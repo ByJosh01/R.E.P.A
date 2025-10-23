@@ -1,29 +1,25 @@
 // backend/controllers/authController.js
-require('dotenv').config(); // <-- ¡Asegúrate de que esta línea esté al inicio!
+require('dotenv').config();
 const userModel = require('../models/userModel');
-// const nodemailer = require('nodemailer'); // <--- BORRADO
 const crypto = require('crypto');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-// --- 1. CONFIGURACIÓN DE BREVO (FORMA CORRECTA V3) ---
-const Brevo = require('@getbrevo/brevo'); 
-
-const defaultClient = Brevo.ApiClient.instance; // <--- AHORA 'Brevo' SÍ ESTÁ DEFINIDO
-let apiKey = defaultClient.authentications['api-key'];
-apiKey.apiKey = process.env.BREVO_API_KEY;
+// --- 1. IMPORTACIÓN DE BREVO ---
+// Importamos el paquete principal.
+// ¡Ya NO configuramos el "defaultClient" aquí!
+const brevo = require('@getbrevo/brevo');
 // ---------------------------------
 
-// --- 2. NUEVAS VARIABLES DE ENTORNO ---
+// --- VARIABLES DE ENTORNO ---
 const JWT_SECRET = process.env.JWT_SECRET;
 const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL;
+// Asegúrate de que estas variables SÍ estén en tu .env
+const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL; 
 const SENDER_NAME = "Sistema de Avisos REPA";
-const CLIENT_URL = process.env.CLIENT_URL; // <-- ¡La nueva variable!
+const CLIENT_URL = process.env.CLIENT_URL;
 // -------------------------------------
-
-// const transporter = ... // <--- BORRADO
 
 const generateToken = (userId) => {
     return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '1d' });
@@ -34,7 +30,7 @@ exports.registerUser = async (req, res) => {
         const { curp, email, password, recaptchaToken } = req.body;
 
         if (!recaptchaToken) { /* ... */ }
-        
+
         const verificationURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
         const verificationResponse = await axios.post(verificationURL);
         if (!verificationResponse.data.success) {
@@ -45,10 +41,9 @@ exports.registerUser = async (req, res) => {
         }
 
         await userModel.createUser({ curp, email, password });
-        
-        // --- 3. REEMPLAZO DE NODEMAILER CON BREVO ---
-        
-        // ¡CORRECCIÓN! El enlace ahora usa la variable CLIENT_URL
+
+        // --- INICIO: REEMPLAZO CON BREVO ---
+
         const homeLink = `${CLIENT_URL}/home.html`;
 
         const htmlContent = `
@@ -72,15 +67,23 @@ exports.registerUser = async (req, res) => {
             </p>
         </div>
         `;
-        
-        let apiInstance = new Brevo.TransactionalEmailsApi();
-        let sendSmtpEmail = new Brevo.SendSmtpEmail();
+
+        // 1. Instanciar la API
+        let apiInstance = new brevo.TransactionalEmailsApi();
+
+        // 2. ***** AUTENTICAR ESTA INSTANCIA *****
+        // Esta es la corrección clave.
+        apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+
+        // 3. Crear el objeto del correo
+        let sendSmtpEmail = new brevo.SendSmtpEmail(); 
 
         sendSmtpEmail.subject = "Datos de acceso - Sistema de Avisos de Arribo Pesqueros";
         sendSmtpEmail.htmlContent = htmlContent;
         sendSmtpEmail.sender = { name: SENDER_NAME, email: SENDER_EMAIL };
         sendSmtpEmail.to = [ { email: email } ];
 
+        // 4. Enviar
         apiInstance.sendTransacEmail(sendSmtpEmail)
             .then(function(data) {
                 console.log('Correo de bienvenida enviado por Brevo. ID: ' + data.messageId);
@@ -88,9 +91,9 @@ exports.registerUser = async (req, res) => {
             .catch(function(error) {
                 console.error("Error al enviar correo de bienvenida con Brevo:", error.response ? error.response.body : error.message);
             });
-        
+
         // --- FIN DEL REEMPLAZO ---
-        
+
         res.status(201).json({ message: 'Usuario registrado exitosamente.' });
     } catch (error) {
         console.error("Error en registerUser:", error);
@@ -99,21 +102,17 @@ exports.registerUser = async (req, res) => {
 };
 
 exports.loginUser = async (req, res) => {
-    // ... (ESTA FUNCIÓN NO CAMBIA)
+    // --- SIN CAMBIOS ---
     try {
         const { curp, password } = req.body;
         const user = await userModel.findUserByCurp(curp);
 
         if (user && await bcrypt.compare(password, user.password)) {
             const token = generateToken(user.id);
-            res.status(200).json({ 
-                message: 'Inicio de sesión exitoso.', 
-                token, 
-                user: { 
-                    curp: user.curp, 
-                    email: user.email,
-                    rol: user.rol
-                } 
+            res.status(200).json({
+                message: 'Inicio de sesión exitoso.',
+                token,
+                user: { curp: user.curp, email: user.email, rol: user.rol }
             });
         } else {
             res.status(401).json({ message: 'CURP o contraseña incorrectos.' });
@@ -130,22 +129,29 @@ exports.forgotPassword = async (req, res) => {
         const user = await userModel.findUserByEmail(email);
         if (user) {
             const token = crypto.randomBytes(32).toString('hex');
-            const expires = Date.now() + 15 * 60 * 1000; // 15 minutos
+            const expires = Date.now() + 15 * 60 * 1000;
             await userModel.saveResetToken(email, token, expires);
-            
-            // ¡CORRECCIÓN! El enlace ahora usa la variable CLIENT_URL
+
             const resetLink = `${CLIENT_URL}/reset-password.html?token=${token}`;
 
-            // --- REEMPLAZO DE NODEMAILER CON BREVO ---
-            
-            let apiInstance = new Brevo.TransactionalEmailsApi();
-            let sendSmtpEmail = new Brevo.SendSmtpEmail();
+            // --- INICIO: REEMPLAZO CON BREVO ---
+
+            // 1. Instanciar la API
+            let apiInstance = new brevo.TransactionalEmailsApi();
+
+            // 2. ***** AUTENTICAR ESTA INSTANCIA *****
+            // Esta es la corrección clave.
+            apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+
+            // 3. Crear el objeto del correo
+            let sendSmtpEmail = new brevo.SendSmtpEmail();
 
             sendSmtpEmail.subject = "Recuperación de Contraseña";
             sendSmtpEmail.htmlContent = `<p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p><a href="${resetLink}">Restablecer Contraseña</a><p>El enlace expira en 15 minutos.</p>`;
             sendSmtpEmail.sender = { name: SENDER_NAME, email: SENDER_EMAIL };
             sendSmtpEmail.to = [ { email: email } ];
-            
+
+            // 4. Enviar
             apiInstance.sendTransacEmail(sendSmtpEmail)
                 .then(function(data) {
                     console.log('Correo de recuperación enviado por Brevo. ID: ' + data.messageId);
@@ -153,6 +159,7 @@ exports.forgotPassword = async (req, res) => {
                 .catch(function(error) {
                     console.error("Error al enviar correo de recuperación con Brevo:", error.response ? error.response.body : error.message);
                 });
+
             // --- FIN DEL REEMPLAZO ---
         }
         res.status(200).json({ message: 'Si tu correo está registrado, recibirás un enlace.' });
@@ -163,7 +170,7 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetPassword = async (req, res) => {
-    // ... (ESTA FUNCIÓN NO CAMBIA)
+    // --- SIN CAMBIOS ---
     try {
         const { token, newPassword } = req.body;
         const tokenData = await userModel.findTokenData(token);
