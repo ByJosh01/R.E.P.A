@@ -10,7 +10,9 @@ const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com', // El servidor SMTP de Gmail
+    port: 465,              // El puerto SSL
+    secure: true,           // Usar SSL
     auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_APP_PASSWORD
