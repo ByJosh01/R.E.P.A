@@ -10,12 +10,16 @@ const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
 
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', // El servidor SMTP de Gmail
-    port: 465,              // El puerto SSL
-    secure: true,           // Usar SSL
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // ¡Importante! 'false' porque este puerto usa STARTTLS
     auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_APP_PASSWORD
+    },
+    tls: {
+        // No fallar en certificados inválidos (a veces necesario en la nube)
+        rejectUnauthorized: false
     }
 });
 
