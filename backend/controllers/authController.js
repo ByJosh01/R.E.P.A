@@ -7,10 +7,10 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-// --- 1. CONFIGURACIÓN DE BREVO ---
-const { ApiClient, TransactionalEmailsApi, SendSmtpEmail } = require('@getbrevo/brevo');
+// --- 1. CONFIGURACIÓN DE BREVO (FORMA CORRECTA V3) ---
+const Brevo = require('@getbrevo/brevo'); 
 
-const defaultClient = ApiClient.instance;
+const defaultClient = Brevo.ApiClient.instance; // <--- AHORA 'Brevo' SÍ ESTÁ DEFINIDO
 let apiKey = defaultClient.authentications['api-key'];
 apiKey.apiKey = process.env.BREVO_API_KEY;
 // ---------------------------------
@@ -73,8 +73,8 @@ exports.registerUser = async (req, res) => {
         </div>
         `;
         
-        let apiInstance = new TransactionalEmailsApi();
-        let sendSmtpEmail = new SendSmtpEmail();
+        let apiInstance = new Brevo.TransactionalEmailsApi();
+        let sendSmtpEmail = new Brevo.SendSmtpEmail();
 
         sendSmtpEmail.subject = "Datos de acceso - Sistema de Avisos de Arribo Pesqueros";
         sendSmtpEmail.htmlContent = htmlContent;
@@ -138,8 +138,8 @@ exports.forgotPassword = async (req, res) => {
 
             // --- REEMPLAZO DE NODEMAILER CON BREVO ---
             
-            let apiInstance = new TransactionalEmailsApi();
-            let sendSmtpEmail = new SendSmtpEmail();
+            let apiInstance = new Brevo.TransactionalEmailsApi();
+            let sendSmtpEmail = new Brevo.SendSmtpEmail();
 
             sendSmtpEmail.subject = "Recuperación de Contraseña";
             sendSmtpEmail.htmlContent = `<p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p><a href="${resetLink}">Restablecer Contraseña</a><p>El enlace expira en 15 minutos.</p>`;
