@@ -1,30 +1,28 @@
 // backend/controllers/authController.js
+require('dotenv').config(); // <-- ¡Asegúrate de que esta línea esté al inicio!
 const userModel = require('../models/userModel');
-const nodemailer = require('nodemailer');
+// const nodemailer = require('nodemailer'); // <--- BORRADO
 const crypto = require('crypto');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+
+// --- 1. CONFIGURACIÓN DE BREVO ---
+const Brevo = require('@getbrevo/brevo');
+const defaultClient = Brevo.ApiClient.instance;
+let apiKey = defaultClient.authentications['api-key'];
+apiKey.apiKey = process.env.BREVO_API_KEY;
+// ---------------------------------
+
+// --- 2. NUEVAS VARIABLES DE ENTORNO ---
 const JWT_SECRET = process.env.JWT_SECRET;
 const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL;
+const SENDER_NAME = "Sistema de Avisos REPA";
+const CLIENT_URL = process.env.CLIENT_URL; // <-- ¡La nueva variable!
+// -------------------------------------
 
-
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // ¡Importante! 'false' porque este puerto usa STARTTLS
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD
-    },
-    tls: {
-        // No fallar en certificados inválidos (a veces necesario en la nube)
-        rejectUnauthorized: false
-    }
-});
-
-const SENDER_EMAIL = process.env.GMAIL_USER;
-
+// const transporter = ... // <--- BORRADO
 
 const generateToken = (userId) => {
     return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '1d' });
@@ -34,7 +32,7 @@ exports.registerUser = async (req, res) => {
     try {
         const { curp, email, password, recaptchaToken } = req.body;
 
-        if (!recaptchaToken) { /* ... (lógica de reCAPTCHA sin cambios) ... */ }
+        if (!recaptchaToken) { /* ... */ }
         
         const verificationURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
         const verificationResponse = await axios.post(verificationURL);
@@ -47,12 +45,12 @@ exports.registerUser = async (req, res) => {
 
         await userModel.createUser({ curp, email, password });
         
-        // --- CORRECCIÓN: El correo de bienvenida va aquí, en la función de registro ---
-        const mailOptions = {
-    from: `"Sistema de Avisos de Arribo Pesqueros - SEDARPA" <${process.env.GMAIL_USER}>`,
-    to: email,
-    subject: 'Datos de acceso - Sistema de Avisos de Arribo Pesqueros',
-    html: `
+        // --- 3. REEMPLAZO DE NODEMAILER CON BREVO ---
+        
+        // ¡CORRECCIÓN! El enlace ahora usa la variable CLIENT_URL
+        const homeLink = `${CLIENT_URL}/home.html`;
+
+        const htmlContent = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6;">
             <p>Estimado pescador, le estamos enviando sus <strong>Datos de acceso</strong> que deberá usar para ingresar al formulario de captura de los <strong>avisos de arribo.</strong></p>
             <p>Sus datos de acceso son de uso personal, para que solo usted pueda ingresar al formulario de captura y efectuar los avisos de arribo, a nombre de la sociedad cooperativa pesquera que representa o bien a nombre propio por ser permisionario individual. Con la contraseña usted ya puede entrar al formulario desde este momento. Anote su contraseña y cuide que no sea usada por personas no autorizadas.</p>
@@ -66,18 +64,31 @@ exports.registerUser = async (req, res) => {
                 ADVERTENCIA: NO COMPARTAS ESTOS DATOS CON NADIE, SON CREDENCIALES ÚNICAS.
             </div>
 
-            <p style="margin-top: 20px;"><strong>Liga de acceso:</strong> <a href="http://localhost:3000/home.html">Sistema de Avisos de Arribo Pesqueros</a></p>
+            <p style="margin-top: 20px;"><strong>Liga de acceso:</strong> <a href="${homeLink}">Sistema de Avisos de Arribo Pesqueros</a></p>
             <hr>
             <p style="font-size: 0.9em; color: #555;">
                 Los servidores públicos de la <strong>SEDARPA</strong> lo felicitamos por su responsabilidad y si necesita apoyo o tiene dudas con el proceso de captura de los avisos de arribo, comuníquese por favor a la Dirección General de Pesca y Acuacultura, teléfono (228) 8 40 02 57, línea directa.
             </p>
         </div>
-    `
-};
+        `;
+        
+        let apiInstance = new Brevo.TransactionalEmailsApi();
+        let sendSmtpEmail = new Brevo.SendSmtpEmail(); 
 
-        transporter.sendMail(mailOptions).catch(error => {
-            console.error("Error al enviar correo de bienvenida:", error);
-        });
+        sendSmtpEmail.subject = "Datos de acceso - Sistema de Avisos de Arribo Pesqueros";
+        sendSmtpEmail.htmlContent = htmlContent;
+        sendSmtpEmail.sender = { name: SENDER_NAME, email: SENDER_EMAIL };
+        sendSmtpEmail.to = [ { email: email } ];
+
+        apiInstance.sendTransacEmail(sendSmtpEmail)
+            .then(function(data) {
+                console.log('Correo de bienvenida enviado por Brevo. ID: ' + data.messageId);
+            })
+            .catch(function(error) {
+                console.error("Error al enviar correo de bienvenida con Brevo:", error.response ? error.response.body : error.message);
+            });
+        
+        // --- FIN DEL REEMPLAZO ---
         
         res.status(201).json({ message: 'Usuario registrado exitosamente.' });
     } catch (error) {
@@ -87,7 +98,7 @@ exports.registerUser = async (req, res) => {
 };
 
 exports.loginUser = async (req, res) => {
-    // ... (sin cambios)
+    // ... (ESTA FUNCIÓN NO CAMBIA)
     try {
         const { curp, password } = req.body;
         const user = await userModel.findUserByCurp(curp);
@@ -120,19 +131,28 @@ exports.forgotPassword = async (req, res) => {
             const token = crypto.randomBytes(32).toString('hex');
             const expires = Date.now() + 15 * 60 * 1000; // 15 minutos
             await userModel.saveResetToken(email, token, expires);
-            const resetLink = `http://localhost:3000/reset-password.html?token=${token}`;
+            
+            // ¡CORRECCIÓN! El enlace ahora usa la variable CLIENT_URL
+            const resetLink = `${CLIENT_URL}/reset-password.html?token=${token}`;
 
-            // --- CORRECCIÓN: Este es el correo correcto para recuperar contraseña ---
-            const mailOptions = {
-                from: `"SEDARPA REPA" <${SENDER_EMAIL}>`,
-                to: email,
-                subject: 'Recuperación de Contraseña',
-                html: `<p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p><a href="${resetLink}">Restablecer Contraseña</a><p>El enlace expira en 15 minutos.</p>`
-            };
+            // --- REEMPLAZO DE NODEMAILER CON BREVO ---
+            
+            let apiInstance = new Brevo.TransactionalEmailsApi();
+            let sendSmtpEmail = new Brevo.SendSmtpEmail(); 
 
-            transporter.sendMail(mailOptions).catch(error => {
-                console.error("Error al enviar correo de recuperación:", error);
-            });
+            sendSmtpEmail.subject = "Recuperación de Contraseña";
+            sendSmtpEmail.htmlContent = `<p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p><a href="${resetLink}">Restablecer Contraseña</a><p>El enlace expira en 15 minutos.</p>`;
+            sendSmtpEmail.sender = { name: SENDER_NAME, email: SENDER_EMAIL };
+            sendSmtpEmail.to = [ { email: email } ];
+            
+            apiInstance.sendTransacEmail(sendSmtpEmail)
+                .then(function(data) {
+                    console.log('Correo de recuperación enviado por Brevo. ID: ' + data.messageId);
+                })
+                .catch(function(error) {
+                    console.error("Error al enviar correo de recuperación con Brevo:", error.response ? error.response.body : error.message);
+                });
+            // --- FIN DEL REEMPLAZO ---
         }
         res.status(200).json({ message: 'Si tu correo está registrado, recibirás un enlace.' });
     } catch (error) {
@@ -142,7 +162,7 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetPassword = async (req, res) => {
-    // ... (sin cambios)
+    // ... (ESTA FUNCIÓN NO CAMBIA)
     try {
         const { token, newPassword } = req.body;
         const tokenData = await userModel.findTokenData(token);
