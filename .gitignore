@@ -1,0 +1,19 @@
+# Dependencias (Ignora ambas carpetas node_modules)
+node_modules/
+backend/node_modules/
+
+# Secretos (¡LO MÁS IMPORTANTE!)
+# Ignora el archivo .env de la raíz (si existiera)
+.env
+# Ignora el archivo .env de tu backend (¡CRÍTICO!)
+backend/.env
+
+# Configuración de Base de Datos
+.my.cnf
+
+# Logs (buena práctica)
+*.log
+
+# Archivos de Sistema Operativo (buena práctica)
+.DS_Store
+Thumbs.db

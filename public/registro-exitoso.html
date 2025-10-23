@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEDARPA - Registro Exitoso</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+    <header class="main-header">
+        Secretaría de Desarrollo Agropecuario, Rural y Pesca
+        <button id="theme-toggle" class="theme-toggle"><i class="fas fa-moon"></i></button>
+    </header>
+
+    <nav class="breadcrumb-nav">
+        Sistema de Avisos de Arribo Pesqueros > Confirmación de Registro
+    </nav>
+
+    <main class="main-content visible">
+        <div class="success-container">
+            <div class="panel-card success-card">
+                <h1>¡Felicidades <strong id="user-identifier"></strong>, tu Cuenta fué creada correctamente!</h1>
+                
+                <p>
+                    Tus datos de acceso al sistema fueron enviados al correo:
+                    <strong id="user-email-placeholder">cargando...</strong>
+                </p>
+                
+                <div class="spam-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Si no ves el correo en tu bandeja de entrada principal, por favor, verifica tu carpeta de <strong>SPAM</strong> o correo no deseado.</p>
+                </div>
+
+                <p class="note">
+                    Nota: El correo enviado es sólo informativo, favor de no responderlo.
+                </p>
+
+                <img src="sucess.png" alt="Registro Exitoso" class="success-graphic">
+
+                <a href="home.html" class="btn btn-primary">Iniciar Sesión</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <span>© 2024 Plataforma de la SEDARPA</span>
+        <span>Departamento de Tecnologia</span>
+    </footer>
+
+    <script src="success.js"></script>
+</body>
+</html>

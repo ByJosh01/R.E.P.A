@@ -1,0 +1,37 @@
+services:
+  backend:
+    # Apuntamos siempre a la etiqueta 'latest'
+    build: .
+    image: byjosh/mi-app-repa:latest
+    restart: always
+    ports:
+      - "8080:3000"
+
+    env_file:
+      - ./backend/.env
+  
+    
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: db
+
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: repa
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+volumes:
+  mysql-data:
+
+  # Forzando la reconstrucción - 29/09/2025

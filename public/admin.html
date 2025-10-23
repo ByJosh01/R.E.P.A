@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-layout.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="layout-app page-full-width">
+    <main class="app-content">
+        <header class="content-header">
+            <div>
+                <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
+            </div>
+
+            <div class="user-menu">
+                <div class="user-menu-trigger" id="user-menu-trigger">
+                    <span id="admin-email-placeholder">Cargando...</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="dropdown-menu" id="user-dropdown">
+                    <a href="#" id="view-admin-info">Ver Información</a>
+                    <a href="#" id="admin-logout-btn">Cerrar Sesión</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- NAVEGACIÓN CORREGIDA -->
+        <nav class="tabs-nav" style="margin-top: -30px; margin-bottom: 30px; background-color: white;">
+            <a href="admin.html" class="tab-link active">Solicitantes</a>
+            <a href="admin-usuarios.html" class="tab-link">Cuentas (Usuarios)</a>
+            <a href="admin-integrantes.html" class="tab-link">Integrantes</a>
+            <a href="admin-embarcaciones.html" class="tab-link">Embarcaciones</a>
+        </nav>
+
+        <div class="content-body">
+            <div class="content-card">
+                <h1 class="content-title">Lista de Todos los Solicitantes</h1>
+                <p style="margin-bottom: 20px; color: #666;">Esta es la lista de todos los usuarios registrados en el sistema.</p>
+
+                <div class="input-group" style="max-width: 500px; margin-bottom: 20px;">
+                    <label for="search-input" style="text-align: left;"><i class="fas fa-search"></i> Buscar Solicitante:</label>
+                    <input type="text" id="search-input" class="modal-input" placeholder="Escriba un nombre, RFC o CURP para filtrar...">
+                </div>
+
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>RFC</th>
+                                <th>CURP</th>
+                                <th>Actividad</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="solicitantes-table-body">
+                            <tr><td colspan="5" style="text-align: center;">Cargando datos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="border-top: 2px solid red; margin-top: 40px; padding-top: 20px; text-align: center;">
+    <h2 style="color: red;">Zona de Peligro</h2>
+    <p style="margin-bottom: 20px;">Acciones importantes que afectan a toda la base de datos.</p>
+    
+    <button class="btn btn-secondary" id="backup-db-btn" style="margin-right: 15px;">
+        <i class="fas fa-download"></i> Crear Respaldo (.sql)
+    </button>
+    
+    <button class="btn btn-danger" id="reset-db-btn">
+        <i class="fas fa-exclamation-triangle"></i> Resetear Base de Datos
+    </button>
+</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modales -->
+    <div id="admin-info-modal" class="modal-overlay">
+        <div class="modal-content">
+            <i class="modal-icon fas fa-user-circle success"></i>
+            <h2 id="admin-info-modal-title">Información del Superadministrador</h2>
+            <div id="admin-info-content" class="admin-info-modal-content"></div>
+            <div class="modal-buttons">
+                <button id="close-admin-modal-btn" class="btn btn-primary">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="reset-modal" class="modal-overlay">
+        <div class="modal-content">
+            <i class="modal-icon error fas fa-exclamation-triangle"></i>
+            <h2 id="reset-modal-title">Confirmación Requerida</h2>
+            <p id="reset-modal-message">Para proceder, ingrese la contraseña maestra.</p>
+            <div class="input-group" style="margin: 25px 0;">
+                <label for="master-password-input" style="text-align: left;">Contraseña Maestra:</label>
+                <input type="password" id="master-password-input" class="modal-input" placeholder="********">
+                <p class="feedback-message invalid" id="reset-error-message" style="height: auto;"></p>
+            </div>
+            <div class="modal-buttons">
+                <button id="cancel-reset-btn" class="btn btn-secondary">Cancelar</button>
+                <button id="confirm-reset-btn" class="btn btn-danger">Confirmar y Proceder</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <i class="modal-icon error fas fa-trash-alt"></i>
+            <h2>¿Estás seguro?</h2>
+            <p id="delete-confirm-message">Esta acción es permanente.</p>
+            <div class="modal-buttons">
+                <button id="cancel-delete-btn" class="btn btn-secondary">Cancelar</button>
+                <button id="confirm-delete-btn" class="btn btn-danger">Sí, Eliminar</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="edit-solicitante-modal" class="modal-overlay">
+        <div class="modal-content large">
+            <h2>Editar Datos del Solicitante</h2>
+            <form id="edit-solicitante-form" class="anexo-form" novalidate>
+                <div class="anexo-grid">
+                    <input type="hidden" id="edit-solicitante-id">
+                    <div class="anexo-field span-12">
+                        <label for="edit-nombre">Nombre:</label>
+                        <input type="text" id="edit-nombre" name="nombre">
+                    </div>
+                    <div class="anexo-field span-6">
+                        <label for="edit-rfc">RFC:</label>
+                        <input type="text" id="edit-rfc" name="rfc" maxlength="13">
+                    </div>
+                    <div class="anexo-field span-6">
+                        <label for="edit-curp">CURP:</label>
+                        <input type="text" id="edit-curp" name="curp" maxlength="18">
+                    </div>
+                    <div class="anexo-field span-6">
+                        <label for="edit-actividad">Actividad:</label>
+                        <select id="edit-actividad" name="actividad" class="anexo-select">
+                            <option value="pesca">Pesca</option>
+                            <option value="acuacultura">Acuacultura</option>
+                            <option value="ambas">Ambas</option>
+                        </select>
+                    </div>
+                    <div class="anexo-field span-6">
+                        <label for="edit-rol">Rol de Usuario:</label>
+                        <select id="edit-rol" name="rol" class="anexo-select">
+                            <option value="solicitante">Solicitante</option>
+                            <option value="superadmin">Superadmin</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button type="button" id="cancel-edit-btn" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" form="edit-solicitante-form" class="btn btn-primary">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <script type="module" src="js/admin.js"></script>
+</body>
+</html>

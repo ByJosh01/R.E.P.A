@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEDARPA - Gestión de Anexos</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-layout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+        .modal-content.large {
+            max-width: 950px;
+        }
+    </style>
+</head>
+<body class="layout-app">
+
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar">
+            <button class="sidebar-close-btn" id="sidebar-close-btn">&times;</button>
+            <div class="sidebar-header">
+                <div class="user-avatar"><i class="fas fa-fish"></i></div>
+                <h2 class="user-name" id="sidebar-user-name">Cargando...</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="btn btn-primary btn-block">+ Nuevo Aviso de Arribo</a>
+                <ul>
+                    <li><a href="datos-personales.html"><i class="fas fa-user-circle"></i> Mis Datos Personales</a></li>
+                    <li><a href="#"><i class="fas fa-list-alt"></i> Mis Avisos de Arribo</a></li>
+                    <li><a href="#" id="logout-btn-sidebar"><i class="fas fa-lock"></i> Cerrar Sesión</a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+    <a href="https://www.veracruz.gob.mx/agropecuario/inscripcion-al-registro-estatal-de-pesca-y-acuacultura/" target="_blank" rel="noopener noreferrer">Instructivo de Llenado</a>
+    <a href="https://www.facebook.com/SEDARPAVer/" target="_blank" rel="noopener noreferrer">Facebook</a>
+    <a href="https://www.veracruz.gob.mx/agropecuario/" target="_blank" rel="noopener noreferrer">Contacto</a>
+</div>
+        </aside>
+
+        <main class="app-content">
+            <header class="content-header">
+                <button class="sidebar-open-btn" id="sidebar-open-btn"><i class="fas fa-bars"></i></button>
+                <div class="breadcrumb">Sistema de Avisos de Arribo Pesqueros > Gestión de Anexos</div>
+                <div class="header-actions">
+                    <button id="theme-toggle" class="theme-toggle-app"><i class="fas fa-moon"></i></button>
+                    <a href="datos-personales.html" class="btn-regresar"><i class="fas fa-arrow-left"></i> Volver a Mis Datos</a>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <div class="content-card">
+                        <div class="tabs-nav">
+                <button class="tab-link active" data-tab="anexo1">Anexo 1: Datos del Solicitante</button>
+    
+            <button class="tab-link disabled" data-tab="anexo2">
+        Anexo 2: Integrantes <i class="fas fa-lock"></i>
+                </button>
+             <button class="tab-link disabled" data-tab="anexo3">
+        Anexo 3: Pesca <i class="fas fa-lock"></i>
+                </button>
+            <button class="tab-link disabled" data-tab="anexo4">
+        Anexo 4: Acuacultura <i class="fas fa-lock"></i>
+                </button>
+            <button class="tab-link disabled" data-tab="anexo5">
+        Anexo 5: Embarcaciones <i class="fas fa-lock"></i>
+    </button>
+</div>
+
+                   <div id="anexo1" class="tab-content active">
+                        <form id="solicitante-form" class="anexo-form" novalidate>
+                            <div class="anexo-header">ANEXO 1</div>
+                            <div class="anexo-section">
+                                <div class="anexo-subheader">DATOS SOLICITANTE</div>
+                                <div class="anexo-grid">
+                                    <div class="anexo-field span-6"><label for="expediente">1. Núm. de Expediente:</label><input type="text" id="expediente" name="expediente" maxlength="20"></div>
+                                    <div class="anexo-field span-6"><label for="fecha">2. Fecha:</label><input type="date" id="fecha" name="fecha" required><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-4"><label for="nombre">3. Nombre(s):</label><input type="text" id="nombre" name="nombre" required maxlength="50"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-4"><label for="apellidoPaterno">Apellido Paterno:</label><input type="text" id="apellidoPaterno" name="apellidoPaterno" required maxlength="50"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-4"><label for="apellidoMaterno">Apellido Materno:</label><input type="text" id="apellidoMaterno" name="apellidoMaterno" maxlength="50"></div>
+                                    <div class="anexo-field span-4"><label for="numIntegrantes">4. Núm. de integrantes:</label><input type="number" id="numIntegrantes" name="numIntegrantes" min="0" max="999"></div>
+                                    <div class="anexo-field span-4"><label for="rfc">5. RFC:</label><input type="text" id="rfc" name="rfc" required maxlength="13"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-4"><label for="curp">6. CURP:</label><input type="text" id="curp" name="curp" required maxlength="18"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-6"><label for="telefono">7. Teléfono:</label><input type="tel" id="telefono" name="telefono" maxlength="10"></div>
+                                    <div class="anexo-field span-6"><label for="email">8. Correo electrónico:</label><input type="email" id="email" name="email" required maxlength="60"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-12"><label for="representanteLegal">9. Nombre del rep. legal:</label><input type="text" id="representanteLegal" name="representanteLegal" maxlength="150"></div>
+                                    <div class="anexo-field span-12 anexo-radio-group"><label>10. Actividad:</label><div class="radio-options"><span>Pesca <input type="radio" name="actividad" value="pesca" required></span><span>Acuacultura <input type="radio" name="actividad" value="acuacultura"></span><span>Ambas <input type="radio" name="actividad" value="ambas"></span></div><div class="feedback-message"></div></div>
+                                </div>
+                            </div>
+                            <div class="anexo-section">
+                                <div class="anexo-subheader">DOMICILIO FISCAL DE PERSONA FÍSICA O REPRESENTANTE LEGAL</div>
+                                <div class="anexo-grid">
+                                    <div class="anexo-field span-6"><label for="entidad">11. Entidad federativa:</label><input type="text" id="entidad" name="entidad" required maxlength="50"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-6"><label for="municipio">12. Municipio:</label><input type="text" id="municipio" name="municipio" required maxlength="50"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-4"><label for="localidad">13. Localidad:</label><input type="text" id="localidad" name="localidad" required maxlength="50"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-4"><label for="colonia">14. Colonia:</label><input type="text" id="colonia" name="colonia" required maxlength="50"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-4"><label for="cp">15. Código postal:</label><input type="number" id="cp" name="cp" required min="0" max="99999"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-12"><label for="calle">16. Calle:</label><input type="text" id="calle" name="calle" required maxlength="100"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-6"><label for="numExterior">17. No. Exterior:</label><input type="text" id="numExterior" name="numExterior" required maxlength="10"><div class="feedback-message"></div></div>
+                                    <div class="anexo-field span-6"><label for="numInterior">18. No. Interior:</label><input type="text" id="numInterior" name="numInterior" maxlength="10"></div>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="form-actions" style="margin-top: 25px;">
+                            <button type="button" class="btn btn-secondary" id="cancel-anexo-btn">Cancelar</button>
+                            <button type="submit" form="solicitante-form" class="btn btn-primary">Guardar Anexo 1</button>
+                        </div>
+                    </div>
+                    <div id="anexo2" class="tab-content">
+    <form id="add-integrante-form" class="anexo-form" novalidate>
+        <div class="anexo-header">ANEXO 2</div>
+        <div class="anexo-section">
+            <div class="anexo-subheader">INTEGRANTES REGISTRADOS</div>
+            <div class="table-container" style="margin: 0; border: none; border-radius: 0;">
+                <table class="integrantes-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>RFC</th>
+                            <th>CURP</th>
+                            <th>Sexo</th>
+                            <th>Teléfono</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="integrantes-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="anexo-section">
+            <div class="anexo-subheader" id="integrante-form-subheader">AÑADIR NUEVO INTEGRANTE</div>
+            <div class="anexo-grid">
+                
+                <div class="anexo-field span-4">
+                    <label for="int-nombre">Nombre Completo:</label>
+                    <input type="text" id="int-nombre" name="nombre_completo" required>
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="int-rfc">RFC:</label>
+                    <input type="text" id="int-rfc" name="rfc" required>
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="int-curp">CURP:</label>
+                    <input type="text" id="int-curp" name="curp" required>
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="int-tel">Teléfono:</label>
+                    <input type="tel" id="int-tel" name="telefono">
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4 custom-dropdown-container">
+                    <label for="int-sexo-display">Sexo:</label>
+                    <div class="custom-dropdown" id="sexo-dropdown">
+                        <input type="hidden" name="sexo" id="int-sexo-hidden" required> <div class="dropdown-selected" id="int-sexo-display">
+                            <span>Seleccione una opción</span><i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="dropdown-options">
+                            <div class="dropdown-option" data-value="1">Masculino</div>
+                            <div class="dropdown-option" data-value="0">Femenino</div>
+                        </div>
+                    </div>
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="int-estudios">Último Grado de Estudio:</label>
+                    <input type="text" id="int-estudios" name="ultimo_grado_estudio" required>
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="int-actividad">Actividad que Desempeña:</label>
+                    <input type="text" id="int-actividad" name="actividad_desempena" required>
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="int-localidad">Localidad:</label>
+                    <input type="text" id="int-localidad" name="localidad" required>
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="int-municipio">Municipio:</label>
+                    <input type="text" id="int-municipio" name="municipio" required>
+                    <div class="feedback-message"></div>
+                </div>
+
+            </div>
+        </div>
+    </form>
+    <div class="form-actions" style="margin-top: 25px;">
+        <button type="submit" form="add-integrante-form" class="btn btn-primary" id="submit-integrante-btn">+ Añadir Integrante</button>
+    </div>
+</div>
+                    
+                    <div id="anexo3" class="tab-content">
+                        <form id="anexo3-pesca-form" class="anexo-form">
+                            <div class="anexo-header">ANEXO 3</div>
+                            <div class="anexo-section">
+                                <div class="anexo-subheader">DATOS TÉCNICOS PESCA</div>
+                                <div class="anexo-grid">
+                                    <div class="anexo-field span-6"><label for="lugar_captura">1. Lugar de captura:</label><input type="text" id="lugar_captura" name="lugar_captura"></div>
+                                    <div class="anexo-field span-3"><label for="localidad_captura">2. Localidad:</label><input type="text" id="localidad_captura" name="localidad_captura"></div>
+                                    <div class="anexo-field span-3"><label for="municipio_captura">3. Municipio:</label><input type="text" id="municipio_captura" name="municipio_captura"></div>
+                                    <div class="anexo-field span-6"><label for="sitio_desembarque">4. Sitio de desembarque:</label><input type="text" id="sitio_desembarque" name="sitio_desembarque"></div>
+                                    <div class="anexo-field span-3"><label for="localidad_desembarque">5. Localidad:</label><input type="text" id="localidad_desembarque" name="localidad_desembarque"></div>
+                                    <div class="anexo-field span-3"><label for="municipio_desembarque">6. Municipio:</label><input type="text" id="municipio_desembarque" name="municipio_desembarque"></div>
+                                    <div class="anexo-field span-12 anexo-checkbox-group">
+                                        <label>7. Pesquería:</label>
+                                        <div class="checkbox-options">
+                                            <span><input type="checkbox" id="pesqueria_escama" name="pesqueria[]" value="Escama"><label for="pesqueria_escama">Escama</label></span>
+                                            <span><input type="checkbox" id="pesqueria_crustaceos" name="pesqueria[]" value="Crustáceos"><label for="pesqueria_crustaceos">Crustáceos</label></span>
+                                            <span><input type="checkbox" id="pesqueria_moluscos" name="pesqueria[]" value="Moluscos"><label for="pesqueria_moluscos">Moluscos</label></span>
+                                        </div>
+                                    </div>
+                                    <div class="anexo-field span-12 anexo-radio-group">
+                                        <label>8. Tipo de pesquería:</label>
+                                        <div class="radio-options">
+                                            <span><input type="radio" id="tipo_comercial" name="tipo_pesqueria" value="Comercial"><label for="tipo_comercial">Comercial</label></span>
+                                            <span><input type="radio" id="tipo_fomento" name="tipo_pesqueria" value="Fomento"><label for="tipo_fomento">Fomento</label></span>
+                                            <span><input type="radio" id="tipo_deportiva" name="tipo_pesqueria" value="Deportiva/Recreativa"><label for="tipo_deportiva">Deportiva/Recreativa</label></span>
+                                            <span><input type="radio" id="tipo_didactica" name="tipo_pesqueria" value="Didáctica"><label for="tipo_didactica">Didáctica</label></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                           <div class="anexo-section">
+    <div class="anexo-subheader">CARACTERÍSTICAS TÉCNICAS</div>
+    <div class="anexo-grid">
+        <div class="anexo-field span-12"><label class="full-width-label">9. Arte de pesca y Cantidad:</label></div>
+        <div class="anexo-field span-4 arte-pesca-item"><input type="checkbox" id="arte_red_agallera" name="artes_pesca[]" value="Red agallera"><label for="arte_red_agallera">Red agallera</label><input type="number" name="cantidad_red_agallera" placeholder="Cant."></div>
+        <div class="anexo-field span-4 arte-pesca-item"><input type="checkbox" id="arte_red_tendal" name="artes_pesca[]" value="Red tendal"><label for="arte_red_tendal">Red tendal</label><input type="number" name="cantidad_red_tendal" placeholder="Cant."></div>
+        <div class="anexo-field span-4 arte-pesca-item"><input type="checkbox" id="arte_atarraya" name="artes_pesca[]" value="Atarraya"><label for="arte_atarraya">Atarraya</label><input type="number" name="cantidad_atarraya" placeholder="Cant."></div>
+        
+        <div class="anexo-field span-4 arte-pesca-item"><input type="checkbox" id="arte_linea_anzuelos" name="artes_pesca[]" value="Linea y anzuelos"><label for="arte_linea_anzuelos">Línea y anzuelos</label><input type="number" name="cantidad_linea_y_anzuelos" placeholder="Cant."></div>
+        
+        <div class="anexo-field span-4 arte-pesca-item"><input type="checkbox" id="arte_trampa_nasa" name="artes_pesca[]" value="Trampa nasa"><label for="arte_trampa_nasa">Trampa nasa</label><input type="number" name="cantidad_trampa_nasa" placeholder="Cant."></div>
+        
+        <div class="anexo-field span-4 arte-pesca-item"><input type="checkbox" id="arte_trampa_aro" name="artes_pesca[]" value="Trampa de aro"><label for="arte_trampa_aro">Trampa de aro</label><input type="number" name="cantidad_trampa_de_aro" placeholder="Cant."></div>
+        
+        <div class="anexo-field span-4 arte-pesca-item"><input type="checkbox" id="arte_manual" name="artes_pesca[]" value="Manual"><label for="arte_manual">Manual</label><input type="number" name="cantidad_manual" placeholder="Cant."></div>
+        <div class="anexo-field span-4 arte-pesca-item"><input type="checkbox" id="arte_gancho" name="artes_pesca[]" value="Gancho"><label for="arte_gancho">Gancho</label><input type="number" name="cantidad_gancho" placeholder="Cant."></div>
+        <div class="anexo-field span-12 anexo-checkbox-group">
+                                        <label>10. Especie(s) objetivo:</label>
+                                        <div class="checkbox-options wrap">
+                                            <span><input type="checkbox" id="especie_escama" name="especies_objetivo[]" value="Escama"><label for="especie_escama">Escama</label></span>
+                                            <span><input type="checkbox" id="especie_langostino" name="especies_objetivo[]" value="Langostino/Acamaya"><label for="especie_langostino">Langostino/Acamaya</label></span>
+                                            <span><input type="checkbox" id="especie_almeja" name="especies_objetivo[]" value="Almeja"><label for="especie_almeja">Almeja</label></span>
+                                            <span><input type="checkbox" id="especie_cangrejo" name="especies_objetivo[]" value="Cangrejo"><label for="especie_cangrejo">Cangrejo</label></span>
+                                            <span><input type="checkbox" id="especie_caracol" name="especies_objetivo[]" value="Caracol"><label for="especie_caracol">Caracol</label></span>
+                                            <span><input type="checkbox" id="especie_jaiba" name="especies_objetivo[]" value="Jaiba"><label for="especie_jaiba">Jaiba</label></span>
+                                            <span class="field-with-extra-input"><input type="checkbox" id="especie_otros" name="especies_objetivo[]" value="Otros"><label for="especie_otros">Otros:</label><input type="text" name="especies_objetivo_otros" placeholder="Especifique"></span>
+                                        </div>
+                                    </div>
+                                    <div class="anexo-field span-12 anexo-checkbox-group">
+                                        <label>11. Certificados:</label>
+                                        <div class="checkbox-options wrap">
+                                            <span><input type="checkbox" id="cert_sanidad" name="certificados[]" value="Sanidad"><label for="cert_sanidad">Sanidad</label></span>
+                                            <span><input type="checkbox" id="cert_inocuidad" name="certificados[]" value="Inocuidad Buenas Practicas"><label for="cert_inocuidad">Inocuidad Buenas Prácticas</label></span>
+                                            <span class="field-with-extra-input"><input type="checkbox" id="cert_otros" name="certificados[]" value="Otros"><label for="cert_otros">Otros:</label><input type="text" name="certificados_otros" placeholder="Especifique"></span>
+                                        </div>
+                                    </div>
+                                    <div class="anexo-field span-6"><label for="produccion_anual_valor">12. Nivel de producción anual:</label><input type="number" id="produccion_anual_valor" name="nivel_produccion_anual" placeholder="Escriba la cantidad"></div>
+                                    <div class="anexo-field span-6 anexo-radio-group"><label>Unidad:</label>
+                                        <div class="radio-options">
+                                            <span><input type="radio" id="unidad_kg" name="produccion_unidad" value="Kilogramos"><label for="unidad_kg">Kg</label></span>
+                                            <span><input type="radio" id="unidad_ton" name="produccion_unidad" value="Toneladas"><label for="unidad_ton">Ton</label></span>
+                                            <span><input type="radio" id="unidad_miles" name="produccion_unidad" value="Miles de toneladas"><label for="unidad_miles">Miles de Ton</label></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="anexo-section">
+                                <div class="anexo-subheader">13. DESCRIPCIÓN DE LOS ACTIVOS DE LA UNIDAD PESQUERA</div>
+                                <div class="activos-container-grid">
+                                    <div class="main-label">13.1 Embarcaciones:</div>
+                                    <div class="col-header">Madera</div>
+                                    <div class="col-header">Fibra de vidrio</div>
+                                    <div class="col-header">Metal</div>
+                                    <div class="main-label"></div>
+                                    <div class="si-no-cell">
+                                        <label for="emb_madera_si" class="custom-radio">Sí <input type="radio" id="emb_madera_si" name="embarcacion_madera_opcion" value="si"></label>
+                                        <label for="emb_madera_no" class="custom-radio">No <input type="radio" id="emb_madera_no" name="embarcacion_madera_opcion" value="no" checked></label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label for="emb_fibra_si" class="custom-radio">Sí <input type="radio" id="emb_fibra_si" name="embarcacion_fibra_opcion" value="si"></label>
+                                        <label for="emb_fibra_no" class="custom-radio">No <input type="radio" id="emb_fibra_no" name="embarcacion_fibra_opcion" value="no" checked></label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label for="emb_metal_si" class="custom-radio">Sí <input type="radio" id="emb_metal_si" name="embarcacion_metal_opcion" value="si"></label>
+                                        <label for="emb_metal_no" class="custom-radio">No <input type="radio" id="emb_metal_no" name="embarcacion_metal_opcion" value="no" checked></label>
+                                    </div>
+                                    <div class="main-label">Cantidad:</div>
+                                    <div class="cantidad-cell"><input type="number" name="embarcacion_madera_cantidad" placeholder="0"></div>
+                                    <div class="cantidad-cell"><input type="number" name="embarcacion_fibra_cantidad" placeholder="0"></div>
+                                    <div class="cantidad-cell"><input type="number" name="embarcacion_metal_cantidad" placeholder="0"></div>
+                                    <div class="main-label">13.2 Motores:</div>
+                                    <div class="si-no-cell">
+                                        <label for="motores_si" class="custom-radio">Sí <input type="radio" id="motores_si" name="motores_opcion" value="si"></label>
+                                        <label for="motores_no" class="custom-radio">No <input type="radio" id="motores_no" name="motores_opcion" value="no" checked></label>
+                                    </div>
+                                    <div class="main-label" style="text-align: right; padding-right: 10px;">Cantidad:</div>
+                                    <div class="cantidad-cell"><input type="number" name="motores_cantidad" placeholder="0"></div>
+                                    <div class="main-label">13.3 Sistema de Conservación:</div>
+                                    <div class="col-header">Hielera</div>
+                                    <div class="col-header">Refrigerador</div>
+                                    <div class="col-header">Cuarto frío</div>
+                                    <div class="main-label"></div>
+                                    <div class="si-no-cell">
+                                        <label for="cons_hielera_si" class="custom-radio">Sí <input type="radio" id="cons_hielera_si" name="conservacion_hielera_opcion" value="si"></label>
+                                        <label for="cons_hielera_no" class="custom-radio">No <input type="radio" id="cons_hielera_no" name="conservacion_hielera_opcion" value="no" checked></label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label for="cons_refri_si" class="custom-radio">Sí <input type="radio" id="cons_refri_si" name="conservacion_refrigerador_opcion" value="si"></label>
+                                        <label for="cons_refri_no" class="custom-radio">No <input type="radio" id="cons_refri_no" name="conservacion_refrigerador_opcion" value="no" checked></label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label for="cons_cuarto_si" class="custom-radio">Sí <input type="radio" id="cons_cuarto_si" name="conservacion_cuartofrio_opcion" value="si"></label>
+                                        <label for="cons_cuarto_no" class="custom-radio">No <input type="radio" id="cons_cuarto_no" name="conservacion_cuartofrio_opcion" value="no" checked></label>
+                                    </div>
+                                    <div class="main-label">Cantidad:</div>
+                                    <div class="cantidad-cell"><input type="number" name="conservacion_hielera_cantidad" placeholder="0"></div>
+                                    <div class="cantidad-cell"><input type="number" name="conservacion_refrigerador_cantidad" placeholder="0"></div>
+                                    <div class="cantidad-cell"><input type="number" name="conservacion_cuartofrio_cantidad" placeholder="0"></div>
+                                    <div class="main-label">13.4 Equipo de Transporte:</div>
+                                    <div class="col-header">Camioneta</div>
+                                    <div class="col-header">Camioneta caja fría</div>
+                                    <div class="col-header">Camión</div>
+                                    <div class="main-label"></div>
+                                    <div class="si-no-cell">
+                                        <label for="trans_camioneta_si" class="custom-radio">Sí <input type="radio" id="trans_camioneta_si" name="transporte_camioneta_opcion" value="si"></label>
+                                        <label for="trans_camioneta_no" class="custom-radio">No <input type="radio" id="trans_camioneta_no" name="transporte_camioneta_opcion" value="no" checked></label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label for="trans_caja_si" class="custom-radio">Sí <input type="radio" id="trans_caja_si" name="transporte_cajafria_opcion" value="si"></label>
+                                        <label for="trans_caja_no" class="custom-radio">No <input type="radio" id="trans_caja_no" name="transporte_cajafria_opcion" value="no" checked></label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label for="trans_camion_si" class="custom-radio">Sí <input type="radio" id="trans_camion_si" name="transporte_camion_opcion" value="si"></label>
+                                        <label for="trans_camion_no" class="custom-radio">No <input type="radio" id="trans_camion_no" name="transporte_camion_opcion" value="no" checked></label>
+                                    </div>
+                                    <div class="main-label">Cantidad:</div>
+                                    <div class="cantidad-cell"><input type="number" name="transporte_camioneta_cantidad" placeholder="0"></div>
+                                    <div class="cantidad-cell"><input type="number" name="transporte_cajafria_cantidad" placeholder="0"></div>
+                                    <div class="cantidad-cell"><input type="number" name="transporte_camion_cantidad" placeholder="0"></div>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="form-actions" style="margin-top: 25px;">
+                            <button type="button" class="btn btn-secondary" id="cancel-anexo3-btn">Cancelar</button>
+                            <button type="submit" form="anexo3-pesca-form" class="btn btn-primary">Guardar Anexo 3</button>
+                        </div>
+                    </div>
+
+                    <div id="anexo4" class="tab-content">
+                        <form id="anexo4-acuacultura-form" class="anexo-form">
+                            <div class="anexo-header">ANEXO 4</div>
+                            <div class="anexo-section">
+                                <div class="anexo-subheader">DATOS TÉCNICOS ACUACULTURA</div>
+                                <div class="anexo-grid">
+                                    <div class="anexo-field span-6 anexo-radio-group">
+                                        <label>1. La instalación es propia:</label>
+                                        <div class="radio-options">
+                                            <span><input type="radio" name="instalacionPropia" id="propiaSi" value="si"><label for="propiaSi">Sí</label></span>
+                                            <span><input type="radio" name="instalacionPropia" id="propiaNo" value="no"><label for="propiaNo">No</label></span>
+                                        </div>
+                                    </div>
+                                    <div class="anexo-field span-6">
+                                        <label for="contratoArrendamiento">2. Contrato de arrendamiento (años):</label>
+                                        <input type="number" id="contratoArrendamiento" name="contratoArrendamientoAnos" placeholder="Años">
+                                    </div>
+                                    <div class="anexo-field span-12">
+                                        <label for="dimensiones">3. Dimensiones de la unidad de Producción:</label>
+                                        <textarea id="dimensiones" name="dimensionesUnidad" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="anexo-section">
+                                <div class="anexo-grid">
+                                    <div class="anexo-field span-3">
+                                        <label class="full-width-label">4. Tipo:</label>
+                                        <div class="anexo-radio-group vertical">
+                                            <span><input type="radio" name="tipo" id="tipoComercial" value="comercial"><label for="tipoComercial">Comercial</label></span>
+                                            <span><input type="radio" name="tipo" id="tipoDidactica" value="didactica"><label for="tipoDidactica">Didáctica</label></span>
+                                            <span><input type="radio" name="tipo" id="tipoInvestigacion" value="investigacion"><label for="tipoInvestigacion">Investigación</label></span>
+                                            <span><input type="radio" name="tipo" id="tipoFomento" value="fomento"><label for="tipoFomento">Fomento</label></span>
+                                        </div>
+                                    </div>
+                                    <div class="anexo-field span-3">
+                                        <label class="full-width-label">5. Especie(s) objetivo:</label>
+                                        <div class="anexo-checkbox-group vertical">
+                                            <span><input type="checkbox" name="especies" value="langostino" id="especieLangostino"><label for="especieLangostino">Langostino</label></span>
+                                            <span><input type="checkbox" name="especies" value="mojarra" id="especieMojarra"><label for="especieMojarra">Mojarra</label></span>
+                                            <span><input type="checkbox" name="especies" value="caracol" id="especieCaracol"><label for="especieCaracol">Caracol</label></span>
+                                            <span><input type="checkbox" name="especies" value="tilapia" id="especieTilapia"><label for="especieTilapia">Tilapia</label></span>
+                                            <span><input type="checkbox" name="especies" value="bagre" id="especieBagre"><label for="especieBagre">Bagre</label></span>
+                                            <span><input type="checkbox" name="especies" value="pejelagarto" id="especiePejelagarto"><label for="especiePejelagarto">Pejelagarto</label></span>
+                                            <span><input type="checkbox" name="especies" value="ostion" id="especieOstion"><label for="especieOstion">Ostión</label></span>
+                                            <input type="text" class="input-otro" name="especiesOtras" placeholder="Otras, ¿cuáles?">
+                                        </div>
+                                    </div>
+                                    <div class="anexo-field span-3">
+                                        <label class="full-width-label">6. Tipo de instalación:</label>
+                                        <div class="anexo-radio-group vertical">
+                                            <span><input type="radio" name="tipoInstalacion" id="instGranja" value="granja"><label for="instGranja">Granja</label></span>
+                                            <span><input type="radio" name="tipoInstalacion" id="instCentroAcuicola" value="centro_acuicola"><label for="instCentroAcuicola">Centro acuícola</label></span>
+                                            <span><input type="radio" name="tipoInstalacion" id="instLaboratorio" value="laboratorio"><label for="instLaboratorio">Laboratorio</label></span>
+                                        </div>
+                                    </div>
+                                    <div class="anexo-field span-3">
+                                        <label class="full-width-label">7. Sistema de producción:</label>
+                                        <div class="anexo-radio-group vertical">
+                                            <span><input type="radio" name="sistemaProduccion" id="prodIntensivo" value="intensivo"><label for="prodIntensivo">Intensivo</label></span>
+                                            <span><input type="radio" name="sistemaProduccion" id="prodSemiIntensivo" value="semi_intensivo"><label for="prodSemiIntensivo">Semi-intensivo</label></span>
+                                            <span><input type="radio" name="sistemaProduccion" id="prodExtensivo" value="extensivo"><label for="prodExtensivo">Extensivo</label></span>
+                                            <span><input type="radio" name="sistemaProduccion" id="prodHiperintensivo" value="hiperintensivo"><label for="prodHiperintensivo">Hiperintensivo</label></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="anexo-section">
+                                <div class="anexo-grid">
+                                    <div class="anexo-field span-6">
+                                        <label for="produccionAnualValor">8. Nivel de producción anual:</label>
+                                        <div class="input-group">
+                                            <input type="number" name="produccionAnualValor" id="produccionAnualValor" placeholder="Cantidad">
+                                            <select name="produccionAnualUnidad">
+                                                <option value="" disabled selected>Selecciona unidad...</option>
+                                                <option value="kilogramos">Kilogramos</option>
+                                                <option value="toneladas">Toneladas</option>
+                                                <option value="miles_toneladas">Miles de toneladas</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="anexo-field span-6">
+                                        <label class="full-width-label">9. Certificados que cuenta el solicitante:</label>
+                                        <div class="anexo-checkbox-group vertical">
+                                            <div class="input-group-checkbox">
+                                                <input type="checkbox" name="certificados" value="sanidad" id="certSanidad"><label for="certSanidad">Sanidad</label>
+                                                <input type="text" name="certificadoSanidadCual" placeholder="¿Cuál?">
+                                            </div>
+                                            <div class="input-group-checkbox">
+                                                <input type="checkbox" name="certificados" value="inocuidad" id="certInocuidad"><label for="certInocuidad">Inocuidad</label>
+                                                <input type="text" name="certificadoInocuidadCual" placeholder="¿Cuál?">
+                                            </div>
+                                            <div class="input-group-checkbox">
+                                                <input type="checkbox" name="certificados" value="buenas_practicas" id="certBuenasPracticas"><label for="certBuenasPracticas">Buenas prácticas</label>
+                                                <input type="text" name="certificadoBuenasPracticasCual" placeholder="¿Cuál?">
+                                            </div>
+                                            <div class="input-group-checkbox">
+                                                <input type="checkbox" name="certificados" value="otros" id="certOtros"><label for="certOtros">Otros</label>
+                                                <input type="text" name="certificadoOtrosCual" placeholder="¿Cuál?">
+                                            </div>
+                                            <span><input type="checkbox" name="certificados" value="ninguno" id="certNinguno"><label for="certNinguno">Ninguno</label></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="anexo-section">
+                                <div class="anexo-subheader">10. Descripción de los activos de la unidad de producción:</div>
+                                <div class="activos-container-grid anexo4-final-grid">
+                                    <div class="section-title">10.1 Tipo de estanques:</div>
+                                    <div class="empty-cell"></div>
+                                    <div class="col-header">Rústico</div>
+                                    <div class="col-header">Geomembrana</div>
+                                    <div class="col-header">Concreto</div>
+                                    <div class="row-label">Sí/No</div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="estanque_rustico_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="estanque_rustico_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="estanque_geomembrana_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="estanque_geomembrana_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="estanque_concreto_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="estanque_concreto_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="row-label">Cantidad:</div>
+                                    <div class="input-cell"><input type="number" name="estanque_rustico_cantidad"></div>
+                                    <div class="input-cell"><input type="number" name="estanque_geomembrana_cantidad"></div>
+                                    <div class="input-cell"><input type="number" name="estanque_concreto_cantidad"></div>
+                                    <div class="row-label">Dimensiones:</div>
+                                    <div class="input-cell"><input type="text" name="estanque_rustico_dimensiones"></div>
+                                    <div class="input-cell"><input type="text" name="estanque_geomembrana_dimensiones"></div>
+                                    <div class="input-cell"><input type="text" name="estanque_concreto_dimensiones"></div>
+                                    <div class="section-title">10.2 Instrumentos de medición:</div>
+                                    <div class="empty-cell"></div>
+                                    <div class="col-header">Temperatura</div>
+                                    <div class="col-header">Oxígeno</div>
+                                    <div class="col-header">pH</div>
+                                    <div class="row-label">Sí/No</div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="instrumento_temperatura_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="instrumento_temperatura_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="instrumento_oxigeno_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="instrumento_oxigeno_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="instrumento_ph_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="instrumento_ph_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="row-label">Cantidad:</div>
+                                    <div class="input-cell"><input type="number" name="instrumento_temperatura_cantidad"></div>
+                                    <div class="input-cell"><input type="number" name="instrumento_oxigeno_cantidad"></div>
+                                    <div class="input-cell"><input type="number" name="instrumento_ph_cantidad"></div>
+                                    <div class="section-title">10.3 Sistema de conservación:</div>
+                                    <div class="empty-cell"></div>
+                                    <div class="col-header">Hielera</div>
+                                    <div class="col-header">Refrigerador</div>
+                                    <div class="col-header">Cuarto Frío</div>
+                                    <div class="row-label">Sí/No</div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="conservacion_hielera_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="conservacion_hielera_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="conservacion_refrigerador_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="conservacion_refrigerador_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="conservacion_cuartofrio_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="conservacion_cuartofrio_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="row-label">Cantidad:</div>
+                                    <div class="input-cell"><input type="number" name="conservacion_hielera_cantidad"></div>
+                                    <div class="input-cell"><input type="number" name="conservacion_refrigerador_cantidad"></div>
+                                    <div class="input-cell"><input type="number" name="conservacion_cuartofrio_cantidad"></div>
+                                    <div class="section-title">10.4 Equipo de transporte:</div>
+                                    <div class="empty-cell"></div>
+                                    <div class="col-header">Lancha</div>
+                                    <div class="col-header">Camioneta</div>
+                                    <div class="col-header">Camioneta caja fría</div>
+                                    <div class="row-label">Sí/No</div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="transporte_lancha_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="transporte_lancha_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="transporte_camioneta_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="transporte_camioneta_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="transporte_cajafria_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="transporte_cajafria_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="row-label">Cantidad:</div>
+                                    <div class="input-cell"><input type="number" name="transporte_lancha_cantidad"></div>
+                                    <div class="input-cell"><input type="number" name="transporte_camioneta_cantidad"></div>
+                                    <div class="input-cell"><input type="number" name="transporte_cajafria_cantidad"></div>
+                                    <div class="section-title">10.5 Embarcaciones:</div>
+                                    <div class="empty-cell"></div>
+                                    <div class="col-header">Madera</div>
+                                    <div class="col-header">Fibra de vidrio</div>
+                                    <div class="col-header">Metal</div>
+                                    <div class="row-label">Sí/No</div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="embarcacion_madera_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="embarcacion_madera_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="embarcacion_fibra_vidrio_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="embarcacion_fibra_vidrio_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="embarcacion_metal_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="embarcacion_metal_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="row-label">Cantidad:</div>
+                                    <div class="input-cell"><input type="number" name="embarcacion_madera_cantidad"></div>
+                                    <div class="input-cell"><input type="number" name="embarcacion_fibra_vidrio_cantidad"></div>
+                                    <div class="input-cell"><input type="number" name="embarcacion_metal_cantidad"></div>
+                                    <div class="section-title">10.6 Instalación hidráulica y aireación:</div>
+                                    <div class="empty-cell"></div>
+                                    <div class="col-header">Bomba de agua</div>
+                                    <div class="col-header">Aireador</div>
+                                    <div class="col-header empty-header"></div>
+                                    <div class="row-label">Sí/No</div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="hidraulica_bomba_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="hidraulica_bomba_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="si-no-cell">
+                                        <label><input type="radio" name="hidraulica_aireador_opcion" value="si"> Sí</label>
+                                        <label><input type="radio" name="hidraulica_aireador_opcion" value="no" checked> No</label>
+                                    </div>
+                                    <div class="empty-cell"></div>
+                                    <div class="row-label">Cantidad:</div>
+                                    <div class="input-cell"><input type="number" name="hidraulica_bomba_cantidad"></div>
+                                    <div class="input-cell"><input type="number" name="hidraulica_aireador_cantidad"></div>
+                                    <div class="empty-cell"></div>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="form-actions" style="margin-top: 25px;">
+                            <button type="button" class="btn btn-secondary" id="cancel-anexo4-btn">Cancelar</button>
+                            <button type="submit" form="anexo4-acuacultura-form" class="btn btn-primary">Guardar Anexo 4</button>
+                        </div>
+                    </div>
+
+                    <div id="anexo5" class="tab-content">
+                        <form id="add-embarcacion-form" class="anexo-form">
+                            <div class="anexo-header">ANEXO 5</div>
+                            <div class="anexo-section">
+                                <div class="anexo-subheader">CARACTERÍSTICAS DE LAS EMBARCACIONES MENORES</div>
+                                <div class="table-container" style="margin: 0; border: none; border-radius: 0; overflow-x: auto;">
+                                    <table class="embarcaciones-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Matrícula</th>
+                                                <th>Tonelaje</th>
+                                                <th>Marca Motor</th>
+                                                <th>Núm. Serie</th>
+                                                <th>Potencia HP</th>
+                                                <th>Puerto Base</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="embarcaciones-table-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="anexo-section">
+                                <div class="anexo-subheader" id="embarcacion-form-subheader">AÑADIR NUEVA EMBARCACIÓN</div>
+                                <div class="anexo-grid" style="grid-template-columns: repeat(4, 1fr);">
+                                    <div class="anexo-field span-4"><label for="emb-nombre">Nombre:</label><input type="text" id="emb-nombre" name="nombre_embarcacion" required></div>
+                                    <div class="anexo-field span-2"><label for="emb-matricula">Matrícula:</label><input type="text" id="emb-matricula" name="matricula"></div>
+                                    <div class="anexo-field span-2"><label for="emb-tonelaje">Tonelaje Neto:</label><input type="text" id="emb-tonelaje" name="tonelaje_neto"></div>
+                                    <div class="anexo-field span-2"><label for="emb-marca">Marca del Motor:</label><input type="text" id="emb-marca" name="marca"></div>
+                                    <div class="anexo-field span-2"><label for="emb-serie">Número de Serie:</label><input type="text" id="emb-serie" name="numero_serie"></div>
+                                    <div class="anexo-field span-2"><label for="emb-hp">Potencia (HP):</label><input type="text" id="emb-hp" name="potencia_hp"></div>
+                                    <div class="anexo-field span-2"><label for="emb-puerto">Puerto Base:</label><input type="text" id="emb-puerto" name="puerto_base"></div>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="form-actions" style="margin-top: 25px;">
+                            <button type="submit" form="add-embarcacion-form" class="btn btn-primary" id="submit-embarcacion-btn">+ Añadir Embarcación</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <div id="logout-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Confirmar Cierre de Sesión</h2>
+            <p>¿Estás seguro de que deseas cerrar la sesión?</p>
+            <div class="modal-buttons">
+                <button id="cancel-logout-btn" class="btn btn-secondary">Cancelar</button>
+                <button id="confirm-logout-btn" class="btn btn-primary">Cerrar Sesión</button>
+            </div>
+        </div>
+    </div>
+    <div id="cancel-confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Confirmar Cancelación</h2>
+            <p>Se perderán los cambios que no hayas guardado. ¿Deseas continuar?</p>
+            <div class="modal-buttons">
+                <button id="deny-cancel-btn" class="btn btn-secondary">No, volver</button>
+                <button id="confirm-cancel-btn" class="btn btn-primary">Sí, cancelar</button>
+            </div>
+        </div>
+    </div>
+    <div id="info-modal" class="modal-overlay">
+        <div class="modal-content">
+            <i id="info-modal-icon" class="modal-icon"></i>
+            <h2 id="info-modal-title">Título</h2>
+            <p id="info-modal-message">Mensaje de ejemplo.</p>
+            <div class="modal-buttons">
+                <button id="info-modal-close-btn" class="btn btn-primary">Aceptar</button>
+            </div>
+        </div>
+    </div>
+    <div id="delete-confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <i class="modal-icon error fas fa-exclamation-triangle"></i>
+            <h2>Confirmar Eliminación</h2>
+            <p>¿Estás seguro de que deseas eliminar a este integrante? Esta acción no se puede deshacer.</p>
+            <div class="modal-buttons">
+                <button id="deny-delete-btn" class="btn btn-secondary">No, cancelar</button>
+                <button id="confirm-delete-btn" class="btn btn-primary">Sí, eliminar</button>
+            </div>
+        </div>
+    </div>
+<div id="edit-integrante-modal" class="modal-overlay">
+    <div class="modal-content large">
+        <h2>Editar Datos del Integrante</h2>
+        <form id="edit-integrante-form" class="anexo-form" novalidate>
+            <div class="anexo-grid">
+                
+                <div class="anexo-field span-4">
+                    <label for="edit-int-nombre">Nombre Completo:</label>
+                    <input type="text" id="edit-int-nombre" name="nombre_completo" required maxlength="35">
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="edit-int-rfc">RFC:</label>
+                    <input type="text" id="edit-int-rfc" name="rfc" required maxlength="13">
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="edit-int-curp">CURP:</label>
+                    <input type="text" id="edit-int-curp" name="curp" required maxlength="18">
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="edit-int-tel">Teléfono:</label>
+                    <input type="tel" id="edit-int-tel" name="telefono" maxlength="10">
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4 custom-dropdown-container">
+                    <label>Sexo:</label>
+                    <div class="custom-dropdown" id="edit-sexo-dropdown">
+                        <input type="hidden" name="sexo" id="edit-int-sexo-hidden" required>
+                        <div class="dropdown-selected"><span>Seleccione una opción</span><i class="fas fa-chevron-down"></i></div>
+                        <div class="dropdown-options">
+                            <div class="dropdown-option" data-value="1">Masculino</div>
+                            <div class="dropdown-option" data-value="0">Femenino</div>
+                        </div>
+                    </div>
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="edit-int-estudios">Último Grado de Estudio:</label>
+                    <input type="text" id="edit-int-estudios" name="ultimo_grado_estudio" required maxlength="35" readonly placeholder="Clic para seleccionar">
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="edit-int-actividad">Actividad que Desempeña:</label>
+                    <input type="text" id="edit-int-actividad" name="actividad_desempena" required maxlength="35">
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="edit-int-localidad">Localidad:</label>
+                    <input type="text" id="edit-int-localidad" name="localidad" required maxlength="35">
+                    <div class="feedback-message"></div>
+                </div>
+
+                <div class="anexo-field span-4">
+                    <label for="edit-int-municipio">Municipio:</label>
+                    <input type="text" id="edit-int-municipio" name="municipio" required maxlength="35">
+                    <div class="feedback-message"></div>
+                </div>
+
+            </div>
+        </form>
+        <div class="modal-buttons">
+            <button type="button" id="cancel-edit-modal-btn" class="btn btn-secondary">Cancelar</button>
+            <button type="submit" form="edit-integrante-form" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+    </div>
+</div>
+
+<div id="grado-estudio-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h2>Seleccione el Grado de Estudio</h2>
+        <div id="grado-estudio-options" class="options-list">
+            <div class="option-item" data-value="Primaria">Primaria</div>
+            <div class="option-item" data-value="Secundaria">Secundaria</div>
+            <div class="option-item" data-value="Bachillerato">Bachillerato</div>
+            <div class="option-item" data-value="Universidad Técnica">Universidad Técnica</div>
+            <div class="option-item" data-value="Licenciatura">Licenciatura</div>
+            <div class="option-item" data-value="Posgrado">Posgrado</div>
+        </div>
+        <div class="modal-buttons">
+            <button type="button" id="cancel-grado-modal-btn" class="btn btn-secondary">Cancelar</button>
+        </div>
+    </div>
+</div>
+    <div id="edit-embarcacion-modal" class="modal-overlay">
+        <div class="modal-content large">
+            <h2>Editar Datos de la Embarcación</h2>
+            <form id="edit-embarcacion-form" class="anexo-form">
+                <div class="anexo-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="anexo-field span-4"><label for="edit-emb-nombre">Nombre:</label><input type="text" id="edit-emb-nombre" name="nombre_embarcacion" required></div>
+                    <div class="anexo-field span-2"><label for="edit-emb-matricula">Matrícula:</label><input type="text" id="edit-emb-matricula" name="matricula"></div>
+                    <div class="anexo-field span-2"><label for="edit-emb-tonelaje">Tonelaje Neto:</label><input type="text" id="edit-emb-tonelaje" name="tonelaje_neto"></div>
+                    <div class="anexo-field span-2"><label for="edit-emb-marca">Marca del Motor:</label><input type="text" id="edit-emb-marca" name="marca"></div>
+                    <div class="anexo-field span-2"><label for="edit-emb-serie">Número de Serie:</label><input type="text" id="edit-emb-serie" name="numero_serie"></div>
+                    <div class="anexo-field span-2"><label for="edit-emb-hp">Potencia (HP):</label><input type="text" id="edit-emb-hp" name="potencia_hp"></div>
+                    <div class="anexo-field span-2"><label for="edit-emb-puerto">Puerto Base:</label><input type="text" id="edit-emb-puerto" name="puerto_base"></div>
+                </div>
+            </form>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button type="button" id="cancel-edit-embarcacion-btn" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" form="edit-embarcacion-form" class="btn btn-primary">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="delete-embarcacion-modal" class="modal-overlay">
+        <div class="modal-content">
+            <i class="modal-icon error fas fa-exclamation-triangle"></i>
+            <h2>Confirmar Eliminación</h2>
+            <p>¿Estás seguro de que deseas eliminar esta embarcación? La acción no se puede deshacer.</p>
+            <div class="modal-buttons">
+                <button id="deny-delete-embarcacion-btn" class="btn btn-secondary">No, cancelar</button>
+                <button id="confirm-delete-embarcacion-btn" class="btn btn-primary">Sí, eliminar</button>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module" src="anexos.js"></script>
+</body>
+</html>

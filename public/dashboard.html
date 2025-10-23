@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEDARPA - Panel Principal</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+    <header class="main-header">
+        Secretaría de Desarrollo Agropecuario, Rural y Pesca
+        <button id="theme-toggle" class="theme-toggle"><i class="fas fa-moon"></i></button>
+    </header>
+
+    <nav class="breadcrumb-nav">
+        Sistema de Avisos de Arribo Pesqueros > Panel Principal
+    </nav>
+
+    <main class="main-content">
+        <div class="flowchart-container">
+            
+            <div class="flowchart-tier">
+                <div class="flowchart-box title-box">R.E.P.A</div>
+            </div>
+
+            <div class="flowchart-tier tier-2">
+                <a href="datos-personales.html" class="flowchart-box option-card" data-option="permiso-pesca">
+                    <i class="fas fa-ship"></i> Gestión de Permiso de Pesca
+                </a>
+            </div>
+            
+            <div class="flowchart-tier tier-3">
+                <div class="flowchart-group" data-parent="permiso-pesca">
+                    <a href="#" class="flowchart-box option-card">Avisos de Arribo</a>
+                    <a href="#" class="flowchart-box option-card">Aviso de Repoblación</a>
+                </div>
+                </div>
+
+            <div class="flowchart-tier tier-4">
+                <a href="#" class="flowchart-box option-card" data-option="guia-pesca">Guía de Pesca</a>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <span>© 2025 Plataforma de la SEDARPA</span>
+        <span>Departamento de Tecnologia</span>
+    </footer>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

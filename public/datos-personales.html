@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEDARPA - Mis Datos Personales</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-layout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="layout-app page-full-width">
+
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <div class="app-layout">
+        <aside class="app-sidebar" id="app-sidebar">
+            <button class="sidebar-close-btn" id="sidebar-close-btn">&times;</button>
+            <div class="sidebar-header">
+                <div class="user-avatar"><i class="fas fa-fish"></i></div>
+                <h2 class="user-name" id="sidebar-user-name">Cargando...</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="btn btn-primary btn-block">+ Nuevo Aviso de Arribo</a>
+                <ul>
+                    <li class="active"><a href="datos-personales.html"><i class="fas fa-user-circle"></i> Mis Datos Personales</a></li>
+                    <li><a href="#"><i class="fas fa-list-alt"></i> Mis Avisos de Arribo</a></li>
+                    <li><a href="#" id="logout-btn-sidebar"><i class="fas fa-lock"></i> Cerrar Sesión</a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="https://www.veracruz.gob.mx/agropecuario/inscripcion-al-registro-estatal-de-pesca-y-acuacultura/" target="_blank" rel="noopener noreferrer">Instructivo de Llenado</a>
+                <a href="https://www.facebook.com/SEDARPAVer/" target="_blank" rel="noopener noreferrer">Facebook</a>
+                <a href="https://www.veracruz.gob.mx/agropecuario/" target="_blank" rel="noopener noreferrer">Contacto</a>
+            </div>
+        </aside>
+
+        <main class="app-content">
+            <header class="content-header">
+                <button class="sidebar-open-btn" id="sidebar-open-btn"><i class="fas fa-bars"></i></button>
+                <div class="breadcrumb">Sistema de Avisos de Arribo Pesqueros > Mis Datos Personales</div>
+                <div class="header-actions">
+                    <button id="theme-toggle" class="theme-toggle-app"><i class="fas fa-moon"></i></button>
+                    <a href="dashboard.html" class="btn-regresar"><i class="fas fa-undo"></i> Regresar</a>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <div class="content-card profile-card" id="profile-summary-card">
+                    <h1 class="content-title">Mis Datos Personales</h1>
+                    <div class="info-row"><label>Correo Electrónico:</label><span id="user-email-summary">Cargando...</span></div>
+                    <div class="info-row"><label>CURP:</label><span id="user-curp-summary">Cargando...</span></div>
+                    <div class="info-row"><label>Nombre ó Razón Social:</label><span id="razon-social-summary">No registrado</span></div>
+                    <div class="info-row"><label>R.N.P.A.:</label><span>No registrado</span></div>
+                    <div class="info-row"><label>R.E.P.A.:</label><span>-</span></div>
+                    <div class="info-row"><label>Municipio:</label><span id="municipio-summary">No registrado</span></div>
+                    <div class="info-row"><label>Núm. de Embarcaciones Totales:</label><span>-</span></div>
+                    <div class="info-row full-width"><label>Zona de Pesca:</label><span>No registrada</span></div>
+                    <div class="info-row full-width"><label>Sitio de Desembarque:</label><span>No registrado</span></div>
+                </div>
+
+                <div class="content-card">
+                    <h1 class="content-title">Gestión de Anexos</h1>
+                    <p style="margin-bottom: 20px; color: #666;">Aquí puedes llenar o actualizar los datos de tu registro.</p>
+                    <div class="anexo-management-container">
+                        <a href="anexos.html" id="anexo1-card" class="anexo-management-card">
+                            <i class="fas fa-file-alt"></i>
+                            <h3>Anexo 1: Datos del Solicitante</h3>
+                            <p>Información general y domicilio fiscal.</p>
+                            <span class="status-badge status-incomplete">Incompleto</span>
+                        </a>
+
+                        <a href="anexos.html#anexo2" id="anexo2-card" class="anexo-management-card disabled">
+                            <i class="fas fa-users"></i>
+                            <h3>Anexo 2: Datos de los Integrantes</h3>
+                            <p>Información de los miembros de la cooperativa/unidad.</p>
+                             <span class="status-badge">Bloqueado</span>
+                        </a>
+
+                        <a href="anexos.html#anexo3" id="anexo3-card" class="anexo-management-card disabled">
+                            <i class="fas fa-ship"></i>
+                            <h3>Anexo 3: Datos Técnicos Pesca</h3>
+                            <p>Información sobre capturas, artes de pesca y producción.</p>
+                            <span class="status-badge">Bloqueado</span>
+                        </a>
+
+                        <a href="anexos.html#anexo4" id="anexo4-card" class="anexo-management-card disabled">
+                            <i class="fas fa-water"></i>
+                            <h3>Anexo 4: Datos Técnicos Acuacultura</h3>
+                            <p>Información sobre granjas, especies y sistemas de producción.</p>
+                            <span class="status-badge">Bloqueado</span>
+                        </a>
+
+                        <a href="anexos.html#anexo5" id="anexo5-card" class="anexo-management-card disabled">
+                            <i class="fas fa-anchor"></i>
+                            <h3>Anexo 5: Embarcaciones Menores</h3>
+                            <p>Características de las embarcaciones de la unidad.</p>
+                            <span class="status-badge">Bloqueado</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <div id="logout-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Confirmar Cierre de Sesión</h2>
+            <p>¿Estás seguro de que deseas cerrar la sesión?</p>
+            <div class="modal-buttons">
+                <button id="cancel-logout-btn" class="btn btn-secondary">Cancelar</button>
+                <button id="confirm-logout-btn" class="btn btn-primary">Cerrar Sesión</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="datos-personales.js"></script>
+</body>
+</html>

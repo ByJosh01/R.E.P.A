@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalles del Solicitante</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-layout.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="layout-app page-full-width">
+    <main class="app-content">
+        <header class="content-header">
+            <div>
+                <i class="fas fa-user-tag" style="margin-right: 10px;"></i> Detalles del Solicitante
+            </div>
+            <div class="header-actions">
+                <a href="admin.html" class="btn-regresar"><i class="fas fa-arrow-left"></i> Volver a la Lista</a>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="content-card profile-card">
+                <h1 class="content-title">Datos Personales (Anexo 1)</h1>
+                <div id="perfil-details">
+                    <p style="text-align: center;">Cargando...</p>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <h1 class="content-title">Integrantes (Anexo 2)</h1>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre Completo</th>
+                                <th>RFC</th>
+                                <th>CURP</th>
+                                <th>Teléfono</th>
+                                <th>Actividad</th>
+                            </tr>
+                        </thead>
+                        <tbody id="integrantes-details-body">
+                            <tr><td colspan="5" style="text-align: center;">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <h1 class="content-title">Embarcaciones Menores (Anexo 5)</h1>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Matrícula</th>
+                                <th>Tonelaje</th>
+                                <th>Marca Motor</th>
+                                <th>Puerto Base</th>
+                            </tr>
+                        </thead>
+                        <tbody id="embarcaciones-details-body">
+                            <tr><td colspan="5" style="text-align: center;">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="content-card" id="anexo3-card-details" style="display: none;">
+                <h1 class="content-title">Datos Técnicos de Pesca (Anexo 3)</h1>
+                <div id="anexo3-details">
+                    <p style="text-align: center;">Cargando...</p>
+                </div>
+            </div>
+
+            <div class="content-card" id="anexo4-card-details" style="display: none;">
+                <h1 class="content-title">Datos Técnicos de Acuacultura (Anexo 4)</h1>
+                <div id="anexo4-details">
+                    <p style="text-align: center;">Cargando...</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script type="module" src="js/detalle-solicitante.js"></script>
+</body>
+</html>

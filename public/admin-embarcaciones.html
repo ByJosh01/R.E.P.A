@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Todas las Embarcaciones</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-layout.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="layout-app page-full-width">
+    <main class="app-content">
+        <header class="content-header">
+            <div>
+                <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
+            </div>
+        </header>
+
+        <nav class="tabs-nav" style="margin-top: -30px; margin-bottom: 30px; background-color: white;">
+            <a href="admin.html" class="tab-link">Solicitantes</a>
+            <a href="admin-usuarios.html" class="tab-link">Cuentas (Usuarios)</a>
+            <a href="admin-integrantes.html" class="tab-link">Integrantes</a>
+            <a href="admin-embarcaciones.html" class="tab-link active">Embarcaciones</a>
+        </nav>
+
+        <div class="content-body">
+            <div class="content-card">
+                <h1 class="content-title">Lista de Todas las Embarcaciones Menores</h1>
+                <p style="margin-bottom: 20px; color: #666;">Esta tabla muestra todas las embarcaciones registradas por todos los solicitantes.</p>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre Embarcación</th>
+                                <th>Matrícula</th>
+                                <th>Tonelaje Neto</th>
+                                <th>Marca Motor</th>
+                                <th>Potencia (HP)</th>
+                                <th>Puerto Base</th>
+                            </tr>
+                        </thead>
+                        <tbody id="embarcaciones-table-body">
+                            <tr><td colspan="6" style="text-align: center;">Cargando datos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script type="module" src="js/admin-embarcaciones.js"></script>
+</body>
+</html>
