@@ -609,45 +609,53 @@
                     </div>
 
                     <div id="anexo5" class="tab-content">
-                        <form id="add-embarcacion-form" class="anexo-form">
-                            <div class="anexo-header">ANEXO 5</div>
-                            <div class="anexo-section">
-                                <div class="anexo-subheader">CARACTERÍSTICAS DE LAS EMBARCACIONES MENORES</div>
-                                <div class="table-container" style="margin: 0; border: none; border-radius: 0; overflow-x: auto;">
-                                    <table class="embarcaciones-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Nombre</th>
-                                                <th>Matrícula</th>
-                                                <th>Tonelaje</th>
-                                                <th>Marca Motor</th>
-                                                <th>Núm. Serie</th>
-                                                <th>Potencia HP</th>
-                                                <th>Puerto Base</th>
-                                                <th>Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="embarcaciones-table-body"></tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="anexo-section">
-                                <div class="anexo-subheader" id="embarcacion-form-subheader">AÑADIR NUEVA EMBARCACIÓN</div>
-                                <div class="anexo-grid" style="grid-template-columns: repeat(4, 1fr);">
-                                    <div class="anexo-field span-4"><label for="emb-nombre">Nombre:</label><input type="text" id="emb-nombre" name="nombre_embarcacion" required></div>
-                                    <div class="anexo-field span-2"><label for="emb-matricula">Matrícula:</label><input type="text" id="emb-matricula" name="matricula"></div>
-                                    <div class="anexo-field span-2"><label for="emb-tonelaje">Tonelaje Neto:</label><input type="text" id="emb-tonelaje" name="tonelaje_neto"></div>
-                                    <div class="anexo-field span-2"><label for="emb-marca">Marca del Motor:</label><input type="text" id="emb-marca" name="marca"></div>
-                                    <div class="anexo-field span-2"><label for="emb-serie">Número de Serie:</label><input type="text" id="emb-serie" name="numero_serie"></div>
-                                    <div class="anexo-field span-2"><label for="emb-hp">Potencia (HP):</label><input type="text" id="emb-hp" name="potencia_hp"></div>
-                                    <div class="anexo-field span-2"><label for="emb-puerto">Puerto Base:</label><input type="text" id="emb-puerto" name="puerto_base"></div>
-                                </div>
-                            </div>
-                        </form>
-                        <div class="form-actions" style="margin-top: 25px;">
-                            <button type="submit" form="add-embarcacion-form" class="btn btn-primary" id="submit-embarcacion-btn">+ Añadir Embarcación</button>
-                        </div>
-                    </div>
+    <form id="add-embarcacion-form" class="anexo-form">
+        <div class="anexo-header">ANEXO 5</div>
+        <div class="anexo-section">
+            <div class="anexo-subheader">CARACTERÍSTICAS DE LAS EMBARCACIONES MENORES</div>
+            <div class="table-container" style="margin: 0; border: none; border-radius: 0; overflow-x: auto;">
+                <table class="embarcaciones-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Matrícula</th>
+                            <th>Tonelaje</th>
+                            <th>Marca Motor</th>
+                            <th>Núm. Serie</th>
+                            <th>Potencia HP</th>
+                            <th>Puerto Base</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="embarcaciones-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="anexo-section">
+            <div class="anexo-subheader" id="embarcacion-form-subheader">AÑADIR NUEVA EMBARCACIÓN</div>
+            <div class="anexo-grid" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="anexo-field span-4"><label for="emb-nombre">Nombre:</label><input type="text" id="emb-nombre" name="nombre_embarcacion" required></div>
+    
+    <div class="anexo-field span-2">
+        <label for="emb-matricula">Matrícula:</label>
+        <input type="text" id="emb-matricula" name="matricula">
+        <button type="button" class="btn-insert-char" id="btn-insert-ordinal-a-add" title="Insertar 'ª'">ª</button>
+        <button type="button" class="btn-help-icon" id="btn-help-matricula-add" title="Ver ejemplo de matrícula">
+            <i class="fas fa-question-circle"></i>
+        </button>
+    </div>
+    <div class="anexo-field span-2"><label for="emb-tonelaje">Tonelaje Neto:</label><input type="text" id="emb-tonelaje" name="tonelaje_neto"></div>
+    <div class="anexo-field span-2"><label for="emb-marca">Marca del Motor:</label><input type="text" id="emb-marca" name="marca"></div>
+    <div class="anexo-field span-2"><label for="emb-serie">Número de Serie:</label><input type="text" id="emb-serie" name="numero_serie"></div>
+    <div class="anexo-field span-2"><label for="emb-hp">Potencia (HP):</label><input type="text" id="emb-hp" name="potencia_hp"></div>
+    <div class="anexo-field span-2"><label for="emb-puerto">Puerto Base:</label><input type="text" id="emb-puerto" name="puerto_base"></div>
+</div>
+        </div>
+    </form>
+    <div class="form-actions" style="margin-top: 25px;">
+        <button type="submit" form="add-embarcacion-form" class="btn btn-primary" id="submit-embarcacion-btn">+ Añadir Embarcación</button>
+    </div>
+</div>
 
                 </div>
             </div>
@@ -788,25 +796,33 @@
     </div>
 </div>
     <div id="edit-embarcacion-modal" class="modal-overlay">
-        <div class="modal-content large">
-            <h2>Editar Datos de la Embarcación</h2>
-            <form id="edit-embarcacion-form" class="anexo-form">
-                <div class="anexo-grid" style="grid-template-columns: repeat(4, 1fr);">
-                    <div class="anexo-field span-4"><label for="edit-emb-nombre">Nombre:</label><input type="text" id="edit-emb-nombre" name="nombre_embarcacion" required></div>
-                    <div class="anexo-field span-2"><label for="edit-emb-matricula">Matrícula:</label><input type="text" id="edit-emb-matricula" name="matricula"></div>
-                    <div class="anexo-field span-2"><label for="edit-emb-tonelaje">Tonelaje Neto:</label><input type="text" id="edit-emb-tonelaje" name="tonelaje_neto"></div>
-                    <div class="anexo-field span-2"><label for="edit-emb-marca">Marca del Motor:</label><input type="text" id="edit-emb-marca" name="marca"></div>
-                    <div class="anexo-field span-2"><label for="edit-emb-serie">Número de Serie:</label><input type="text" id="edit-emb-serie" name="numero_serie"></div>
-                    <div class="anexo-field span-2"><label for="edit-emb-hp">Potencia (HP):</label><input type="text" id="edit-emb-hp" name="potencia_hp"></div>
-                    <div class="anexo-field span-2"><label for="edit-emb-puerto">Puerto Base:</label><input type="text" id="edit-emb-puerto" name="puerto_base"></div>
-                </div>
-            </form>
-            <div class="modal-buttons" style="margin-top: 20px;">
-                <button type="button" id="cancel-edit-embarcacion-btn" class="btn btn-secondary">Cancelar</button>
-                <button type="submit" form="edit-embarcacion-form" class="btn btn-primary">Guardar Cambios</button>
-            </div>
+    <div class="modal-content large">
+        <h2>Editar Datos de la Embarcación</h2>
+        <form id="edit-embarcacion-form" class="anexo-form">
+    <div class="anexo-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="anexo-field span-4"><label for="edit-emb-nombre">Nombre:</label><input type="text" id="edit-emb-nombre" name="nombre_embarcacion" required></div>
+        
+        <div class="anexo-field span-2">
+            <label for="edit-emb-matricula">Matrícula:</label>
+            <input type="text" id="edit-emb-matricula" name="matricula">
+            <button type="button" class="btn-insert-char" id="btn-insert-ordinal-a-edit" title="Insertar 'ª'">ª</button>
+            <button type="button" class="btn-help-icon" id="btn-help-matricula-edit" title="Ver ejemplo de matrícula">
+                <i class="fas fa-question-circle"></i>
+            </button>
+        </div>
+        <div class="anexo-field span-2"><label for="edit-emb-tonelaje">Tonelaje Neto:</label><input type="text" id="edit-emb-tonelaje" name="tonelaje_neto"></div>
+        <div class="anexo-field span-2"><label for="edit-emb-marca">Marca del Motor:</label><input type="text" id="edit-emb-marca" name="marca"></div>
+        <div class="anexo-field span-2"><label for="edit-emb-serie">Número de Serie:</label><input type="text" id="edit-emb-serie" name="numero_serie"></div>
+        <div class="anexo-field span-2"><label for="edit-emb-hp">Potencia (HP):</label><input type="text" id="edit-emb-hp" name="potencia_hp"></div>
+        <div class="anexo-field span-2"><label for="edit-emb-puerto">Puerto Base:</label><input type="text" id="edit-emb-puerto" name="puerto_base"></div>
+    </div>
+</form>
+        <div class="modal-buttons" style="margin-top: 20px;">
+            <button type="button" id="cancel-edit-embarcacion-btn" class="btn btn-secondary">Cancelar</button>
+            <button type="submit" form="edit-embarcacion-form" class="btn btn-primary">Guardar Cambios</button>
         </div>
     </div>
+</div>
     
     <div id="delete-embarcacion-modal" class="modal-overlay">
         <div class="modal-content">
@@ -819,7 +835,20 @@
             </div>
         </div>
     </div>
-    
-    <script type="module" src="anexos.js"></script>
+
+
+    <div id="matricula-help-modal" class="modal-overlay">
+    <div class="modal-content large">
+        <h2>Ejemplo de Matrícula</h2>
+        <p>El formato debe seguir esta estructura (ejemplo: 6ª BA-2-53-21).</p>
+        <img src="matricula.png" alt="Ejemplo de matrícula de embarcación" style="width: 100%; border-radius: 8px; margin-top: 15px;">
+        <div class="modal-buttons" style="margin-top: 20px;">
+            <button id="close-matricula-help-btn" class="btn btn-primary">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="anexos.js"></script>
 </body>
 </html>
+    

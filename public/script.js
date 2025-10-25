@@ -269,14 +269,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             try {
                 const response = await fetch('/api/forgot-password', {
-                   method: 'POST',
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email }),
                 });
-                const result = await response.json();
-              alert(result.message);
-                emailInput.value = '';
+
+                // Verificamos si la respuesta del backend fue exitosa (código 200-299)
+                if (response.ok) {
+                    // ÉXITO: Redirigimos a la nueva página de confirmación
+                    window.location.href = 'recuperar-exitoso.html';
+                } else {
+                    // ERROR: El servidor respondió con un error (ej: correo no encontrado)
+                    const errorData = await response.json();
+                    alert(errorData.message || 'No se pudo procesar la solicitud.');
+                }
             } catch (error) {
+                console.error('Error de conexión:', error);
                 alert('No se pudo conectar con el servidor. ¿Está encendido?');
             }
         });

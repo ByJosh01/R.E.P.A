@@ -1,5 +1,3 @@
-// public/js/anexo5.js
-
 // Almacenaremos los datos y el ID de edición aquí para que las funciones puedan acceder a ellos
 let embarcacionesData = [];
 let embarcacionEditId = null;
@@ -12,18 +10,15 @@ const embarcacionesTableBody = document.getElementById('embarcaciones-table-body
 const editEmbarcacionModal = document.getElementById('edit-embarcacion-modal');
 const editEmbarcacionForm = document.getElementById('edit-embarcacion-form');
 const deleteEmbarcacionModal = document.getElementById('delete-embarcacion-modal');
+// ▼▼▼ NUEVOS SELECTORES ▼▼▼
+const matriculaHelpModal = document.getElementById('matricula-help-modal'); 
+// ▲▲▲ FIN NUEVOS SELECTORES ▲▲▲
 
 
 // =========================================================================
-// == INICIO: LÓGICA DE VALIDACIÓN ROBUSTA (REPLICADA DE ANEXO 2)
+// == INICIO: LÓGICA DE VALIDACIÓN ROBUSTA
 // =========================================================================
 
-/**
- * Muestra retroalimentación visual (válido/inválido) para un campo de formulario.
- * @param {HTMLElement} inputElement - El campo del formulario.
- * @param {string} message - El mensaje a mostrar.
- * @param {boolean} isValid - True si es válido, false si es inválido.
- */
 const showFeedback = (inputElement, message, isValid) => {
     let feedbackElement = inputElement.nextElementSibling;
     if (!feedbackElement || !feedbackElement.classList.contains('feedback-message')) {
@@ -44,45 +39,36 @@ const showFeedback = (inputElement, message, isValid) => {
     }
 };
 
-/**
- * Limpia toda la retroalimentación de un formulario.
- * @param {HTMLFormElement} form - El formulario a limpiar.
- */
 const clearAllFeedback = (form) => {
     form.querySelectorAll('.feedback-message').forEach(el => el.textContent = '');
     form.querySelectorAll('.valid, .invalid').forEach(el => el.classList.remove('valid', 'invalid'));
 };
 
-/**
- * Prepara la UI para la validación, creando los divs de feedback si no existen.
- * @param {HTMLFormElement} form - El formulario a preparar.
- */
 const setupValidationUI = (form) => {
     form.querySelectorAll('.anexo-field input').forEach(input => {
-        if (!input.nextElementSibling || !input.nextElementSibling.classList.contains('feedback-message')) {
-            const feedbackDiv = document.createElement('div');
+        let feedbackDiv = input.nextElementSibling;
+        while (feedbackDiv && !feedbackDiv.classList.contains('feedback-message')) {
+            feedbackDiv = feedbackDiv.nextElementSibling;
+        }
+
+        if (!feedbackDiv) {
+            feedbackDiv = document.createElement('div');
             feedbackDiv.className = 'feedback-message';
-            input.parentNode.insertBefore(feedbackDiv, input.nextSibling);
+            input.closest('.anexo-field').appendChild(feedbackDiv);
         }
     });
 };
 
-// ===== CAMBIO INICIA: Se ajusta el límite de la matrícula =====
 const fieldLimitsAnexo5 = {
     nombre_embarcacion: 40,
-    matricula: 20, // Ajustado para el formato específico
+    matricula: 20, 
     tonelaje_neto: 10,
     marca: 40,
     numero_serie: 40,
     potencia_hp: 5,
     puerto_base: 40
 };
-// ===== CAMBIO TERMINA =====
 
-/**
- * Configura la validación para un formulario específico (añadir o editar).
- * @param {HTMLFormElement} form - El formulario al que se aplicará la validación.
- */
 const setupFormValidation = (form) => {
     const addValidation = (fieldName, validationLogic) => {
         const input = form.elements[fieldName];
@@ -95,7 +81,6 @@ const setupFormValidation = (form) => {
         }
     };
 
-    // Validación para campos que solo aceptan texto
     ['nombre_embarcacion', 'marca', 'puerto_base'].forEach(name => {
         addValidation(name, (input) => {
             input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
@@ -109,8 +94,6 @@ const setupFormValidation = (form) => {
         });
     });
 
-    // ===== CAMBIO INICIA: Se separa la validación de matrícula y se añade la nueva lógica =====
-    // Validación para campos alfanuméricos (ahora solo para numero_serie)
     ['numero_serie'].forEach(name => {
         addValidation(name, (input) => {
             input.value = input.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
@@ -124,17 +107,13 @@ const setupFormValidation = (form) => {
         });
     });
 
-    // Validación específica para Matrícula con formato
     addValidation('matricula', (input) => {
-        // Expresión regular para el formato: 6ª BA-2-53-21
         const matriculaRegex = /^6ª\s[A-Z]{2}-\d{1}-\d{1,4}-\d{2}$/;
-        
-        // No forzamos mayúsculas aquí para permitir que el usuario escriba "6ª"
         const valor = input.value.trim();
 
         if (input.required && !valor) {
             showFeedback(input, 'Este campo es obligatorio.', false);
-        } else if (valor && matriculaRegex.test(valor.toUpperCase())) { // Validamos en mayúsculas
+        } else if (valor && matriculaRegex.test(valor.toUpperCase())) { 
             showFeedback(input, 'Formato de matrícula válido.', true);
         } else if (valor) {
             showFeedback(input, 'Formato incorrecto. Ejemplo: 6ª BA-2-53-21', false);
@@ -142,9 +121,7 @@ const setupFormValidation = (form) => {
             showFeedback(input, '', false);
         }
     });
-    // ===== CAMBIO TERMINA =====
 
-    // Validación para Potencia (HP) - solo enteros positivos
     addValidation('potencia_hp', (input) => {
         input.value = input.value.replace(/[^0-9]/g, '');
         const valueAsNumber = parseInt(input.value, 10);
@@ -159,7 +136,6 @@ const setupFormValidation = (form) => {
         }
     });
     
-    // Validación para Tonelaje - números positivos, permite decimales
     addValidation('tonelaje_neto', (input) => {
         input.value = input.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
         const valueAsNumber = parseFloat(input.value);
@@ -174,8 +150,24 @@ const setupFormValidation = (form) => {
         }
     });
 };
+
+const insertOrdinalChar = (inputElement) => {
+    const charToInsert = 'ª';
+    const startPos = inputElement.selectionStart;
+    const endPos = inputElement.selectionEnd;
+    const currentValue = inputElement.value;
+    inputElement.value = currentValue.substring(0, startPos) + charToInsert + currentValue.substring(endPos);
+    const newCursorPos = startPos + charToInsert.length;
+    inputElement.selectionStart = newCursorPos;
+    inputElement.selectionEnd = newCursorPos;
+    inputElement.focus();
+    if (inputElement.oninput) {
+        inputElement.oninput();
+    }
+};
+
 // =========================================================================
-// == FIN: LÓGICA DE VALIDACIÓN ROBUSTA
+// == FIN: LÓGICA DE VALIDACIÓN
 // =========================================================================
 
 
@@ -226,15 +218,31 @@ export function initAnexo5(token, modalFunction) {
         setupValidationUI(addEmbarcacionForm);
         setupFormValidation(addEmbarcacionForm);
 
+        const btnAddOrdinal = document.getElementById('btn-insert-ordinal-a-add');
+        const inputAddMatricula = addEmbarcacionForm.elements['matricula'];
+        if (btnAddOrdinal && inputAddMatricula) {
+            btnAddOrdinal.addEventListener('click', (e) => {
+                e.preventDefault();
+                insertOrdinalChar(inputAddMatricula);
+            });
+        }
+        
+        // ▼▼▼ NUEVO: Lógica del botón de AYUDA para AÑADIR ▼▼▼
+        const btnHelpAdd = document.getElementById('btn-help-matricula-add');
+        if (btnHelpAdd && matriculaHelpModal) {
+            btnHelpAdd.addEventListener('click', (e) => {
+                e.preventDefault();
+                matriculaHelpModal.classList.add('visible');
+            });
+        }
+        // ▲▲▲ FIN NUEVO ▲▲▲
+
         addEmbarcacionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            // Disparar todas las validaciones una última vez
             addEmbarcacionForm.querySelectorAll('input').forEach(input => {
                 if(input.oninput) input.oninput({ target: input });
             });
 
-            // Lógica de ventana emergente específica
             const firstInvalidElement = addEmbarcacionForm.querySelector('.invalid');
             if (firstInvalidElement) {
                 const fieldLabels = {
@@ -348,6 +356,25 @@ export function initAnexo5(token, modalFunction) {
         setupValidationUI(editEmbarcacionForm);
         setupFormValidation(editEmbarcacionForm);
 
+        const btnEditOrdinal = document.getElementById('btn-insert-ordinal-a-edit');
+        const inputEditMatricula = editEmbarcacionForm.elements['matricula'];
+        if (btnEditOrdinal && inputEditMatricula) {
+            btnEditOrdinal.addEventListener('click', (e) => {
+                e.preventDefault();
+                insertOrdinalChar(inputEditMatricula);
+            });
+        }
+        
+        // ▼▼▼ NUEVO: Lógica del botón de AYUDA para EDITAR ▼▼▼
+        const btnHelpEdit = document.getElementById('btn-help-matricula-edit');
+        if (btnHelpEdit && matriculaHelpModal) {
+            btnHelpEdit.addEventListener('click', (e) => {
+                e.preventDefault();
+                matriculaHelpModal.classList.add('visible');
+            });
+        }
+        // ▲▲▲ FIN NUEVO ▲▲▲
+
         document.getElementById('cancel-edit-embarcacion-btn').addEventListener('click', closeEditEmbarcacionModal);
         editEmbarcacionModal.addEventListener('click', e => { if(e.target === editEmbarcacionModal) closeEditEmbarcacionModal(); });
         
@@ -355,12 +382,10 @@ export function initAnexo5(token, modalFunction) {
             e.preventDefault();
             if(!embarcacionEditId) return;
             
-            // Disparar todas las validaciones una última vez
             editEmbarcacionForm.querySelectorAll('input').forEach(input => {
                 if(input.oninput) input.oninput({ target: input });
             });
 
-            // Lógica de ventana emergente específica para el modal de edición
             const firstInvalidElement = editEmbarcacionForm.querySelector('.invalid');
             if (firstInvalidElement) {
                 const fieldLabels = {
@@ -399,4 +424,19 @@ export function initAnexo5(token, modalFunction) {
             }
         });
     }
+
+    // ▼▼▼ NUEVO: Lógica para CERRAR el modal de ayuda ▼▼▼
+    if (matriculaHelpModal) {
+        const closeBtn = document.getElementById('close-matricula-help-btn');
+        closeBtn.addEventListener('click', () => {
+            matriculaHelpModal.classList.remove('visible');
+        });
+
+        matriculaHelpModal.addEventListener('click', (e) => {
+            if (e.target === matriculaHelpModal) {
+                matriculaHelpModal.classList.remove('visible');
+            }
+        });
+    }
+    // ▲▲▲ FIN NUEVO ▲▲▲
 }

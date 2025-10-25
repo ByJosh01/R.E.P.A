@@ -1594,3 +1594,178 @@ body.dark-mode .tab-link.disabled {
     transform: none;
 }
 
+/* ======================================================= */
+/* ======== Estilos para página de Recuperación Exitosa ======== */
+/* ======================================================= */
+
+/* Hacemos que el H2 sea un flexbox vertical */
+.form-card h2.with-icon {
+    display: flex;
+    flex-direction: column; /* <-- Pone el ícono DEBAJO del texto */
+    align-items: center;
+    justify-content: center;
+    gap: 15px; /* <-- Espacio entre el texto y el ícono */
+    margin-top: 20px; 
+    margin-bottom: 25px; 
+}
+
+/* Estilo y animación para el ícono de check verde */
+.success-icon {
+    font-size: 2.5em; /* <-- Aumentamos el tamaño ahora que está en su propia línea */
+    color: var(--success-green); 
+}
+
+/* Animación para el ícono de check */
+@keyframes bounceIn {
+    0% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+    70% {
+        transform: scale(0.9);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.animated-check {
+    animation: bounceIn 0.8s ease-out forwards;
+    animation-delay: 0.3s; 
+    opacity: 0; 
+}
+
+
+/* Estilos para el texto de instrucciones */
+.recover-instructions {
+    font-size: 15px; 
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+.recover-instructions.small-text {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-bottom: 20px;
+}
+
+/* Estilo base del botón en esta tarjeta */
+.form-card .btn-primary {
+    margin-top: 10px;
+    /* Aseguramos que la transición esté definida para el hover.
+      Tu clase .btn global ya tiene "transition: all 0.3s ease",
+      pero esto es más específico.
+    */
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+/* ==== NUEVA ANIMACIÓN DE HOVER PARA EL BOTÓN ====
+*/
+.form-card .btn-primary:hover {
+    transform: translateY(-4px); /* Lo "levanta" un poco más que el resto */
+    /* Sombra más pronunciada para que parezca que se despega */
+    box-shadow: 0 6px 12px rgba(192, 57, 43, 0.5); 
+}
+/* ================================================
+*/
+
+/* --- Dark Mode para estos nuevos textos --- */
+body.dark-mode .recover-instructions {
+    color: #bbb;
+}
+body.dark-mode .recover-instructions.small-text {
+    color: #888;
+}
+
+
+/* ======================================================= */
+/* ======== Botón para Insertar Carácter (Anexo 5) ======== */
+/* ======================================================= */
+
+/* Estilo del botón 'ª' */
+.btn-insert-char {
+    padding: 6px 12px;
+    font-size: 1.1em; /* Un poco más grande para que 'ª' se vea bien */
+    font-weight: bold;
+    line-height: 1;
+    min-width: 40px; /* Ancho mínimo */
+    flex-shrink: 0; /* Evita que el botón se encoja */
+    
+    /* Colores secundarios del tema */
+    background-color: var(--subtle-gray);
+    color: var(--primary-red);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 5px; /* Pequeña separación del input */
+}
+
+.btn-insert-char:hover {
+    background-color: var(--primary-red);
+    color: var(--white-color);
+    border-color: var(--primary-red);
+    transform: scale(1.05);
+}
+
+/* Dark mode */
+body.dark-mode .btn-insert-char {
+    background-color: #3a3a3a;
+    color: #ff6b6b; /* Un rojo más brillante para dark mode */
+    border-color: #555;
+}
+
+body.dark-mode .btn-insert-char:hover {
+    background-color: #ff6b6b;
+    color: var(--white-color);
+    border-color: #ff6b6b;
+}
+
+/* ======================================================= */
+/* ======== Botón de Ayuda (Matrícula) ======== */
+/* ======================================================= */
+
+.btn-help-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    font-size: 1.2em; /* Tamaño del ícono */
+    min-width: 40px; 
+    height: 40px; /* Asegura altura consistente */
+    flex-shrink: 0; 
+    
+    background-color: var(--subtle-gray);
+    color: #007bff; /* Azul de "información" */
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 5px; 
+}
+
+.btn-help-icon:hover {
+    background-color: #007bff;
+    color: var(--white-color);
+    border-color: #007bff;
+    transform: scale(1.05);
+}
+
+/* Dark mode */
+body.dark-mode .btn-help-icon {
+    background-color: #3a3a3a;
+    color: #00aaff;
+    border-color: #555;
+}
+
+body.dark-mode .btn-help-icon:hover {
+    background-color: #00aaff;
+    color: var(--white-color);
+    border-color: #00aaff;
+}
