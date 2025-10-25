@@ -1,6 +1,10 @@
 // backend/models/solicitanteModel.js
 const pool = require('../db');
 
+/**
+ * Actualiza los datos del Anexo 1 para un usuario específico.
+ * Marca anexo1_completo como true.
+ */
 exports.updateAnexo1 = async (usuarioId, anexoData) => {
     // 1. Obtenemos el solicitante_id a partir del usuario_id
     const [solicitanteRows] = await pool.query('SELECT solicitante_id FROM solicitantes WHERE usuario_id = ?', [usuarioId]);
@@ -29,14 +33,8 @@ exports.updateAnexo1 = async (usuarioId, anexoData) => {
         no_exterior: anexoData.numExterior ?? null,
         no_interior: anexoData.numInterior ?? null,
         numero_integrantes: anexoData.numIntegrantes ? parseInt(anexoData.numIntegrantes, 10) : null,
-        anexo1_completo: true,
-        // ==========================================================
-        // == INICIO DEL CAMBIO: AQUÍ ESTÁ LA LÍNEA QUE LO ARREGLA ==
-        // ==========================================================
+        anexo1_completo: true, // Marca como completo al guardar
         fecha_actualizacion: anexoData.fecha ? new Date(anexoData.fecha) : new Date()
-        // ==========================================================
-        // == FIN DEL CAMBIO
-        // ==========================================================
     };
 
     // 3. Ejecutamos la consulta UPDATE
@@ -44,15 +42,15 @@ exports.updateAnexo1 = async (usuarioId, anexoData) => {
     return result;
 };
 
+/**
+ * Obtiene los datos del perfil del solicitante, incluyendo los estados de completado de todos los anexos.
+ */
 exports.getProfileDataByUserId = async (userId) => {
+    // Seleccionamos TODAS las columnas, incluyendo los nuevos booleanos
     const [rows] = await pool.query(`
-        SELECT 
-            s.*, 
-            COUNT(i.id) AS numero_de_integrantes 
-        FROM solicitantes s
-        LEFT JOIN integrantes i ON s.solicitante_id = i.solicitante_id
+        SELECT
+            s.* FROM solicitantes s
         WHERE s.usuario_id = ?
-        GROUP BY s.solicitante_id
     `, [userId]);
 
     const perfil = rows[0];
@@ -61,27 +59,39 @@ exports.getProfileDataByUserId = async (userId) => {
         return null;
     }
 
-    // ===== INICIO DE CAMBIO: FORMATEAR FECHA PARA EL FRONTEND =====
-    // Esto asegura que la fecha se muestre correctamente en el input type="date"
+    // Formatear fecha para el input date
     if (perfil.fecha_actualizacion) {
         const fecha = new Date(perfil.fecha_actualizacion);
-        // Formato YYYY-MM-DD
         perfil.fecha_actualizacion_formateada = fecha.toISOString().split('T')[0];
     }
-    // ===== FIN DE CAMBIO =====
 
-    const anexo1RequiredFields = [
-        perfil.nombre,
-        perfil.rfc,
-        perfil.curp,
-        perfil.municipio,
-        perfil.calle,
-        perfil.entidad_federativa,
-        perfil.actividad
-    ];
-
-    const isAnexo1Complete = anexo1RequiredFields.every(field => field && String(field).trim() !== '');
-    perfil.anexo1_completo = isAnexo1Complete;
+    // Convertir valores numéricos (0/1) de la BD a booleanos (true/false) para JS
+    perfil.anexo1_completo = !!perfil.anexo1_completo;
+    perfil.anexo2_completo = !!perfil.anexo2_completo;
+    perfil.anexo3_completo = !!perfil.anexo3_completo;
+    perfil.anexo4_completo = !!perfil.anexo4_completo;
+    perfil.anexo5_completo = !!perfil.anexo5_completo;
 
     return perfil;
+};
+
+/**
+ * Actualiza el estado de completado de un anexo específico para un solicitante.
+ * @param {number} solicitanteId - El ID del solicitante.
+ * @param {string} anexoField - El nombre de la columna (ej. 'anexo2_completo').
+ * @param {boolean} status - El nuevo estado (normalmente true).
+ * @param {object} [connection] - Una conexión de pool opcional si se usa dentro de una transacción.
+ */
+exports.updateAnexoStatus = async (solicitanteId, anexoField, status, connection = pool) => {
+    // Validamos que el campo sea uno de los permitidos para evitar inyección SQL
+    const validFields = ['anexo1_completo', 'anexo2_completo', 'anexo3_completo', 'anexo4_completo', 'anexo5_completo'];
+    if (!validFields.includes(anexoField)) {
+        throw new Error(`Campo de estado de anexo inválido: ${anexoField}`);
+    }
+
+    const [result] = await connection.query(
+        `UPDATE solicitantes SET ${anexoField} = ? WHERE solicitante_id = ?`,
+        [status, solicitanteId]
+    );
+    return result;
 };

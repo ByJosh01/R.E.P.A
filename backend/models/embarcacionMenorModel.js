@@ -47,4 +47,16 @@ embarcacionMenorModel.deleteById = async (id) => {
     return result;
 };
 
+// ▼▼▼ NUEVA FUNCIÓN ▼▼▼
+/**
+ * Obtiene una embarcación específica por su ID.
+ * @param {number} id - El ID de la embarcación.
+ * @returns {object|null} La embarcación encontrada o null si no existe.
+ */
+embarcacionMenorModel.getById = async (id) => {
+    const [rows] = await pool.query('SELECT * FROM embarcaciones_menores WHERE id = ?', [id]);
+    return rows[0] || null; // Devuelve el primer resultado o null
+};
+// ▲▲▲ FIN NUEVA FUNCIÓN ▲▲▲
+
 module.exports = embarcacionMenorModel;

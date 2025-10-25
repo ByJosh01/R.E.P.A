@@ -76,54 +76,40 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('sidebar-user-name').textContent = currentUser.email || 'Cargando...';
     document.getElementById('user-email-summary').textContent = currentUser.email || 'Cargando...';
     document.getElementById('user-curp-summary').textContent = currentUser.curp || 'Cargando...';
-    
-    const cargarDatosDelPerfil = async () => {
-        try {
-            const response = await fetch('/api/perfil', {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-            if (!response.ok) throw new Error('No se pudieron cargar los datos del perfil.');
-            
-            const perfil = await response.json();
 
-            if (!perfil) {
-                console.log("Perfil no encontrado para el usuario.");
-                return;
-            }
-
-            const nombreCompleto = [perfil.nombre, perfil.apellido_paterno, perfil.apellido_materno].filter(Boolean).join(' ');
-            
-            document.getElementById('sidebar-user-name').textContent = perfil.correo_electronico || currentUser.email;
-            document.getElementById('user-email-summary').textContent = perfil.correo_electronico || currentUser.email;
-            document.getElementById('user-curp-summary').textContent = perfil.curp || currentUser.curp;
-            
-            document.getElementById('razon-social-summary').textContent = nombreCompleto || 'No registrado';
-            document.getElementById('municipio-summary').textContent = perfil.municipio || 'No registrado';
-            
-            actualizarEstadoAnexos(perfil);
-
-        } catch (error) {
-            alert(error.message);
-            console.error("Fallo al cargar perfil completo:", error);
-        }
-    };
-
+    // ▼▼▼ ESTA ES LA FUNCIÓN ACTUALIZADA ▼▼▼
     const actualizarEstadoAnexos = (perfil) => {
-        const anexo1Card = document.getElementById('anexo1-card');
-        const anexo2Card = document.getElementById('anexo2-card');
-        const anexo3Card = document.getElementById('anexo3-card');
-        const anexo4Card = document.getElementById('anexo4-card');
-        const anexo5Card = document.getElementById('anexo5-card');
+        // Selectores de los elementos HTML (las "tarjetas" y sus etiquetas de estado)
+        const anexoCards = {
+            anexo1: document.getElementById('anexo1-card'),
+            anexo2: document.getElementById('anexo2-card'),
+            anexo3: document.getElementById('anexo3-card'),
+            anexo4: document.getElementById('anexo4-card'),
+            anexo5: document.getElementById('anexo5-card'),
+        };
+        const anexoBadges = {
+            anexo1: anexoCards.anexo1?.querySelector('.status-badge'),
+            anexo2: anexoCards.anexo2?.querySelector('.status-badge'),
+            anexo3: anexoCards.anexo3?.querySelector('.status-badge'),
+            anexo4: anexoCards.anexo4?.querySelector('.status-badge'),
+            anexo5: anexoCards.anexo5?.querySelector('.status-badge'),
+        };
 
-        const anexo1Badge = anexo1Card.querySelector('.status-badge');
-        const anexo2Badge = anexo2Card.querySelector('.status-badge');
-        const anexo3Badge = anexo3Card.querySelector('.status-badge');
-        const anexo4Badge = anexo4Card.querySelector('.status-badge');
-        const anexo5Badge = anexo5Card.querySelector('.status-badge');
+        // Mapa que conecta la clave del perfil con su tarjeta y etiqueta HTML
+        const anexoMap = {
+            anexo1_completo: { card: anexoCards.anexo1, badge: anexoBadges.anexo1 },
+            anexo2_completo: { card: anexoCards.anexo2, badge: anexoBadges.anexo2 },
+            anexo3_completo: { card: anexoCards.anexo3, badge: anexoBadges.anexo3 },
+            anexo4_completo: { card: anexoCards.anexo4, badge: anexoBadges.anexo4 },
+            anexo5_completo: { card: anexoCards.anexo5, badge: anexoBadges.anexo5 },
+        };
 
+        // Función auxiliar para poner el estado correcto en una tarjeta
         const setStatus = (card, badge, text, statusClass, isEnabled) => {
+            if (!card || !badge) return; // Si el elemento no existe, no hacemos nada
+
             badge.textContent = text;
-            badge.className = 'status-badge'; 
+            badge.className = 'status-badge'; // Limpia clases anteriores
             if (statusClass) {
                 badge.classList.add(statusClass);
             }
@@ -135,33 +121,97 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
+        // ---- Lógica Principal de Actualización ----
+
+        const anexo1Completo = perfil.anexo1_completo === true;
+
+        // 1. Actualiza el Anexo 1
+        setStatus(
+            anexoMap.anexo1_completo.card,
+            anexoMap.anexo1_completo.badge,
+            anexo1Completo ? 'Completo' : 'Incompleto',
+            anexo1Completo ? 'status-complete' : 'status-incomplete',
+            true // Anexo 1 siempre está habilitado
+        );
+
+        // 2. Actualiza los Anexos 2 al 5
+        for (const key in anexoMap) {
+            // Saltamos el anexo 1 porque ya lo procesamos
+            if (key === 'anexo1_completo') continue;
+
+            const { card, badge } = anexoMap[key];
+            if (!card || !badge) continue; // Si la tarjeta no existe, la saltamos
+
+            const isAnexoCompleto = perfil[key] === true; // Verifica si ESTE anexo está completo
+
+            if (anexo1Completo) {
+                // Si Anexo 1 está completo, los demás pueden estar Completos o Disponibles
+                setStatus(
+                    card,
+                    badge,
+                    isAnexoCompleto ? 'Completo' : 'Disponible',
+                    isAnexoCompleto ? 'status-complete' : 'status-available',
+                    true // Habilitado
+                );
+            } else {
+                // Si Anexo 1 NO está completo, los demás están Bloqueados
+                setStatus(
+                    card,
+                    badge,
+                    'Bloqueado',
+                    '', // Sin clase de color específica para bloqueado
+                    false // Deshabilitado
+                );
+            }
+        }
+
+        // 3. Oculta Anexos según la actividad (tu lógica existente)
         const actividad = perfil.actividad;
-        
-        if (anexo3Card) anexo3Card.style.display = 'block';
-        if (anexo4Card) anexo4Card.style.display = 'block';
+        if (anexoCards.anexo3) anexoCards.anexo3.style.display = 'block';
+        if (anexoCards.anexo4) anexoCards.anexo4.style.display = 'block';
 
         if (actividad === 'pesca') {
-            if (anexo4Card) anexo4Card.style.display = 'none';
+            if (anexoCards.anexo4) anexoCards.anexo4.style.display = 'none';
         } else if (actividad === 'acuacultura') {
-            if (anexo3Card) anexo3Card.style.display = 'none';
-        }
-        
-        if (perfil.anexo1_completo) {
-            setStatus(anexo1Card, anexo1Badge, 'Completo', 'status-complete', true);
-            
-            setStatus(anexo2Card, anexo2Badge, 'Disponible', 'status-available', true);
-            setStatus(anexo3Card, anexo3Badge, 'Disponible', 'status-available', true);
-            setStatus(anexo4Card, anexo4Badge, 'Disponible', 'status-available', true);
-            setStatus(anexo5Card, anexo5Badge, 'Disponible', 'status-available', true);
-
-        } else {
-            setStatus(anexo1Card, anexo1Badge, 'Incompleto', 'status-incomplete', true);
-            setStatus(anexo2Card, anexo2Badge, 'Bloqueado', '', false);
-            setStatus(anexo3Card, anexo3Badge, 'Bloqueado', '', false);
-            setStatus(anexo4Card, anexo4Badge, 'Bloqueado', '', false);
-            setStatus(anexo5Card, anexo5Badge, 'Bloqueado', '', false);
+            if (anexoCards.anexo3) anexoCards.anexo3.style.display = 'none';
         }
     };
-    
+    // ▲▲▲ FIN DE LA FUNCIÓN ACTUALIZADA ▲▲▲
+
+
+    const cargarDatosDelPerfil = async () => {
+        try {
+            const response = await fetch('/api/perfil', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            if (!response.ok) throw new Error('No se pudieron cargar los datos del perfil.');
+
+            const perfil = await response.json();
+
+            if (!perfil) {
+                console.log("Perfil no encontrado para el usuario.");
+                return;
+            }
+
+            const nombreCompleto = [perfil.nombre, perfil.apellido_paterno, perfil.apellido_materno].filter(Boolean).join(' ');
+
+            document.getElementById('sidebar-user-name').textContent = perfil.correo_electronico || currentUser.email;
+            document.getElementById('user-email-summary').textContent = perfil.correo_electronico || currentUser.email;
+            document.getElementById('user-curp-summary').textContent = perfil.curp || currentUser.curp;
+
+            document.getElementById('razon-social-summary').textContent = nombreCompleto || 'No registrado';
+            document.getElementById('municipio-summary').textContent = perfil.municipio || 'No registrado';
+
+            // Llamamos a la función actualizada para poner los estados
+            actualizarEstadoAnexos(perfil);
+
+        } catch (error) {
+            alert(error.message);
+            console.error("Fallo al cargar perfil completo:", error);
+        }
+    };
+
+    // --- Ejecutar la carga inicial ---
     cargarDatosDelPerfil();
-});
+
+}); // Fin de DOMContentLoaded

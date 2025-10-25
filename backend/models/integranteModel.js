@@ -1,3 +1,4 @@
+// backend/models/integranteModel.js
 const pool = require('../db');
 
 const integranteModel = {};
@@ -18,7 +19,7 @@ integranteModel.add = async (data, solicitanteId) => {
         telefono: data.telefono,
         sexo: data.sexo,
         ultimo_grado_estudio: data.ultimo_grado_estudio,
-        actividad_desempeña: data.actividad_desempena, // <-- CORREGIDO CON 'ñ'
+        actividad_desempeña: data.actividad_desempena, // Corregido 'desempeña'
         localidad: data.localidad,
         municipio: data.municipio
     };
@@ -35,7 +36,7 @@ integranteModel.updateById = async (id, data) => {
         telefono: data.telefono,
         sexo: data.sexo,
         ultimo_grado_estudio: data.ultimo_grado_estudio,
-        actividad_desempeña: data.actividad_desempena, // <-- CORREGIDO CON 'ñ'
+        actividad_desempeña: data.actividad_desempena, // Corregido 'desempeña'
         localidad: data.localidad,
         municipio: data.municipio
     };
@@ -48,5 +49,17 @@ integranteModel.deleteById = async (id) => {
     const [result] = await pool.query('DELETE FROM integrantes WHERE id = ?', [id]);
     return result;
 };
+
+// ▼▼▼ NUEVA FUNCIÓN ▼▼▼
+/**
+ * Obtiene un integrante específico por su ID.
+ * @param {number} id - El ID del integrante.
+ * @returns {object|null} El integrante encontrado o null si no existe.
+ */
+integranteModel.getById = async (id) => {
+    const [rows] = await pool.query('SELECT * FROM integrantes WHERE id = ?', [id]);
+    return rows[0] || null; // Devuelve el primer resultado o null
+};
+// ▲▲▲ FIN NUEVA FUNCIÓN ▲▲▲
 
 module.exports = integranteModel;
