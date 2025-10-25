@@ -2,26 +2,24 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const { protect, isSuperAdmin } = require('../middleware/authMiddleware');
+// MODIFICADO: Importamos ambos middlewares
+const { protect, isAdminOrSuperAdmin, isSuperAdmin } = require('../middleware/authMiddleware');
 
-// Esta ruta usa ambos middlewares para máxima seguridad
-router.get('/solicitantes', protect, isSuperAdmin, adminController.getAllSolicitantes);
+// --- Rutas compartidas (Admin y Superadmin) ---
+router.get('/solicitantes', protect, isAdminOrSuperAdmin, adminController.getAllSolicitantes);
+router.delete('/solicitantes/:id', protect, isAdminOrSuperAdmin, adminController.deleteSolicitante);
+router.get('/solicitantes/:id', protect, isAdminOrSuperAdmin, adminController.getSolicitanteById);
+router.put('/solicitantes/:id', protect, isAdminOrSuperAdmin, adminController.updateSolicitante);
+router.get('/integrantes', protect, isAdminOrSuperAdmin, adminController.getAllIntegrantes);
+router.get('/embarcaciones', protect, isAdminOrSuperAdmin, adminController.getAllEmbarcaciones);
+router.get('/solicitante-detalles/:id', protect, isAdminOrSuperAdmin, adminController.getSolicitanteDetails);
 
-module.exports = router;
 
-// Ruta para resetear la base de datos (acción destructiva, usamos POST)
-router.post('/reset-database', protect, isSuperAdmin, adminController.resetDatabase);
-// NUEVA RUTA para eliminar un solicitante por su ID
-router.delete('/solicitantes/:id', protect, isSuperAdmin, adminController.deleteSolicitante);
-router.get('/solicitantes/:id', protect, isSuperAdmin, adminController.getSolicitanteById);
-router.put('/solicitantes/:id', protect, isSuperAdmin, adminController.updateSolicitante);
+// --- Rutas Exclusivas de SUPERADMIN ---
+// (Gestionar cuentas de usuario y acciones peligrosas)
 router.get('/usuarios', protect, isSuperAdmin, adminController.getAllUsuarios);
-router.get('/integrantes', protect, isSuperAdmin, adminController.getAllIntegrantes);
-router.get('/embarcaciones', protect, isSuperAdmin, adminController.getAllEmbarcaciones);
-// --- NUEVA RUTA PARA OBTENER LOS DETALLES COMPLETOS DE UN SOLICITANTE ---
-router.get('/solicitante-detalles/:id', protect, isSuperAdmin, adminController.getSolicitanteDetails);
-// Usamos GET porque estamos "obteniendo" un archivo, no cambiando datos.
+router.post('/reset-database', protect, isSuperAdmin, adminController.resetDatabase);
 router.get('/backup-database', protect, isSuperAdmin, adminController.backupDatabase);
 
-module.exports = router;
 
+module.exports = router;

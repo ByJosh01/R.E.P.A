@@ -13,15 +13,25 @@
     <main class="app-content">
         <header class="content-header">
             <div>
-                <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
+                 <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
+            </div>
+             <div class="user-menu">
+                <div class="user-menu-trigger" id="user-menu-trigger">
+                    <span id="admin-email-placeholder">Cargando...</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="dropdown-menu" id="user-dropdown">
+                    <a href="#" id="view-admin-info">Ver Información</a>
+                    <a href="#" id="admin-logout-btn">Cerrar Sesión</a>
+                </div>
             </div>
         </header>
 
         <nav class="tabs-nav" style="margin-top: -30px; margin-bottom: 30px; background-color: white;">
-            <a href="admin.html" class="tab-link">Solicitantes</a>
-            <a href="admin-usuarios.html" class="tab-link">Cuentas (Usuarios)</a>
-            <a href="admin-integrantes.html" class="tab-link active">Integrantes</a>
-            <a href="admin-embarcaciones.html" class="tab-link">Embarcaciones</a>
+            <a href="admin.html" class="tab-link" id="nav-solicitantes">Solicitantes</a>
+            <a href="admin-usuarios.html" class="tab-link" id="nav-cuentas" style="display: none;">Cuentas (Usuarios)</a>
+            <a href="admin-integrantes.html" class="tab-link active" id="nav-integrantes">Integrantes</a>
+            <a href="admin-embarcaciones.html" class="tab-link" id="nav-embarcaciones">Embarcaciones</a>
         </nav>
 
         <div class="content-body">
@@ -48,6 +58,18 @@
             </div>
         </div>
     </main>
+
+    <div id="admin-info-modal" class="modal-overlay">
+        <div class="modal-content">
+            <i class="modal-icon fas fa-user-circle success"></i>
+            <h2 id="admin-info-modal-title">Información</h2>
+            <div id="admin-info-content" class="admin-info-modal-content">
+                </div>
+            <div class="modal-buttons">
+                <button id="close-admin-modal-btn" class="btn btn-primary">Cerrar</button>
+            </div>
+        </div>
+    </div>
     <script type="module" src="js/admin-integrantes.js"></script>
 </body>
 </html>

@@ -5,9 +5,15 @@ const path = require('path');
 
 exports.getAllSolicitantes = async (req, res) => {
     try {
+        // --- INICIO DE LA CORRECCIÓN ---
+        // Ahora hacemos JOIN con usuarios para obtener el ROL
         const [solicitantes] = await pool.query(
-            'SELECT solicitante_id, nombre, rfc, curp, actividad FROM solicitantes'
+            `SELECT s.solicitante_id, s.nombre, s.rfc, s.curp, s.actividad, u.rol 
+             FROM solicitantes s
+             LEFT JOIN usuarios u ON s.usuario_id = u.id` // Unimos las tablas por el ID de usuario
         );
+        // --- FIN DE LA CORRECCIÓN ---
+
         res.status(200).json(solicitantes);
     } catch (error) {
         console.error("Error en getAllSolicitantes:", error);
