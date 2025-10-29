@@ -66,11 +66,11 @@ body.dark-mode .admin-table tbody td {
 }
 
 body.dark-mode .admin-table .btn-icon {
-    color: #ff6b6b;
+    color: #4b0000;
 }
 
 body.dark-mode .admin-table .btn-icon:hover {
-    color: #ff5252;
+    color: #3f0000;
     background-color: rgba(255, 107, 107, 0.1);
 }
 
@@ -196,11 +196,11 @@ body.dark-mode .admin-info-modal-content .info-row span {
 
 /* public/css/admin.css (Añadir al final) */
 .btn-danger {
-    background-color: #e74c3c;
+    background-color: #660b01;
     color: white;
 }
 .btn-danger:hover {
-    background-color: #c0392b;
+    background-color: #ff0000;
 }
 
 /* public/css/admin.css (Añadir al final) */

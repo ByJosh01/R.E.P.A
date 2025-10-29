@@ -46,6 +46,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const editSolicitanteId = document.getElementById('edit-solicitante-id');
 
     const backupDbBtn = document.getElementById('backup-db-btn');
+    
+    // ▼▼▼ NUEVO SELECTOR ▼▼▼
+    const btnDownloadGeneralReport = document.getElementById('btn-download-general-report');
+    // ▲▲▲ FIN NUEVO SELECTOR ▲▲▲
 
     // =======================================================
     // === FUNCIÓN REUTILIZABLE PARA MODALES DE INFO/ERROR ===
@@ -169,7 +173,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </td>
-                <td> <button class="btn-icon btn-download-pdf" data-id="${sol.solicitante_id}" title="Descargar PDF">
+                <td>
+                    <button class="btn-icon btn-download-pdf" data-id="${sol.solicitante_id}" title="Descargar PDF">
                         <i class="fas fa-file-pdf"></i>
                     </button>
                 </td>
@@ -491,6 +496,51 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // ▼▼▼ NUEVO LISTENER PARA REPORTE GENERAL ▼▼▼
+    if (btnDownloadGeneralReport) {
+        btnDownloadGeneralReport.addEventListener('click', async () => {
+            console.log('Descargando reporte general...');
+            btnDownloadGeneralReport.disabled = true;
+            btnDownloadGeneralReport.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+            try {
+                const response = await fetch(`/api/admin/download-reporte-general`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `Error ${response.status}: ${response.statusText}`;
+                    try { const errorData = await response.json(); errorMsg = errorData.message || errorMsg; } catch (e) {}
+                    throw new Error(errorMsg);
+                }
+
+                // Lógica para descargar el blob
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'Reporte_General_Solicitantes.pdf'; // Nombre por defecto
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+                    if (filenameMatch && filenameMatch.length > 1) filename = filenameMatch[1];
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none'; a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click();
+                window.URL.revokeObjectURL(url); a.remove();
+
+            } catch (error) {
+                console.error("Error al descargar reporte general:", error);
+                showInfoModal('Error de Descarga', `No se pudo descargar el reporte: ${error.message}`, false);
+            } finally {
+                btnDownloadGeneralReport.disabled = false;
+                btnDownloadGeneralReport.innerHTML = '<i class="fas fa-file-pdf"></i> Descargar Reporte General';
+            }
+        });
+    }
+    // ▲▲▲ FIN NUEVO LISTENER ▲▲▲
 
     // --- CARGA INICIAL DE LA TABLA ---
     cargarSolicitantes();

@@ -45,6 +45,11 @@
                     <input type="text" id="search-input" class="modal-input" placeholder="Escriba un nombre, RFC o CURP para filtrar...">
                 </div>
 
+                <div class="form-actions" style="margin-bottom: 20px; text-align: left; padding: 0;">
+                    <button class="btn btn-primary" id="btn-download-general-report" style="width: auto; font-size: 0.9em; padding: 10px 15px;">
+                        <i class="fas fa-file-pdf"></i> Descargar Reporte General
+                    </button>
+                </div>
                 <div class="table-container">
                     <table class="admin-table">
                         <thead>
@@ -64,11 +69,11 @@
                 <div style="border-top: 2px solid red; margin-top: 40px; padding-top: 20px; text-align: center;">
                     <h2 style="color: red;">Zona de Peligro</h2>
                     <p style="margin-bottom: 20px;">Acciones importantes que afectan a toda la base de datos.</p>
-
+                    
                     <button class="btn btn-secondary" id="backup-db-btn" style="margin-right: 15px;">
                         <i class="fas fa-download"></i> Crear Respaldo (.sql)
                     </button>
-
+                    
                     <button class="btn btn-danger" id="reset-db-btn">
                         <i class="fas fa-exclamation-triangle"></i> Resetear Base de Datos
                     </button>
@@ -116,7 +121,7 @@
             </div>
         </div>
     </div>
-
+    
     <div id="edit-solicitante-modal" class="modal-overlay">
         <div class="modal-content large">
             <h2>Editar Datos del Solicitante</h2>
@@ -144,13 +149,12 @@
                         </select>
                     </div>
                     <div class="anexo-field span-6">
-                        <label for="edit-rol">Rol de Usuario:</label>
+                    <label for="edit-rol">Rol de Usuario:</label>
                         <select id="edit-rol" name="rol" class="anexo-select">
-                            <option value="solicitante">Solicitante</option>
-                            <option value="admin">Admin</option>
-                            <option value="superadmin">Superadmin</option>
-                        </select>
-                    </div>
+                        <option value="solicitante">Solicitante</option>
+                        <option value="admin">Admin</option> <option value="superadmin">Superadmin</option>
+                    </select>
+                </div>
                 </div>
             </form>
             <div class="modal-buttons" style="margin-top: 20px;">

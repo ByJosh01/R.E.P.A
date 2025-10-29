@@ -2,10 +2,12 @@
 const pool = require('../db');
 const { exec } = require('child_process');
 const path = require('path');
-// Mantenemos solo los modelos que usa ESTE controlador directamente
-const solicitanteModel = require('../models/solicitanteModel');
-// Importar la función del nuevo servicio
-const { generateRegistroPdf } = require('../services/pdfGenerator');
+const solicitanteModel = require('../models/solicitanteModel'); // Modelo principal
+
+// ▼▼▼ IMPORTACIÓN ACTUALIZADA ▼▼▼
+// Importar AMBAS funciones del servicio de PDF
+const { generateRegistroPdf, generateGeneralReportPdf } = require('../services/pdfGenerator');
+// ▲▲▲ FIN IMPORTACIÓN ▲▲▲
 
 exports.getAllSolicitantes = async (req, res) => {
     try {
@@ -22,8 +24,9 @@ exports.getAllSolicitantes = async (req, res) => {
 };
 
 exports.resetDatabase = async (req, res) => {
+    // ... (Tu código de resetDatabase se queda igual) ...
     const { masterPassword } = req.body;
-    const superAdminUserId = req.user.id;
+    const superAdminUserId = req.user.id; 
 
     if (masterPassword !== process.env.MASTER_RESET_PASSWORD) {
         return res.status(403).json({ message: 'Contraseña maestra incorrecta. Acceso denegado.' });
@@ -57,6 +60,7 @@ exports.resetDatabase = async (req, res) => {
 };
 
 exports.deleteSolicitante = async (req, res) => {
+    // ... (Tu código de deleteSolicitante se queda igual) ...
     const { id } = req.params;
     const connection = await pool.getConnection();
     try {
@@ -81,7 +85,8 @@ exports.deleteSolicitante = async (req, res) => {
 };
 
 exports.getSolicitanteById = async (req, res) => {
-    try {
+    // ... (Tu código de getSolicitanteById se queda igual) ...
+     try {
         const { id } = req.params;
         const [rows] = await pool.query(
             `SELECT s.solicitante_id, s.nombre, s.apellido_paterno, s.apellido_materno, s.rfc, s.curp, s.actividad, u.rol
@@ -101,6 +106,7 @@ exports.getSolicitanteById = async (req, res) => {
 };
 
 exports.updateSolicitante = async (req, res) => {
+    // ... (Tu código de updateSolicitante se queda igual) ...
     try {
         const { id } = req.params;
         const { nombre, rfc, curp, actividad, rol } = req.body;
@@ -161,8 +167,8 @@ exports.getAllEmbarcaciones = async (req, res) => {
     }
 };
 
-
 exports.getSolicitanteDetails = async (req, res) => {
+    // ... (Tu código de getSolicitanteDetails se queda igual) ...
     try {
         const { id } = req.params;
         const [perfilRows] = await pool.query('SELECT * FROM solicitantes WHERE solicitante_id = ?', [id]);
@@ -196,6 +202,7 @@ exports.getSolicitanteDetails = async (req, res) => {
 };
 
 exports.backupDatabase = async (req, res) => {
+    // ... (Tu código de backupDatabase se queda igual) ...
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
     const fileName = `repa_backup_${timestamp}.sql`;
     const { MYSQL_DATABASE } = process.env;
@@ -217,12 +224,14 @@ exports.backupDatabase = async (req, res) => {
     }
 };
 
-// --- FUNCIÓN PDF (AHORA LLAMA AL SERVICIO) ---
-/**
- * Controlador que maneja la solicitud de descarga del PDF.
- * Delega la generación del PDF al servicio pdfGenerator.
- */
+// --- FUNCIÓN PDF INDIVIDUAL ---
 exports.downloadRegistroPdf = async (req, res) => {
-    // Simplemente llamamos a la función importada, pasándole req y res
     await generateRegistroPdf(req, res);
 };
+
+// ▼▼▼ NUEVA FUNCIÓN AÑADIDA ▼▼▼
+exports.downloadGeneralReportPdf = async (req, res) => {
+    // Delega la nueva lógica al servicio
+    await generateGeneralReportPdf(req, res); 
+};
+// ▲▲▲ FIN NUEVA FUNCIÓN ▲▲▲

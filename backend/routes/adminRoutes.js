@@ -6,17 +6,19 @@ const { protect, isAdminOrSuperAdmin, isSuperAdmin } = require('../middleware/au
 
 // --- Rutas compartidas (Admin y Superadmin) ---
 router.get('/solicitantes', protect, isAdminOrSuperAdmin, adminController.getAllSolicitantes);
-router.delete('/solicitantes/:id', protect, isAdminOrSuperAdmin, adminController.deleteSolicitante); // Usa solicitante_id
-router.get('/solicitantes/:id', protect, isAdminOrSuperAdmin, adminController.getSolicitanteById); // Usa solicitante_id
-router.put('/solicitantes/:id', protect, isAdminOrSuperAdmin, adminController.updateSolicitante); // Usa solicitante_id
+router.delete('/solicitantes/:id', protect, isAdminOrSuperAdmin, adminController.deleteSolicitante);
+router.get('/solicitantes/:id', protect, isAdminOrSuperAdmin, adminController.getSolicitanteById);
+router.put('/solicitantes/:id', protect, isAdminOrSuperAdmin, adminController.updateSolicitante);
 router.get('/integrantes', protect, isAdminOrSuperAdmin, adminController.getAllIntegrantes);
 router.get('/embarcaciones', protect, isAdminOrSuperAdmin, adminController.getAllEmbarcaciones);
-router.get('/solicitante-detalles/:id', protect, isAdminOrSuperAdmin, adminController.getSolicitanteDetails); // Usa solicitante_id
+router.get('/solicitante-detalles/:id', protect, isAdminOrSuperAdmin, adminController.getSolicitanteDetails);
 
-// ▼▼▼ NUEVA RUTA PARA PDF ▼▼▼
-// Usaremos solicitante_id directamente desde la URL
+// Ruta para PDF individual (esta ya la tenías)
 router.get('/download-pdf/:solicitanteId', protect, isAdminOrSuperAdmin, adminController.downloadRegistroPdf);
-// ▲▲▲ FIN NUEVA RUTA ▲▲▲
+
+// ▼▼▼ RUTA NUEVA QUE FALTA ▼▼▼
+router.get('/download-reporte-general', protect, isAdminOrSuperAdmin, adminController.downloadGeneralReportPdf);
+// ▲▲▲ FIN RUTA NUEVA ▲▲▲
 
 
 // --- Rutas Exclusivas de SUPERADMIN ---
