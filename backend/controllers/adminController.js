@@ -192,10 +192,25 @@ exports.downloadRegistroPdf = async (req, res) => {
         }
 
         const doc = new PDFDocument({ margin: 50, size: 'LETTER' });
-        const filename = `Registro_REPA_${perfil.curp || solicitanteId}.pdf`;
+
+        // --- CORRECCIÓN PARA EL NOMBRE DEL ARCHIVO ---
+        // 1. Obtén y limpia espacios iniciales/finales
+        let dynamicPart = (perfil.curp || solicitanteId).toString().trim();
+        // 2. Reemplaza caracteres no seguros (distintos a letras, números, guion o guion bajo) con _
+        dynamicPart = dynamicPart.replace(/[^a-zA-Z0-9_-]/g, '_');
+        // 3. Elimina cualquier guion bajo que haya quedado AL FINAL
+        dynamicPart = dynamicPart.replace(/_+$/, ''); 
+        // 4. Construye el nombre final
+        const filename = `Registro_REPA_${dynamicPart}.pdf`;
+        console.log('Nombre de archivo generado:', filename);
+        // --- FIN CORRECCIÓN ---
+
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        // Usamos el nombre limpio y corregido
+        res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
         doc.pipe(res);
+
+      
 
         const addField = (label, value) => {
             doc.text(`${label}: `, { continued: true, underline: false }).font('Helvetica').text(value ? String(value).trim() : 'No registrado');
