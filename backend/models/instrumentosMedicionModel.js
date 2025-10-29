@@ -2,6 +2,23 @@
 const pool = require('../db');
 const Instrumentos = {};
 
+/**
+ * Busca los datos de instrumentos de medición para un solicitante específico.
+ * @param {number} solicitanteId - El ID del solicitante.
+ * @returns {object|null} Los datos encontrados o null si no existen.
+ */
+Instrumentos.getBySolicitanteId = async (solicitanteId) => {
+    const query = 'SELECT * FROM instrumentos_medicion WHERE solicitante_id = ?';
+    const [rows] = await pool.execute(query, [solicitanteId]);
+    return rows.length > 0 ? rows[0] : null;
+};
+
+/**
+ * Crea o actualiza los datos de instrumentos de medición.
+ * @param {number} solicitanteId - El ID del solicitante.
+ * @param {object} datos - Los datos del formulario.
+ * @param {object} [connection] - Conexión opcional para transacciones.
+ */
 Instrumentos.upsert = async (solicitanteId, datos, connection) => {
     const db = connection || pool;
     const query = `
@@ -28,8 +45,9 @@ Instrumentos.upsert = async (solicitanteId, datos, connection) => {
         datos.instrumento_oxigeno_cantidad || null,
         datos.instrumento_ph_opcion === 'si' ? 1 : 0,
         datos.instrumento_ph_cantidad || null,
-        datos.instrumento_otros || null
+        datos.instrumento_otros || null // Asumiendo que hay un campo 'instrumento_otros' en el form
     ];
     await db.execute(query, values);
 };
+
 module.exports = Instrumentos;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Gestión</title> 
+    <title>Panel de Gestión</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/app-layout.css">
     <link rel="stylesheet" href="css/admin.css">
@@ -13,7 +13,7 @@
     <main class="app-content">
         <header class="content-header">
             <div>
-                <i class="fas fa-user-cog" style="margin-right: 10px;"></i> Panel de Gestión 
+                <i class="fas fa-user-cog" style="margin-right: 10px;"></i> Panel de Gestión
             </div>
             <div class="user-menu">
                 <div class="user-menu-trigger" id="user-menu-trigger">
@@ -28,7 +28,7 @@
         </header>
 
         <nav class="tabs-nav" style="margin-top: -30px; margin-bottom: 30px; background-color: white;">
-            <a href="panel-admin.html" class="tab-link active">Solicitantes</a> 
+            <a href="panel-admin.html" class="tab-link active">Solicitantes</a>
             <a href="admin-integrantes.html" class="tab-link">Integrantes</a>
             <a href="admin-embarcaciones.html" class="tab-link">Embarcaciones</a>
         </nav>
@@ -52,15 +52,16 @@
                                 <th>CURP</th>
                                 <th>Actividad</th>
                                 <th>Acciones</th>
-                            </tr>
+                                <th>Descargar</th>
+                                </tr>
                         </thead>
                         <tbody id="solicitantes-table-body">
-                            <tr><td colspan="5" style="text-align: center;">Cargando datos...</td></tr>
-                        </tbody>
+                            <tr><td colspan="6" style="text-align: center;">Cargando datos...</td></tr>
+                             </tbody>
                     </table>
                 </div>
-                
-                </div>
+
+            </div>
         </div>
     </main>
 
@@ -86,19 +87,19 @@
             </div>
         </div>
     </div>
-    
+
     <div id="edit-solicitante-modal" class="modal-overlay">
         <div class="modal-content large">
             <h2>Editar Datos del Solicitante</h2>
             <form id="edit-solicitante-form" class="anexo-form" novalidate>
                 <div class="anexo-grid">
                     <input type="hidden" id="edit-solicitante-id">
-                    
+
                     <div class="anexo-field span-12">
                         <label for="edit-nombre">Nombre:</label>
                         <input type="text" id="edit-nombre" name="nombre">
                     </div>
-                    
+
                     <div class="anexo-field span-6">
                         <label for="edit-rfc">RFC:</label>
                         <input type="text" id="edit-rfc" name="rfc" maxlength="13">
@@ -107,8 +108,8 @@
                         <label for="edit-curp">CURP:</label>
                         <input type="text" id="edit-curp" name="curp" maxlength="18">
                     </div>
-                    
-                    <div class="anexo-field span-12"> 
+
+                    <div class="anexo-field span-12">
                         <label for="edit-actividad">Actividad:</label>
                         <select id="edit-actividad" name="actividad" class="anexo-select">
                             <option value="pesca">Pesca</option>
@@ -116,8 +117,8 @@
                             <option value="ambas">Ambas</option>
                         </select>
                     </div>
-                    
-                    </div>
+
+                </div>
             </form>
             <div class="modal-buttons" style="margin-top: 20px;">
                 <button type="button" id="cancel-edit-btn" class="btn btn-secondary">Cancelar</button>
@@ -125,7 +126,7 @@
             </div>
         </div>
     </div>
-    
-    <script type="module" src="js/panel-admin.js"></script> 
+
+    <script type="module" src="js/panel-admin.js"></script>
 </body>
 </html>

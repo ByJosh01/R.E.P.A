@@ -1,14 +1,32 @@
-// Pega este nuevo código en backend/models/tipoEstanquesModel.js
-
+// backend/models/tipoEstanquesModel.js
 const pool = require('../db');
 const TipoEstanques = {};
 
+// ▼▼▼ FUNCIÓN AÑADIDA ▼▼▼
+/**
+ * Busca los datos de tipo de estanques para un solicitante específico.
+ * @param {number} solicitanteId - El ID del solicitante.
+ * @returns {object|null} Los datos encontrados o null si no existen.
+ */
+TipoEstanques.getBySolicitanteId = async (solicitanteId) => {
+    const query = 'SELECT * FROM tipo_estanques WHERE solicitante_id = ?';
+    const [rows] = await pool.execute(query, [solicitanteId]);
+    return rows.length > 0 ? rows[0] : null;
+};
+// ▲▲▲ FIN FUNCIÓN AÑADIDA ▲▲▲
+
+/**
+ * Crea o actualiza los datos de tipo de estanques.
+ * @param {number} solicitanteId - El ID del solicitante.
+ * @param {object} datos - Los datos del formulario.
+ * @param {object} [connection] - Conexión opcional para transacciones.
+ */
 TipoEstanques.upsert = async (solicitanteId, datos, connection) => {
     const db = connection || pool;
-    
+
     const query = `
         INSERT INTO tipo_estanques (
-            solicitante_id, 
+            solicitante_id,
             rustico, rustico_cantidad, rustico_dimensiones,
             geomembrana, geomembrana_cantidad, geomembrana_dimensiones,
             concreto, concreto_cantidad, concreto_dimensiones
@@ -25,7 +43,7 @@ TipoEstanques.upsert = async (solicitanteId, datos, connection) => {
             concreto_dimensiones = VALUES(concreto_dimensiones);
     `;
 
-    // Valores extraídos del formulario (ahora sí coinciden con el HTML)
+    // Valores extraídos del formulario
     const values = [
         solicitanteId,
         datos.estanque_rustico_opcion === 'si' ? 1 : 0,

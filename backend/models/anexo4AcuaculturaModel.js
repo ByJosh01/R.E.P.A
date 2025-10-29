@@ -1,26 +1,34 @@
-const pool = require('../db'); 
+// backend/models/anexo4AcuaculturaModel.js
+const pool = require('../db');
 
 const Anexo4 = {};
 
-// Busca los datos del Anexo 4 para un solicitante específico.
+/**
+ * Busca los datos generales del Anexo 4 para un solicitante específico.
+ * @param {number} solicitanteId - El ID del solicitante.
+ * @returns {object|null} Los datos encontrados o null si no existen.
+ */
 Anexo4.getBySolicitanteId = async (solicitanteId) => {
     const query = 'SELECT * FROM datos_tecnicos_acuacultura WHERE solicitante_id = ?';
     const [rows] = await pool.execute(query, [solicitanteId]);
-    return rows[0]; // Devuelve el primer resultado o undefined si no hay nada
+    // Devolver null explícitamente si no hay filas
+    return rows.length > 0 ? rows[0] : null;
 };
 
-// --- CAMBIO AQUÍ: Se añade "connection" como parámetro ---
-// Esto permite que la función se use dentro de una transacción desde el controlador.
+/**
+ * Crea o actualiza los datos generales del Anexo 4.
+ * @param {object} datosAnexo - Los datos del formulario.
+ * @param {number} solicitanteId - El ID del solicitante.
+ * @param {object} [connection] - Conexión opcional para transacciones.
+ */
 Anexo4.create = async (datosAnexo, solicitanteId, connection) => {
-    // Si no se pasa una conexión, se usa el pool principal.
     const db = connection || pool;
-    
-    // Preparamos los objetos para convertirlos a formato JSON
+
+    // Convertir arrays y valores específicos a JSON o formato adecuado
     const especiesData = {
         seleccionadas: datosAnexo.especies || [],
         otras: datosAnexo.especiesOtras || ''
     };
-
     const certificadosData = {
         sanidad: datosAnexo.certificadoSanidadCual || '',
         inocuidad: datosAnexo.certificadoInocuidadCual || '',
@@ -50,19 +58,18 @@ Anexo4.create = async (datosAnexo, solicitanteId, connection) => {
 
     const values = [
         solicitanteId,
-        datosAnexo.instalacionPropia || null,
+        datosAnexo.instalacionPropia === 'si' ? 1 : 0, // Convertir 'si'/'no' a booleano/número
         datosAnexo.contratoArrendamientoAnos || null,
-        datosAnexo.dimensionesUnidad || null,
+        datosAnexo.dimensionesUnidad || null, // Asumiendo que viene como 'dimensionesUnidad' del form
         datosAnexo.tipo || null,
-        JSON.stringify(especiesData),
+        JSON.stringify(especiesData), // Guardar como JSON
         datosAnexo.tipoInstalacion || null,
         datosAnexo.sistemaProduccion || null,
         datosAnexo.produccionAnualValor || null,
         datosAnexo.produccionAnualUnidad || null,
-        JSON.stringify(certificadosData)
+        JSON.stringify(certificadosData) // Guardar como JSON
     ];
 
-    // Se usa 'db' que puede ser la conexión de la transacción o el pool general
     const [result] = await db.execute(query, values);
     return { affectedRows: result.affectedRows };
 };

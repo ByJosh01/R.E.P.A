@@ -1,11 +1,13 @@
 // backend/models/solicitanteModel.js
 const pool = require('../db');
 
+const solicitanteModel = {};
+
 /**
  * Actualiza los datos del Anexo 1 para un usuario específico.
  * Marca anexo1_completo como true.
  */
-exports.updateAnexo1 = async (usuarioId, anexoData) => {
+solicitanteModel.updateAnexo1 = async (usuarioId, anexoData) => {
     // 1. Obtenemos el solicitante_id a partir del usuario_id
     const [solicitanteRows] = await pool.query('SELECT solicitante_id FROM solicitantes WHERE usuario_id = ?', [usuarioId]);
     if (solicitanteRows.length === 0) {
@@ -43,10 +45,9 @@ exports.updateAnexo1 = async (usuarioId, anexoData) => {
 };
 
 /**
- * Obtiene los datos del perfil del solicitante, incluyendo los estados de completado de todos los anexos.
+ * Obtiene los datos del perfil del solicitante por su usuario_id, incluyendo los estados de completado de todos los anexos.
  */
-exports.getProfileDataByUserId = async (userId) => {
-    // Seleccionamos TODAS las columnas, incluyendo los nuevos booleanos
+solicitanteModel.getProfileDataByUserId = async (userId) => {
     const [rows] = await pool.query(`
         SELECT
             s.* FROM solicitantes s
@@ -59,13 +60,11 @@ exports.getProfileDataByUserId = async (userId) => {
         return null;
     }
 
-    // Formatear fecha para el input date
     if (perfil.fecha_actualizacion) {
         const fecha = new Date(perfil.fecha_actualizacion);
         perfil.fecha_actualizacion_formateada = fecha.toISOString().split('T')[0];
     }
 
-    // Convertir valores numéricos (0/1) de la BD a booleanos (true/false) para JS
     perfil.anexo1_completo = !!perfil.anexo1_completo;
     perfil.anexo2_completo = !!perfil.anexo2_completo;
     perfil.anexo3_completo = !!perfil.anexo3_completo;
@@ -76,14 +75,41 @@ exports.getProfileDataByUserId = async (userId) => {
 };
 
 /**
- * Actualiza el estado de completado de un anexo específico para un solicitante.
- * @param {number} solicitanteId - El ID del solicitante.
- * @param {string} anexoField - El nombre de la columna (ej. 'anexo2_completo').
- * @param {boolean} status - El nuevo estado (normalmente true).
- * @param {object} [connection] - Una conexión de pool opcional si se usa dentro de una transacción.
+ * Obtiene los datos del perfil del solicitante por su solicitante_id.
+ * Incluye los estados de completado de todos los anexos.
  */
-exports.updateAnexoStatus = async (solicitanteId, anexoField, status, connection = pool) => {
-    // Validamos que el campo sea uno de los permitidos para evitar inyección SQL
+solicitanteModel.getProfileDataBySolicitanteId = async (solicitanteId) => {
+    const [rows] = await pool.query(`
+        SELECT
+            s.* FROM solicitantes s
+        WHERE s.solicitante_id = ?
+    `, [solicitanteId]);
+
+    const perfil = rows[0];
+
+    if (!perfil) {
+        return null;
+    }
+
+    if (perfil.fecha_actualizacion) {
+        const fecha = new Date(perfil.fecha_actualizacion);
+        perfil.fecha_actualizacion_formateada = fecha.toISOString().split('T')[0];
+    }
+
+    perfil.anexo1_completo = !!perfil.anexo1_completo;
+    perfil.anexo2_completo = !!perfil.anexo2_completo;
+    perfil.anexo3_completo = !!perfil.anexo3_completo;
+    perfil.anexo4_completo = !!perfil.anexo4_completo;
+    perfil.anexo5_completo = !!perfil.anexo5_completo;
+
+    return perfil;
+};
+
+
+/**
+ * Actualiza el estado de completado de un anexo específico para un solicitante.
+ */
+solicitanteModel.updateAnexoStatus = async (solicitanteId, anexoField, status, connection = pool) => {
     const validFields = ['anexo1_completo', 'anexo2_completo', 'anexo3_completo', 'anexo4_completo', 'anexo5_completo'];
     if (!validFields.includes(anexoField)) {
         throw new Error(`Campo de estado de anexo inválido: ${anexoField}`);
@@ -95,3 +121,6 @@ exports.updateAnexoStatus = async (solicitanteId, anexoField, status, connection
     );
     return result;
 };
+
+
+module.exports = solicitanteModel;
