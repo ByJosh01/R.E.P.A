@@ -1769,3 +1769,34 @@ body.dark-mode .btn-help-icon:hover {
     color: var(--white-color);
     border-color: #00aaff;
 }
+
+/* Estilo para el botón de descarga PDF en la tabla de admin */
+.admin-table .btn-download-pdf {
+    color: #dc3545; /* Rojo */
+}
+
+.admin-table .btn-download-pdf:hover {
+    color: #fff;
+    background-color: #c82333; /* Rojo más oscuro */
+    border-color: #bd2130;
+}
+
+/* Estilo cuando está deshabilitado (cargando) */
+.admin-table .btn-download-pdf:disabled {
+    color: #6c757d; /* Gris */
+    background-color: transparent;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+body.dark-mode .admin-table .btn-download-pdf {
+    color: #ff6b6b; /* Rojo claro para dark mode */
+}
+
+body.dark-mode .admin-table .btn-download-pdf:hover {
+     color: #fff;
+    background-color: #e55364;
+}
+body.dark-mode .admin-table .btn-download-pdf:disabled {
+     color: #adb5bd;
+ }
