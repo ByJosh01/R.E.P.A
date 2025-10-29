@@ -185,8 +185,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
             if (!response.ok) throw new Error('No se pudieron cargar los datos del perfil.');
-
+            
             const perfil = await response.json();
+            
 
             if (!perfil) {
                 console.log("Perfil no encontrado para el usuario.");

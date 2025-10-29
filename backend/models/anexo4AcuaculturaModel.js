@@ -11,7 +11,6 @@ const Anexo4 = {};
 Anexo4.getBySolicitanteId = async (solicitanteId) => {
     const query = 'SELECT * FROM datos_tecnicos_acuacultura WHERE solicitante_id = ?';
     const [rows] = await pool.execute(query, [solicitanteId]);
-    // Devolver null explícitamente si no hay filas
     return rows.length > 0 ? rows[0] : null;
 };
 
@@ -24,7 +23,6 @@ Anexo4.getBySolicitanteId = async (solicitanteId) => {
 Anexo4.create = async (datosAnexo, solicitanteId, connection) => {
     const db = connection || pool;
 
-    // Convertir arrays y valores específicos a JSON o formato adecuado
     const especiesData = {
         seleccionadas: datosAnexo.especies || [],
         otras: datosAnexo.especiesOtras || ''
@@ -34,7 +32,7 @@ Anexo4.create = async (datosAnexo, solicitanteId, connection) => {
         inocuidad: datosAnexo.certificadoInocuidadCual || '',
         buenas_practicas: datosAnexo.certificadoBuenasPracticasCual || '',
         otros: datosAnexo.certificadoOtrosCual || '',
-        seleccionados: datosAnexo.certificados || []
+        seleccionados: Array.isArray(datosAnexo.certificados) ? datosAnexo.certificados : (datosAnexo.certificados ? [datosAnexo.certificados] : [])
     };
 
     const query = `
@@ -56,22 +54,40 @@ Anexo4.create = async (datosAnexo, solicitanteId, connection) => {
             certificados = VALUES(certificados);
     `;
 
+    // ▼▼▼ LÓGICA CORREGIDA PARA ENUM('si','no') ▼▼▼
+    console.log('Valor de instalacionPropia recibido:', datosAnexo.instalacionPropia);
+    let instalacionPropiaValue = null; // Por defecto NULL
+    if (datosAnexo.instalacionPropia === 'si') {
+        instalacionPropiaValue = 'si'; // Insertar la cadena 'si'
+    } else if (datosAnexo.instalacionPropia === 'no') {
+        instalacionPropiaValue = 'no'; // Insertar la cadena 'no'
+    }
+    console.log('Valor a insertar para instalacion_propia:', instalacionPropiaValue);
+    // ▲▲▲ FIN LÓGICA CORREGIDA ▲▲▲
+
+
     const values = [
         solicitanteId,
-        datosAnexo.instalacionPropia === 'si' ? 1 : 0, // Convertir 'si'/'no' a booleano/número
+        instalacionPropiaValue, // Usar 'si', 'no', o null
         datosAnexo.contratoArrendamientoAnos || null,
-        datosAnexo.dimensionesUnidad || null, // Asumiendo que viene como 'dimensionesUnidad' del form
+        datosAnexo.dimensionesUnidad || null,
         datosAnexo.tipo || null,
-        JSON.stringify(especiesData), // Guardar como JSON
+        JSON.stringify(especiesData),
         datosAnexo.tipoInstalacion || null,
         datosAnexo.sistemaProduccion || null,
         datosAnexo.produccionAnualValor || null,
         datosAnexo.produccionAnualUnidad || null,
-        JSON.stringify(certificadosData) // Guardar como JSON
+        JSON.stringify(certificadosData)
     ];
 
-    const [result] = await db.execute(query, values);
-    return { affectedRows: result.affectedRows };
+    try {
+        const [result] = await db.execute(query, values);
+        return { affectedRows: result.affectedRows };
+    } catch (error) {
+         console.error("Error al ejecutar query en anexo4AcuaculturaModel:", error);
+         console.error("Valores que se intentaron insertar:", values); // Loguear valores
+         throw error; // Re-lanzar el error para que el controlador lo maneje
+    }
 };
 
 module.exports = Anexo4;
