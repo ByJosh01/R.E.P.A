@@ -1,14 +1,36 @@
 // public/js/panel-admin.js
 document.addEventListener('DOMContentLoaded', async () => {
     // --- Verificaciones y Selectores Globales ---
-    const authToken = localStorage.getItem('authToken');
-    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
-    if (!authToken || !currentUser) {
-        window.location.href = 'home.html';
-        return;
-    }
+    const authToken = localStorage.getItem('authToken'); // Lo necesitas para los fetch
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser')); // Es VITAL para el rol
 
-    // Elementos del DOM
+    // ==========================================================
+    // ==== INICIO DE LA MODIFICACIÓN (AUTORIZACIÓN DE ROL) ====
+    // ==========================================================
+
+    // El 'auth-guard.js' (en el <head>) ya revisó si el user está logueado.
+    // Ahora, este script revisa si tiene el ROL CORRECTO.
+
+    // Esta página es EXCLUSIVAMENTE para el rol 'admin'.
+    if (currentUser.rol !== 'admin') {
+        console.warn(`Acceso denegado: Rol '${currentUser.rol}' no autorizado para 'panel-admin.html'.`);
+
+        // Si es 'superadmin', lo pateamos a SU panel (admin.html).
+        if (currentUser.rol === 'superadmin') {
+            window.location.replace('/admin.html');
+        
+        // Si es 'solicitante' (o cualquier otro), lo pateamos a SU dashboard.
+        } else {
+            window.location.replace('/dashboard.html');
+        }
+        return; // Detenemos la ejecución del resto del script
+    }
+    // ==========================================================
+    // ==== FIN DE LA MODIFICACIÓN ====
+    // ==========================================================
+
+
+    // Elementos del DOM (El resto de tu código original, sin cambios)
     const userMenuTrigger = document.getElementById('user-menu-trigger');
     const userDropdown = document.getElementById('user-dropdown');
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
@@ -374,10 +396,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                  // Para el nombre, necesitamos separar nombre y apellidos si los guardas así
                  // Esto es un ejemplo, ajusta según cómo guardes el nombre en tu BD
                  // Quizás solo necesites enviar un campo 'nombre_completo' o mantenerlos separados
-                nombre: editForm.elements.nombre.value, // Asumiendo que es nombre completo
-                rfc: editForm.elements.rfc.value,
-                curp: editForm.elements.curp.value,
-                actividad: editForm.elements.actividad.value
+                 nombre: editForm.elements.nombre.value, // Asumiendo que es nombre completo
+                 rfc: editForm.elements.rfc.value,
+                 curp: editForm.elements.curp.value,
+                 actividad: editForm.elements.actividad.value
             };
 
             try {
