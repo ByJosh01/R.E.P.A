@@ -1,44 +1,301 @@
 // public/js/admin-usuarios.js
 document.addEventListener('DOMContentLoaded', async () => {
+    // --- Verificaciones y Selectores Globales ---
     const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+    if (!authToken || !currentUser || (currentUser.rol !== 'admin' && currentUser.rol !== 'superadmin')) {
         window.location.href = 'home.html';
         return;
     }
 
+    // Elementos del DOM
+    const userMenuTrigger = document.getElementById('user-menu-trigger');
+    const userDropdown = document.getElementById('user-dropdown');
+    const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
+    const viewAdminInfoBtn = document.getElementById('view-admin-info');
+    const adminLogoutBtn = document.getElementById('admin-logout-btn');
     const tableBody = document.getElementById('usuarios-table-body');
+    const searchInput = document.getElementById('search-input');
+    let allUsuarios = []; // Para guardar datos originales
 
-    try {
-        const response = await fetch('/api/admin/usuarios', {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
+    // Modales de Info/Error
+    const infoModal = document.getElementById('admin-info-modal'); // Reutiliza el modal de admin
+    const infoModalTitle = document.getElementById('admin-info-title');
+    const infoModalContent = document.getElementById('admin-info-content');
+    const infoModalIcon = document.getElementById('admin-info-icon');
+    const infoModalMessage = document.getElementById('admin-info-message'); // Asumiendo que añades un <p> con este ID
+    const closeInfoModalBtn = document.getElementById('close-admin-info-btn');
 
-        if (!response.ok) {
-            throw new Error('No se pudieron cargar los datos de los usuarios.');
+    // Modales de Logout
+    const logoutModal = document.getElementById('logout-modal');
+    const cancelLogoutBtn = document.getElementById('cancel-logout-btn');
+    const confirmLogoutBtn = document.getElementById('confirm-logout-btn');
+
+    // Modales de Edición
+    const editModal = document.getElementById('edit-usuario-modal');
+    const editForm = document.getElementById('edit-usuario-form');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    const editUsuarioId = document.getElementById('edit-usuario-id');
+
+    // =======================================================
+    // === FUNCIÓN REUTILIZABLE PARA MODALES DE INFO/ERROR ===
+    // =======================================================
+    const showInfoModal = (title, content, isSuccess = true, onConfirm = null) => {
+        if (!infoModal || !infoModalTitle || !infoModalContent || !infoModalIcon || !closeInfoModalBtn) {
+            console.error("Elementos del modal de información no encontrados.");
+            alert(`${title}: ${content}`);
+            return;
         }
+        infoModalTitle.textContent = title;
+        // Diferenciar si es 'Ver Info' (HTML) o 'Éxito/Error' (texto)
+        if (content.startsWith('<div')) {
+            infoModalContent.innerHTML = content;
+        } else {
+             infoModalContent.innerHTML = `<p style="text-align: center;">${content}</p>`;
+        }
+        infoModalIcon.className = 'modal-icon fas';
+        infoModalIcon.classList.add(isSuccess ? 'fa-check-circle' : 'fa-times-circle', isSuccess ? 'success' : 'error');
+        infoModal.classList.add('visible');
+        
+        const confirmHandler = () => {
+            infoModal.classList.remove('visible');
+            if (onConfirm) onConfirm();
+            closeInfoModalBtn.removeEventListener('click', confirmHandler);
+        };
+        closeInfoModalBtn.addEventListener('click', confirmHandler, { once: true });
+    };
 
-        const usuarios = await response.json();
+    // =======================================================
+    // === LÓGICA DEL MENÚ DE ADMIN ===
+    // =======================================================
+    if (adminEmailPlaceholder) { adminEmailPlaceholder.textContent = currentUser.email; }
+    if (userMenuTrigger && userDropdown) {
+        userMenuTrigger.addEventListener('click', (e) => { e.stopPropagation(); userDropdown.classList.toggle('active'); });
+    }
+    window.addEventListener('click', () => { if (userDropdown && userDropdown.classList.contains('active')) { userDropdown.classList.remove('active'); } });
+
+    // --- Ver Info Admin ---
+    if (viewAdminInfoBtn && infoModal && infoModalContent) {
+        viewAdminInfoBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                const r = await fetch('/api/perfil', { headers: { 'Authorization': `Bearer ${authToken}` } });
+                if (!r.ok) throw new Error('No se pudo obtener la info.');
+                const p = await r.json();
+                const infoHtml = `<div class="info-row"><label>Nombre:</label> <span>${p.nombre||'N/A'}</span></div><div class="info-row"><label>CURP:</label> <span>${p.curp}</span></div><div class="info-row"><label>RFC:</label> <span>${p.rfc||'N/A'}</span></div><div class="info-row"><label>Email:</label> <span>${p.correo_electronico}</span></div><div class="info-row"><label>Municipio:</label> <span>${p.municipio||'N/A'}</span></div>`;
+                showInfoModal('Información del Administrador', infoHtml, true);
+            } catch (err) {
+                showInfoModal('Error', err.message, false);
+            }
+        });
+    }
+    if (infoModal) {
+        infoModal.addEventListener('click', (e) => {
+            if (e.target === infoModal) infoModal.classList.remove('visible');
+        });
+    }
+
+    // --- Logout Admin ---
+    if (adminLogoutBtn && logoutModal) {
+        adminLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            logoutModal.classList.add('visible');
+        });
+        const closeModal = () => logoutModal.classList.remove('visible');
+        if(cancelLogoutBtn) cancelLogoutBtn.addEventListener('click', closeModal);
+        logoutModal.addEventListener('click', (e) => { if (e.target === logoutModal) closeModal(); });
+        if(confirmLogoutBtn) confirmLogoutBtn.addEventListener('click', () => {
+            sessionStorage.removeItem('currentUser');
+            localStorage.removeItem('authToken');
+            window.location.href = 'home.html';
+        });
+    }
+
+
+    // =======================================================
+    // === LÓGICA PARA CARGAR LA TABLA Y BUSCADOR ===
+    // =======================================================
+
+    // --- FUNCIÓN PARA FORMATEAR FECHA ---
+    const formatFecha = (dateString) => {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleString('es-MX', { 
+                year: 'numeric', month: '2-digit', day: '2-digit', 
+                hour: '2-digit', minute: '2-digit', hour12: true 
+            });
+        } catch (e) {
+            return dateString;
+        }
+    };
+
+    // --- FUNCIÓN PARA RENDERIZAR LA TABLA (CON BOTÓN EDITAR) ---
+    const renderTabla = (usuarios) => {
+        if(!tableBody) return;
         tableBody.innerHTML = '';
 
         if (usuarios.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay usuarios registrados.</td></tr>';
-        } else {
-            usuarios.forEach(user => {
-                const row = tableBody.insertRow();
-                // Formateamos la fecha para que sea más legible
-                const fechaCreacion = new Date(user.creado_en).toLocaleString('es-MX');
-
-                row.innerHTML = `
-                    <td>${user.id}</td>
-                    <td>${user.email}</td>
-                    <td>${user.curp}</td>
-                    <td>${user.rol}</td>
-                    <td>${fechaCreacion}</td>
-                `;
-            });
+            tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No se encontraron usuarios.</td></tr>`;
+            return;
         }
-    } catch (error) {
-        console.error("Error al cargar usuarios:", error);
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">${error.message}</td></tr>`;
+
+        usuarios.forEach(user => {
+            const row = tableBody.insertRow();
+            row.dataset.id = user.id;
+
+            // Deshabilitar edición si es el propio superadmin (seguridad)
+            let editButtonDisabled = '';
+            if (user.id === currentUser.id) { // Compara ID de usuario
+                editButtonDisabled = 'disabled';
+            }
+            // Superadmin puede editar a todos, admin no puede editar a superadmin
+            if (currentUser.rol === 'admin' && user.rol === 'superadmin') {
+                editButtonDisabled = 'disabled';
+            }
+
+            row.innerHTML = `
+                <td>${user.id}</td>
+                <td>${user.email || 'N/A'}</td>
+                <td>${user.curp || 'N/A'}</td>
+                <td>${user.rol || 'N/A'}</td>
+                <td>${formatFecha(user.creado_en)}</td>
+                <td>
+                    <button class="btn-icon btn-edit-usuario" title="Editar" data-id="${user.id}" ${editButtonDisabled}>
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
+                    </td>
+            `;
+        });
+    };
+
+    // --- FUNCIÓN PARA CARGAR USUARIOS ---
+    const cargarUsuarios = async () => {
+        try {
+            const response = await fetch('/api/admin/usuarios', { // Endpoint de la ruta
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+             if (response.status === 403) { 
+                 showInfoModal('Acceso Denegado', 'No tienes permisos para ver esta sección.', false, () => window.location.href = 'admin.html'); 
+                 return;
+            }
+            if (!response.ok) {
+                throw new Error('No se pudieron cargar los usuarios.');
+            }
+            allUsuarios = await response.json();
+            renderTabla(allUsuarios);
+        } catch (error) {
+            console.error("Error al cargar usuarios:", error);
+            if(tableBody) tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">${error.message}</td></tr>`;
+        }
+    };
+
+    // --- LÓGICA DE BÚSQUEDA ---
+    if (searchInput && tableBody) {
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const filteredUsuarios = allUsuarios.filter(u => {
+                const email = (u.email || '').toLowerCase();
+                const curp = (u.curp || '').toLowerCase();
+                return email.includes(searchTerm) || curp.includes(searchTerm);
+            });
+            renderTabla(filteredUsuarios);
+        });
     }
-});
+
+    // =======================================================
+    // === LÓGICA PARA ACCIONES DE LA TABLA (EDITAR) ===
+    // =======================================================
+    
+    // --- Cerrar Modal de Edición ---
+    const closeEditModal = () => { if (editModal) editModal.classList.remove('visible'); };
+    if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
+    if (editModal) editModal.addEventListener('click', (e) => { if (e.target === editModal) closeEditModal(); });
+
+    // --- Abrir Modal de Edición (Event Listener en la Tabla) ---
+    if (tableBody) {
+        tableBody.addEventListener('click', async (e) => {
+            const button = e.target.closest('button.btn-edit-usuario');
+            if (!button || button.disabled) return;
+
+            const usuarioId = button.dataset.id;
+            console.log(`Editando usuario ID: ${usuarioId}`);
+            
+            try {
+                // 1. Obtener datos del usuario específico
+                const response = await fetch(`/api/admin/usuarios/${usuarioId}`, { 
+                    headers: { 'Authorization': `Bearer ${authToken}` } 
+                });
+                if (!response.ok) throw new Error('No se pudieron obtener los datos del usuario.');
+                const data = await response.json();
+
+                // 2. Rellenar el modal
+                if (editForm && editUsuarioId && editModal) {
+                    editForm.elements.email.value = data.email || '';
+                    editForm.elements.curp.value = data.curp || '';
+                    editForm.elements.rol.value = data.rol || 'solicitante';
+                    editForm.elements.password.value = ''; // Limpiar campo de contraseña
+                    editUsuarioId.value = data.id;
+                    
+                    editModal.classList.add('visible');
+                } else {
+                    console.error("Elementos del modal de edición de usuario no encontrados.");
+                }
+            } catch(error) {
+                console.error("Error al abrir modal de edición:", error);
+                showInfoModal('Error', error.message, false);
+            }
+        });
+    }
+
+    // --- Enviar Formulario de Edición ---
+    if (editForm && editUsuarioId) {
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            const id = editUsuarioId.value;
+            if (!id) {
+                showInfoModal('Error', 'ID de usuario no encontrado.', false);
+                return;
+            }
+
+            const data = {
+                email: editForm.elements.email.value,
+                curp: editForm.elements.curp.value.toUpperCase(),
+                rol: editForm.elements.rol.value,
+                password: editForm.elements.password.value // Enviar contraseña (vacía si no se cambia)
+            };
+
+            // No enviar contraseña si el campo está vacío
+            if (!data.password || data.password.trim() === '') {
+                delete data.password;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/usuarios/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || 'Error desconocido.');
+
+                closeEditModal();
+                showInfoModal('Éxito', result.message, true, () => {
+                   cargarUsuarios(); // Recargar la tabla
+                });
+
+            } catch (error) {
+                console.error("Error al actualizar usuario:", error);
+                showInfoModal('Error al Actualizar', error.message, false);
+            }
+        });
+    }
+
+    // --- CARGA INICIAL ---
+    cargarUsuarios();
+
+}); // Fin de DOMContentLoaded

@@ -15,10 +15,18 @@
             <div>
                 <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
             </div>
-            <!-- El menú desplegable del admin iría aquí si se reutiliza -->
-        </header>
+            <div class="user-menu">
+                <div class="user-menu-trigger" id="user-menu-trigger">
+                    <span id="admin-email-placeholder">Cargando...</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="dropdown-menu" id="user-dropdown">
+                    <a href="#" id="view-admin-info">Ver Información</a>
+                    <a href="#" id="admin-logout-btn">Cerrar Sesión</a>
+                </div>
+            </div>
+            </header>
 
-        <!-- NAVEGACIÓN CORREGIDA -->
         <nav class="tabs-nav" style="margin-top: -30px; margin-bottom: 30px; background-color: white;">
             <a href="admin.html" class="tab-link">Solicitantes</a>
             <a href="admin-usuarios.html" class="tab-link active">Cuentas (Usuarios)</a>
@@ -30,6 +38,11 @@
             <div class="content-card">
                 <h1 class="content-title">Lista de Todas las Cuentas de Usuario</h1>
                 <p style="margin-bottom: 20px; color: #666;">Esta tabla muestra los registros de la tabla `usuarios` para inicio de sesión.</p>
+                
+                <div class="input-group" style="max-width: 500px; margin-bottom: 20px;">
+                    <label for="search-input" style="text-align: left;"><i class="fas fa-search"></i> Buscar Usuario:</label>
+                    <input type="text" id="search-input" class="modal-input" placeholder="Escriba un email o CURP para filtrar...">
+                </div>
                 <div class="table-container">
                     <table class="admin-table">
                         <thead>
@@ -39,16 +52,79 @@
                                 <th>CURP</th>
                                 <th>Rol</th>
                                 <th>Fecha de Creación</th>
-                            </tr>
+                                <th>Acciones</th> </tr>
                         </thead>
                         <tbody id="usuarios-table-body">
-                            <tr><td colspan="5" style="text-align: center;">Cargando datos...</td></tr>
-                        </tbody>
+                            <tr><td colspan="6" style="text-align: center;">Cargando datos...</td></tr> </tbody>
                     </table>
                 </div>
             </div>
         </div>
     </main>
+
+    <div id="admin-info-modal" class="modal-overlay">
+        <div class="modal-content">
+            <i id="admin-info-icon" class="modal-icon fas fa-check-circle success"></i>
+            <h2 id="admin-info-title">Éxito</h2>
+            <div id="admin-info-content" class="admin-info-modal-content">
+                 <p style="text-align: center;" id="admin-info-message">Operación completada.</p>
+            </div>
+            <div class="modal-buttons">
+                <button id="close-admin-info-btn" class="btn btn-primary">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="logout-modal" class="modal-overlay">
+         <div class="modal-content">
+             <h2>Confirmar Cierre de Sesión</h2>
+             <p>¿Estás seguro de que deseas cerrar la sesión?</p>
+             <div class="modal-buttons">
+                 <button id="cancel-logout-btn" class="btn btn-secondary">Cancelar</button>
+                 <button id="confirm-logout-btn" class="btn btn-primary">Cerrar Sesión</button>
+             </div>
+         </div>
+     </div>
+
+    <div id="edit-usuario-modal" class="modal-overlay">
+        <div class="modal-content large">
+            <h2>Editar Cuenta de Usuario</h2>
+            <form id="edit-usuario-form" class="anexo-form" novalidate>
+                <div class="anexo-grid">
+                    <input type="hidden" id="edit-usuario-id">
+                    
+                    <div class="anexo-field span-12">
+                        <label for="edit-email">Email:</label>
+                        <input type="email" id="edit-email" name="email" class="modal-input" required>
+                    </div>
+                    
+                    <div class="anexo-field span-6">
+                        <label for="edit-curp">CURP:</label>
+                        <input type="text" id="edit-curp" name="curp" class="modal-input" required maxlength="18">
+                    </div>
+                    
+                    <div class="anexo-field span-6">
+                        <label for="edit-rol">Rol de Usuario:</label>
+                        <select id="edit-rol" name="rol" class="anexo-select">
+                            <option value="solicitante">Solicitante</option>
+                            <option value="admin">Admin</option>
+                            <option value="superadmin">Superadmin</option>
+                        </select>
+                    </div>
+                    
+                    <div class="anexo-field span-12">
+                        <label for="edit-password">Nueva Contraseña (Opcional):</label>
+                        <input type="password" id="edit-password" name="password" class="modal-input" placeholder="Dejar en blanco para no cambiar">
+                        <div class="feedback-message"></div>
+                    </div>
+                </div>
+            </form>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button type="button" id="cancel-edit-btn" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" form="edit-usuario-form" class="btn btn-primary">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
     <script type="module" src="js/admin-usuarios.js"></script>
 </body>
 </html>

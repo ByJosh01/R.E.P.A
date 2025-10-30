@@ -1,19 +1,16 @@
 // public/dashboard.js
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- LÓGICA DE AUTENTICACIÓN (ACTUALIZADA) ---
-    const authToken = localStorage.getItem('authToken');
-    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+    // ==========================================================
+    // --- LÓGICA DE AUTENTICACIÓN (ELIMINADA) ---
+    // El archivo 'auth-guard.js' (en el <head>) ya hizo esta
+    // validación. Si este script se está ejecutando,
+    // es 100% seguro que el usuario está autenticado.
+    // Quitar este bloque detiene el bucle infinito.
+    // ==========================================================
 
-    // Si falta el token o los datos del usuario, la sesión no es válida.
-    if (!authToken || !currentUser) {
-        localStorage.removeItem('authToken'); // Limpiamos por si acaso
-        sessionStorage.removeItem('currentUser');
-        alert('Acceso denegado. Por favor, inicie sesión.');
-        window.location.href = 'home.html';
-        return; // Detenemos la ejecución del resto del script
-    }
-    // --- FIN DE LA ACTUALIZACIÓN ---
+    // Obtenemos los datos del usuario, que SABEMOS que existen
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
 
     // Lógica para Modo Oscuro (sin cambios)
     const themeToggle = document.getElementById('theme-toggle');

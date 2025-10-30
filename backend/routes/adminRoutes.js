@@ -12,17 +12,16 @@ router.put('/solicitantes/:id', protect, isAdminOrSuperAdmin, adminController.up
 router.get('/integrantes', protect, isAdminOrSuperAdmin, adminController.getAllIntegrantes);
 router.get('/embarcaciones', protect, isAdminOrSuperAdmin, adminController.getAllEmbarcaciones);
 router.get('/solicitante-detalles/:id', protect, isAdminOrSuperAdmin, adminController.getSolicitanteDetails);
-
-// Ruta para PDF individual (esta ya la tenías)
 router.get('/download-pdf/:solicitanteId', protect, isAdminOrSuperAdmin, adminController.downloadRegistroPdf);
-
-// ▼▼▼ RUTA NUEVA QUE FALTA ▼▼▼
 router.get('/download-reporte-general', protect, isAdminOrSuperAdmin, adminController.downloadGeneralReportPdf);
-// ▲▲▲ FIN RUTA NUEVA ▲▲▲
 
 
 // --- Rutas Exclusivas de SUPERADMIN ---
 router.get('/usuarios', protect, isSuperAdmin, adminController.getAllUsuarios);
+// ▼▼▼ NUEVAS RUTAS ▼▼▼
+router.get('/usuarios/:id', protect, isSuperAdmin, adminController.getUsuarioById); // Obtener un usuario
+router.put('/usuarios/:id', protect, isSuperAdmin, adminController.updateUsuario); // Actualizar un usuario
+// ▲▲▲ FIN NUEVAS RUTAS ▲▲▲
 router.post('/reset-database', protect, isSuperAdmin, adminController.resetDatabase);
 router.get('/backup-database', protect, isSuperAdmin, adminController.backupDatabase);
 

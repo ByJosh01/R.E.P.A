@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- ============================================== -->
+    <!-- ==== ¡GUARDIA DE SEGURIDAD AÑADIDO! ==== -->
+    <!-- Este es el único cambio. Bloquea a cualquiera que NO esté logueado -->
+    <script src="js/auth-guard.js"></script>
+    <!-- ============================================== -->
+    
     <title>Panel de Administración</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/app-layout.css">
@@ -151,9 +158,9 @@
                     <div class="anexo-field span-6">
                     <label for="edit-rol">Rol de Usuario:</label>
                         <select id="edit-rol" name="rol" class="anexo-select">
-                        <option value="solicitante">Solicitante</option>
-                        <option value="admin">Admin</option> <option value="superadmin">Superadmin</option>
-                    </select>
+                            <option value="solicitante">Solicitante</option>
+                            <option value="admin">Admin</option> <option value="superadmin">Superadmin</option>
+                        </select>
                 </div>
                 </div>
             </form>

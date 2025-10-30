@@ -14,31 +14,54 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Tu línea de archivos estáticos (¡ESTÁ PERFECTA!)
+// =================================================================
+// ==== INICIO: MIDDLEWARE ANTI-CACHÉ (¡AÑADIDO AQUÍ!) ====
+// =================================================================
+// Esto le ordena al navegador "No guardes la 'foto' de estas páginas".
+app.use((req, res, next) => {
+    // Lista de tus páginas HTML protegidas
+    const protectedPages = [
+        '/dashboard.html',
+        '/admin.html',
+        '/panel-admin.html',
+        '/anexos.html',
+        '/datos-personales.html',
+        '/detalle-solicitante.html',
+        '/admin-usuarios.html',
+        '/admin-integrantes.html',
+        '/admin-embarcaciones.html'
+        // ...agrega aquí cualquier otra página que requiera login
+    ];
+
+    if (protectedPages.includes(req.path)) {
+        // Estas cabeceras fuerzan al navegador a no usar la caché
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+    }
+    next();
+});
+// =================================================================
+// ==== FIN: MIDDLEWARE ANTI-CACHÉ ====
+// =================================================================
+
+// Tu línea de archivos estáticos AHORA VA DESPUÉS del middleware
 app.use(express.static(path.join(__dirname, '../public')));
 
-// --- ¡ESTO ES LO QUE FALTA! ---
-// Esta ruta captura la petición a la raíz '/' y envía tu 'home.html'.
-// Debe ir DESPUÉS de express.static, pero ANTES de tus rutas API.
+// Ruta para la raíz '/'
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'home.html'));
 });
-// --- FIN DE LA SOLUCIÓN ---
 
-// RUTAS
+// RUTAS API
 app.use('/api', authRoutes);
 app.use('/api', integranteRoutes);
 app.use('/api/embarcaciones', embarcacionMenorRoutes);
 app.use('/api/admin', adminRoutes);
-
-// --- CAMBIO AQUÍ ---
-// Dejamos la ruta original para que funcionen /perfil, /anexo1, /anexo3, etc.
 app.use('/api', anexoRoutes); 
-// Y añadimos la nueva para que funcione específicamente /api/anexos/acuacultura
 app.use('/api/anexos', anexoRoutes); 
 
 const PORT = 3000;
 app.listen(PORT, () => {
-    // ¡Log cambiado para que sea claro en el servidor!
     console.log(`Servidor escuchando en el puerto ${PORT}`);
 });

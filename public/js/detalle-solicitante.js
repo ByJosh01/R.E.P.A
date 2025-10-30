@@ -1,10 +1,24 @@
 // public/js/detalle-solicitante.js
 document.addEventListener('DOMContentLoaded', async () => {
     const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser')); // <--- Necesitamos al usuario actual
+
+    if (!authToken || !currentUser) { // <--- Verificamos también al usuario
         window.location.href = 'home.html';
         return;
     }
+
+    // ▼▼▼ LÓGICA NUEVA PARA EL BOTÓN "VOLVER" ▼▼▼
+    const btnVolver = document.getElementById('btn-volver-admin');
+    if (btnVolver) {
+        // Determinamos a dónde debe regresar el admin
+        if (currentUser.rol === 'superadmin') {
+            btnVolver.href = 'admin.html'; // Los superadmin regresan a admin.html
+        } else {
+            btnVolver.href = 'panel-admin.html'; // Los admin normales regresan a panel-admin.html
+        }
+    }
+    // ▲▲▲ FIN DE LA LÓGICA NUEVA ▲▲▲
 
     // 1. Obtenemos el ID del solicitante desde la URL
     const params = new URLSearchParams(window.location.search);

@@ -1,14 +1,32 @@
-// public/js/admin.js (Versión Final con todas las funciones y botón PDF)
+// public/js/admin.js
 document.addEventListener('DOMContentLoaded', async () => {
-    // --- Verificaciones y Selectores Globales ---
+    
+    // El 'auth-guard.js' (en el <head>) ya verificó si 'authToken' y 'currentUser' existen.
+    // Si este script se ejecuta, es porque el usuario SÍ está logueado.
     const authToken = localStorage.getItem('authToken');
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
-    if (!authToken || !currentUser) {
-        window.location.href = 'home.html';
-        return;
-    }
+    
+    // ==========================================================
+    // ==== INICIO DE LA MODIFICACIÓN (BLOQUE DE SEGURIDAD) ====
+    // ==========================================================
+    
+    // Ya no necesitamos: if (!authToken || !currentUser) { ... }
+    // El 'auth-guard.js' ya lo hizo por nosotros, de forma más rápida.
 
-    // Elementos del DOM
+    // ¡ESTA ES LA LÍNEA CLAVE!
+    // Ahora solo verificamos la AUTORIZACIÓN (el rol).
+    if (currentUser.rol !== 'superadmin') {
+        console.warn('Acceso denegado: Se requiere rol "superadmin". Redirigiendo a panel-admin.html');
+        // Lo enviamos a su panel correcto (o al dashboard si tampoco es admin)
+        window.location.href = 'panel-admin.html'; 
+        return; // Detiene la ejecución del resto del script
+    }
+    // ==========================================================
+    // ==== FIN DE LA MODIFICACIÓN ====
+    // ==========================================================
+
+
+    // Elementos del DOM (Sin cambios)
     const userMenuTrigger = document.getElementById('user-menu-trigger');
     const userDropdown = document.getElementById('user-dropdown');
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
@@ -47,9 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const backupDbBtn = document.getElementById('backup-db-btn');
     
-    // ▼▼▼ NUEVO SELECTOR ▼▼▼
     const btnDownloadGeneralReport = document.getElementById('btn-download-general-report');
-    // ▲▲▲ FIN NUEVO SELECTOR ▲▲▲
 
     // =======================================================
     // === FUNCIÓN REUTILIZABLE PARA MODALES DE INFO/ERROR ===

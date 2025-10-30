@@ -2,12 +2,9 @@
 const pool = require('../db');
 const { exec } = require('child_process');
 const path = require('path');
-const solicitanteModel = require('../models/solicitanteModel'); // Modelo principal
-
-// ▼▼▼ IMPORTACIÓN ACTUALIZADA ▼▼▼
-// Importar AMBAS funciones del servicio de PDF
+const bcrypt = require('bcryptjs'); // <-- AÑADIR BCRYPT
+const solicitanteModel = require('../models/solicitanteModel');
 const { generateRegistroPdf, generateGeneralReportPdf } = require('../services/pdfGenerator');
-// ▲▲▲ FIN IMPORTACIÓN ▲▲▲
 
 exports.getAllSolicitantes = async (req, res) => {
     try {
@@ -24,7 +21,6 @@ exports.getAllSolicitantes = async (req, res) => {
 };
 
 exports.resetDatabase = async (req, res) => {
-    // ... (Tu código de resetDatabase se queda igual) ...
     const { masterPassword } = req.body;
     const superAdminUserId = req.user.id; 
 
@@ -60,7 +56,6 @@ exports.resetDatabase = async (req, res) => {
 };
 
 exports.deleteSolicitante = async (req, res) => {
-    // ... (Tu código de deleteSolicitante se queda igual) ...
     const { id } = req.params;
     const connection = await pool.getConnection();
     try {
@@ -85,8 +80,7 @@ exports.deleteSolicitante = async (req, res) => {
 };
 
 exports.getSolicitanteById = async (req, res) => {
-    // ... (Tu código de getSolicitanteById se queda igual) ...
-     try {
+    try {
         const { id } = req.params;
         const [rows] = await pool.query(
             `SELECT s.solicitante_id, s.nombre, s.apellido_paterno, s.apellido_materno, s.rfc, s.curp, s.actividad, u.rol
@@ -106,9 +100,9 @@ exports.getSolicitanteById = async (req, res) => {
 };
 
 exports.updateSolicitante = async (req, res) => {
-    // ... (Tu código de updateSolicitante se queda igual) ...
     try {
         const { id } = req.params;
+        // El body ahora también puede incluir 'rol'
         const { nombre, rfc, curp, actividad, rol } = req.body;
 
         const [solicitantes] = await pool.query('SELECT usuario_id FROM solicitantes WHERE solicitante_id = ?', [id]);
@@ -116,18 +110,25 @@ exports.updateSolicitante = async (req, res) => {
             return res.status(404).json({ message: 'Solicitante no encontrado.' });
         }
         const usuarioId = solicitantes[0].usuario_id;
-
+        
+        // Separar nombre
         const nombreParts = (nombre || '').split(' ');
         const nombre_solo = nombreParts.shift() || '';
         const apellido_paterno = nombreParts.shift() || '';
         const apellido_materno = nombreParts.join(' ') || '';
 
+        // Actualizar solicitantes
         await pool.query(
             'UPDATE solicitantes SET nombre = ?, apellido_paterno = ?, apellido_materno = ?, rfc = ?, curp = ?, actividad = ? WHERE solicitante_id = ?',
             [nombre_solo, apellido_paterno, apellido_materno, rfc, curp, actividad, id]
         );
 
+        // Actualizar rol en usuarios (si se proveyó)
         if (rol) {
+            // Prevenir que el admin se quite el rol a sí mismo
+            if (req.user.id == usuarioId && rol !== req.user.rol) {
+                 return res.status(403).json({ message: 'No puedes cambiar tu propio rol.' });
+            }
             await pool.query(
                 'UPDATE usuarios SET rol = ? WHERE id = ?',
                 [rol, usuarioId]
@@ -144,7 +145,10 @@ exports.getAllUsuarios = async (req, res) => {
     try {
         const [usuarios] = await pool.query('SELECT id, curp, email, rol, creado_en FROM usuarios ORDER BY id DESC');
         res.status(200).json(usuarios);
-    } catch (error) { res.status(500).json({ message: 'Error en el servidor.' }); }
+    } catch (error) {
+        console.error("Error en getAllUsuarios:", error);
+        res.status(500).json({ message: 'Error en el servidor.' });
+    }
 };
 
 exports.getAllIntegrantes = async (req, res) => {
@@ -167,8 +171,8 @@ exports.getAllEmbarcaciones = async (req, res) => {
     }
 };
 
+
 exports.getSolicitanteDetails = async (req, res) => {
-    // ... (Tu código de getSolicitanteDetails se queda igual) ...
     try {
         const { id } = req.params;
         const [perfilRows] = await pool.query('SELECT * FROM solicitantes WHERE solicitante_id = ?', [id]);
@@ -202,7 +206,6 @@ exports.getSolicitanteDetails = async (req, res) => {
 };
 
 exports.backupDatabase = async (req, res) => {
-    // ... (Tu código de backupDatabase se queda igual) ...
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
     const fileName = `repa_backup_${timestamp}.sql`;
     const { MYSQL_DATABASE } = process.env;
@@ -229,9 +232,86 @@ exports.downloadRegistroPdf = async (req, res) => {
     await generateRegistroPdf(req, res);
 };
 
-// ▼▼▼ NUEVA FUNCIÓN AÑADIDA ▼▼▼
+// --- FUNCIÓN PDF GENERAL ---
 exports.downloadGeneralReportPdf = async (req, res) => {
-    // Delega la nueva lógica al servicio
     await generateGeneralReportPdf(req, res); 
 };
-// ▲▲▲ FIN NUEVA FUNCIÓN ▲▲▲
+
+// ▼▼▼ NUEVAS FUNCIONES PARA EDITAR USUARIOS ▼▼▼
+exports.getUsuarioById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        // Solo selecciona los campos que el admin puede ver/editar
+        const [rows] = await pool.query(
+            'SELECT id, email, curp, rol FROM usuarios WHERE id = ?',
+            [id]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Usuario no encontrado.' });
+        }
+        res.status(200).json(rows[0]);
+    } catch (error) {
+        console.error("Error en getUsuarioById:", error);
+        res.status(500).json({ message: 'Error en el servidor.' });
+    }
+};
+
+exports.updateUsuario = async (req, res) => {
+    const connection = await pool.getConnection(); // Usar transacción
+    try {
+        const { id } = req.params;
+        const { email, curp, rol, password } = req.body; // Incluir password
+
+        // Validaciones básicas
+        if (!email || !curp || !rol) {
+            return res.status(400).json({ message: 'Faltan campos (email, curp, rol).' });
+        }
+        if (rol !== 'solicitante' && rol !== 'admin' && rol !== 'superadmin') {
+            return res.status(400).json({ message: 'Rol inválido.' });
+        }
+
+        // Evitar que un superadmin se quite el rol a sí mismo por accidente
+        if (req.user.id == id && rol !== 'superadmin') {
+             return res.status(403).json({ message: 'Un superadmin no puede cambiar su propio rol.' });
+        }
+        
+        await connection.beginTransaction(); // Iniciar transacción
+
+        // 1. Actualizar la tabla 'usuarios'
+        let queryParams = [email, curp.toUpperCase(), rol];
+        let queryUpdateUsuario = 'UPDATE usuarios SET email = ?, curp = ?, rol = ?';
+
+        // Si se proveyó una nueva contraseña, encriptarla y añadirla a la consulta
+        if (password && password.trim() !== '') {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            queryUpdateUsuario += ', password = ?';
+            queryParams.push(hashedPassword);
+        }
+
+        queryUpdateUsuario += ' WHERE id = ?';
+        queryParams.push(id);
+
+        await connection.query(queryUpdateUsuario, queryParams);
+        
+        // 2. También actualizamos el curp/email en la tabla 'solicitantes' vinculada (si existe)
+        await connection.query(
+            'UPDATE solicitantes SET curp = ?, correo_electronico = ? WHERE usuario_id = ?',
+            [curp.toUpperCase(), email, id]
+        );
+        
+        await connection.commit(); // Confirmar cambios
+
+        res.status(200).json({ message: 'Cuenta de usuario actualizada correctamente.' });
+    } catch (error) {
+        await connection.rollback(); // Revertir en caso de error
+        console.error("Error en updateUsuario:", error);
+         // Manejar error de CURP/Email duplicado
+        if (error.code === 'ER_DUP_ENTRY') {
+             return res.status(409).json({ message: 'Error: El email o CURP ya está en uso por otra cuenta.' });
+        }
+        res.status(500).json({ message: 'Error en el servidor al actualizar el usuario.' });
+    } finally {
+         if (connection) connection.release(); // Liberar conexión
+    }
+};
+// ▲▲▲ FIN NUEVAS FUNCIONES ▲▲▲
