@@ -103,6 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const userDropdown = document.getElementById('user-dropdown');
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
     const viewAdminInfoBtn = document.getElementById('view-admin-info');
+    const adminGotoDashboardBtn = document.getElementById('admin-goto-dashboard-btn');
     const adminLogoutBtn = document.getElementById('admin-logout-btn');
     const tableBody = document.getElementById('solicitantes-table-body');
     const searchInput = document.getElementById('search-input');
@@ -178,6 +179,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (adminInfoModal) { adminInfoModal.addEventListener('click', (e) => { if (e.target === adminInfoModal) adminInfoModal.classList.remove('visible'); }); }
     if (closeAdminModalBtn) { closeAdminModalBtn.addEventListener('click', () => { if(adminInfoModal) adminInfoModal.classList.remove('visible'); }); }
+
+    if (adminGotoDashboardBtn) {
+        adminGotoDashboardBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Esta página es solo para 'admin', así que su dashboard es 'dashboard.html'
+            window.location.href = 'dashboard.html';
+        });
+    }
+
     if (adminLogoutBtn) {
         adminLogoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
