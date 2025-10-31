@@ -4,12 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- ============================================== -->
-    <!-- ==== ¡GUARDIA DE SEGURIDAD AÑADIDO! ==== -->
-    <!-- Este es el único cambio. Bloquea a cualquiera que NO esté logueado -->
     <script src="js/auth-guard.js"></script>
-    <!-- ============================================== -->
-    
     <title>Panel de Administración</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/app-layout.css">
@@ -18,8 +13,9 @@
 </head>
 <body class="layout-app page-full-width">
     <main class="app-content">
+        
         <header class="content-header">
-            <div>
+        <div>
                 <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
             </div>
 
@@ -30,9 +26,10 @@
                 </div>
                 <div class="dropdown-menu" id="user-dropdown">
                     <a href="#" id="view-admin-info">Ver Información</a>
+                    <a href="#" id="admin-goto-dashboard-btn">Ir al Dashboard (SUPER-ADMIN)</a>
                     <a href="#" id="admin-logout-btn">Cerrar Sesión</a>
                 </div>
-            </div>
+                </div>
         </header>
 
         <nav class="tabs-nav" style="margin-top: -30px; margin-bottom: 30px; background-color: white;">
@@ -73,8 +70,8 @@
                     </table>
                 </div>
 
-                <div style="border-top: 2px solid red; margin-top: 40px; padding-top: 20px; text-align: center;">
-                    <h2 style="color: red;">Zona de Peligro</h2>
+                <div style="border-top: 2px solid rgb(255, 0, 0); margin-top: 40px; padding-top: 20px; text-align: center;">
+                    <h2 style="color: rgb(92, 0, 0);">Zona de Peligro</h2>
                     <p style="margin-bottom: 20px;">Acciones importantes que afectan a toda la base de datos.</p>
                     
                     <button class="btn btn-secondary" id="backup-db-btn" style="margin-right: 15px;">

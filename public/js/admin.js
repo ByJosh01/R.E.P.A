@@ -1,5 +1,3 @@
-// public/js/admin.js
-
 /**
  * Función de chequeo de rol para el Superadmin.
  * Se asegura de que solo el 'superadmin' pueda estar aquí.
@@ -62,12 +60,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ==========================================================
 
 
-    // Elementos del DOM (Tu código original, sin cambios)
+    // Elementos del DOM
     const userMenuTrigger = document.getElementById('user-menu-trigger');
     const userDropdown = document.getElementById('user-dropdown');
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
     const viewAdminInfoBtn = document.getElementById('view-admin-info');
     const adminLogoutBtn = document.getElementById('admin-logout-btn');
+    
+    // ==============================================
+    // ==== ¡SELECTOR AÑADIDO! ====
+    const adminGoToDashboardBtn = document.getElementById('admin-goto-dashboard-btn');
+    // ==============================================
+
     const tableBody = document.getElementById('solicitantes-table-body');
     const searchInput = document.getElementById('search-input');
     let allSolicitantes = []; // Para guardar datos originales
@@ -181,6 +185,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.location.href = 'home.html';
         });
     }
+
+    // ==============================================
+    // ==== ¡EVENT LISTENER AÑADIDO! ====
+    if (adminGoToDashboardBtn) {
+        adminGoToDashboardBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Simplemente redirige al dashboard principal
+            window.location.href = 'dashboard.html';
+        });
+    }
+    // ==============================================
 
     // =======================================================
     // === LÓGICA PARA CARGAR LA TABLA Y BUSCADOR ===

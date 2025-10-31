@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <script src="/js/auth-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <script src="/js/auth-guard.js"></script>
     <title>Admin - Todas las Embarcaciones</title>
     
     <link rel="stylesheet" href="css/style.css">
@@ -13,8 +14,9 @@
 </head>
 <body class="layout-app page-full-width">
     <main class="app-content">
+        
         <header class="content-header">
-            <div>
+        <div>
                  <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
             </div>
              <div class="user-menu">
@@ -24,9 +26,10 @@
                 </div>
                 <div class="dropdown-menu" id="user-dropdown">
                     <a href="#" id="view-admin-info">Ver Información</a>
+                    <a href="#" id="admin-goto-dashboard-btn">Ir al Dashboard (SUPER-ADMIN)</a>
                     <a href="#" id="admin-logout-btn">Cerrar Sesión</a>
                 </div>
-            </div>
+                </div>
         </header>
 
          <nav class="tabs-nav" style="margin-top: -30px; margin-bottom: 30px; background-color: white;">
@@ -40,6 +43,11 @@
             <div class="content-card">
                 <h1 class="content-title">Lista de Todas las Embarcaciones Menores</h1>
                 <p style="margin-bottom: 20px; color: #666;">Esta tabla muestra todas las embarcaciones registradas por todos los solicitantes.</p>
+
+                <div class="input-group" style="max-width: 500px; margin-bottom: 20px;">
+                    <label for="search-input" style="text-align: left;"><i class="fas fa-search"></i> Buscar Embarcación:</label>
+                    <input type="text" id="search-input" class="modal-input" placeholder="Escriba un Nombre o Matrícula para filtrar...">
+                </div>
                 <div class="table-container">
                     <table class="admin-table">
                         <thead>
@@ -50,10 +58,11 @@
                                 <th>Marca Motor</th>
                                 <th>Potencia (HP)</th>
                                 <th>Puerto Base</th>
+                                <th>Acciones</th> 
                             </tr>
                         </thead>
                         <tbody id="embarcaciones-table-body">
-                            <tr><td colspan="6" style="text-align: center;">Cargando datos...</td></tr>
+                            <tr><td colspan="7" style="text-align: center;">Cargando datos...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -63,15 +72,67 @@
 
     <div id="admin-info-modal" class="modal-overlay">
         <div class="modal-content">
-            <i class="modal-icon fas fa-user-circle success"></i>
-            <h2 id="admin-info-modal-title">Información</h2>
+            <i id="admin-info-icon" class="modal-icon fas fa-user-circle success"></i>
+            <h2 id="admin-info-title">Información</h2>
             <div id="admin-info-content" class="admin-info-modal-content">
                  </div>
             <div class="modal-buttons">
-                <button id="close-admin-modal-btn" class="btn btn-primary">Cerrar</button>
+                <button id="close-admin-info-btn" class="btn btn-primary">Cerrar</button>
             </div>
         </div>
     </div>
+    
+    <div id="edit-embarcacion-modal" class="modal-overlay">
+        <div class="modal-content large">
+            <h2>Editar Embarcación</h2>
+            <form id="edit-embarcacion-form" class="anexo-form" novalidate>
+                <div class="anexo-grid">
+                    
+                    <input type="hidden" id="edit-embarcacion-id">
+                    
+                    <div class="anexo-field span-12">
+                        <label for="edit-nombre_embarcacion">Nombre Embarcación:</label>
+                        <input type="text" id="edit-nombre_embarcacion" class="modal-input" required>
+                    </div>
+                    
+                    <div class="anexo-field span-6">
+                        <label for="edit-matricula">Matrícula:</label>
+                        <input type="text" id="edit-matricula" class="modal-input">
+                    </div>
+
+                    <div class="anexo-field span-6">
+                        <label for="edit-tonelaje_neto">Tonelaje Neto:</label>
+                        <input type="text" id="edit-tonelaje_neto" class="modal-input">
+                    </div>
+
+                    <div class="anexo-field span-6">
+                        <label for="edit-marca">Marca Motor:</label>
+                        <input type="text" id="edit-marca" class="modal-input">
+                    </div>
+
+                    <div class="anexo-field span-6">
+                        <label for="edit-potencia_hp">Potencia (HP):</label>
+                        <input type="text" id="edit-potencia_hp" class="modal-input">
+                    </div>
+
+                    <div class="anexo-field span-12">
+                        <label for="edit-puerto_base">Puerto Base:</label>
+                        <input type="text" id="edit-puerto_base" class="modal-input">
+                    </div>
+
+                    <div class="anexo-field span-12">
+                        <small id="edit-error-msg" style="color: red; display: none; width: 100%;"></small>
+                    </div>
+
+                </div>
+            </form>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button type="button" id="close-edit-modal-btn" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" form="edit-embarcacion-form" class="btn btn-primary">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+    
     <script type="module" src="js/admin-embarcaciones.js"></script>
 </body>
 </html>

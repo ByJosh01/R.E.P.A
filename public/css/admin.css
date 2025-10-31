@@ -1,6 +1,26 @@
-/* public/css/admin.css */
+/* public/css/admin.css (TEMA "AZUL PIZARRA" ACTUALIZADO) */
 
-/* Estilo principal para la tabla de administración */
+/* * ===== NUEVO TEMA ADMIN =====
+ * Aquí definimos la nueva paleta de colores.
+ */
+:root {
+    --admin-primary: #34495e; /* Azul Pizarra Oscuro (para header/activos) */
+    --admin-accent: #3498db;  /* Azul Brillante (para iconos/botones) */
+    --admin-accent-hover: #2980b9; /* Azul más oscuro para hover */
+    --admin-table-header: #ecf0f1; /* Gris azulado muy claro (para header de tabla) */
+    --admin-accent-light-bg: rgba(52, 152, 219, 0.1); /* Fondo claro para hover de icono */
+}
+
+/* * ===== ESTILO DEL ENCABEZADO ===== 
+ * (Esto solo funciona si quitaste el style= del HTML)
+ */
+.content-header {
+    background-color: var(--admin-primary);
+}
+
+
+/* * ===== ESTILOS DE TABLAS ===== 
+ */
 .admin-table {
     width: 100%;
     border-collapse: collapse;
@@ -8,31 +28,27 @@
     margin-top: 20px;
 }
 
-/* Estilo para los encabezados de la tabla (Nombre, RFC, etc.) */
 .admin-table thead th {
-    background-color: #e0e0e0;
+    background-color: var(--admin-table-header); /* CAMBIADO */
     color: #333;
     padding: 12px 15px;
     text-align: left;
-    border-bottom: 2px solid #aaa;
+    border-bottom: 2px solid #bdc3c7; /* CAMBIADO */
     font-weight: bold;
 }
 
-/* Estilo para las celdas de datos */
 .admin-table tbody td {
     padding: 12px 15px;
     border-bottom: 1px solid var(--border-color);
     color: var(--text-color);
 }
 
-/* Efecto al pasar el mouse sobre una fila */
 .admin-table tbody tr:hover {
     background-color: var(--subtle-gray);
 }
 
-/* Estilo para la última fila, para que no tenga borde inferior */
 .admin-table tbody tr:last-of-type {
-    border-bottom: 2px solid var(--primary-red);
+    border-bottom: 2px solid var(--admin-accent); /* CAMBIADO (antes --primary-red) */
 }
 
 /* Estilos para los botones de icono (Editar/Eliminar) */
@@ -42,48 +58,43 @@
     cursor: pointer;
     padding: 8px;
     margin: 0 3px;
-    color: var(--primary-red);
-    font-size: 1em;
+    color: var(--admin-accent); /* CAMBIADO (antes --primary-red) */
+    font-size: 1.1em;
     border-radius: 4px;
     transition: all 0.2s ease;
+    text-shadow: none; /* CAMBIADO (el azul brillante se ve mejor sin sombra) */
 }
 
 .admin-table .btn-icon:hover {
-    color: var(--secondary-red);
-    background-color: rgba(169, 44, 42, 0.1);
+    color: var(--admin-accent-hover); /* CAMBIADO (antes --secondary-red) */
+    background-color: var(--admin-accent-light-bg); /* CAMBIADO */
+    transform: scale(1.1);
 }
 
 /* --- Estilos para el Modo Oscuro (Dark Mode) --- */
-
+/* (Se mantienen los estilos de dark mode) */
 body.dark-mode .admin-table thead th {
     background-color: #333;
     color: #e0e0e0;
     border-bottom-color: #555;
 }
-
 body.dark-mode .admin-table tbody td {
     border-bottom-color: #444;
 }
-
 body.dark-mode .admin-table .btn-icon {
-    color: #4b0000;
+    color: #3498db; /* Ajustado al nuevo azul */
 }
-
 body.dark-mode .admin-table .btn-icon:hover {
-    color: #3f0000;
-    background-color: rgba(255, 107, 107, 0.1);
+    color: #5dade2;
+    background-color: var(--admin-accent-light-bg);
 }
 
-/* public/css/admin.css (Añadir al final) */
 
-/* --- Estilos para el Menú Desplegable de Usuario --- */
-
-/* Contenedor principal del menú */
+/* * ===== MENÚ DESPLEGABLE DE USUARIO ===== 
+ */
 .user-menu {
-    position: relative; /* Clave para posicionar el menú desplegable */
+    position: relative;
 }
-
-/* El botón visible que muestra el correo */
 .user-menu-trigger {
     display: flex;
     align-items: center;
@@ -96,19 +107,15 @@ body.dark-mode .admin-table .btn-icon:hover {
     font-weight: 500;
     transition: background-color 0.2s ease;
 }
-
 .user-menu-trigger:hover {
     background-color: rgba(255, 255, 255, 0.2);
 }
-
 .user-menu-trigger i {
     font-size: 0.8em;
 }
-
-/* El menú desplegable (oculto por defecto) */
 .dropdown-menu {
     position: absolute;
-    top: 110%; /* Un poco por debajo del botón */
+    top: 110%;
     right: 0;
     background-color: var(--white-color);
     border-radius: 8px;
@@ -116,22 +123,16 @@ body.dark-mode .admin-table .btn-icon:hover {
     width: 200px;
     z-index: 10;
     overflow: hidden;
-    
-    /* Animación para aparecer */
     opacity: 0;
     transform: translateY(-10px);
     pointer-events: none;
     transition: opacity 0.2s ease, transform 0.2s ease;
 }
-
-/* Clase 'active' que mostrará el menú */
 .dropdown-menu.active {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
 }
-
-/* Estilo de las opciones del menú */
 .dropdown-menu a {
     display: block;
     padding: 12px 18px;
@@ -140,72 +141,62 @@ body.dark-mode .admin-table .btn-icon:hover {
     font-size: 0.9em;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
-
 .dropdown-menu a:hover {
     background-color: var(--subtle-gray);
-    color: var(--primary-red);
+    color: var(--admin-accent); /* CAMBIADO (antes --primary-red) */
 }
-
 body.dark-mode .dropdown-menu a:hover {
     color: white;
 }
 
-/* public/css/admin.css (Añadir al final) */
 
-/* Contenido específico para el modal de info de admin */
+/* * ===== CONTENIDO MODAL ===== 
+ */
 .admin-info-modal-content {
     margin: 25px 0;
     text-align: left;
 }
-
-/* Reutilizamos el estilo .info-row que ya tienes para mostrar los datos */
 .admin-info-modal-content .info-row {
     display: flex;
     justify-content: space-between;
     padding: 12px;
     border-bottom: 1px solid var(--border-color);
 }
-
 .admin-info-modal-content .info-row:last-child {
     border-bottom: none;
 }
-
 .admin-info-modal-content .info-row label {
     font-weight: 500;
     color: #333;
 }
-
 .admin-info-modal-content .info-row span {
     color: #555;
     text-align: right;
 }
-
-/* --- Dark Mode para el contenido del modal --- */
-
+/* Dark Mode para modal */
 body.dark-mode .admin-info-modal-content .info-row {
     border-bottom-color: #444;
 }
-
 body.dark-mode .admin-info-modal-content .info-row label {
     color: #e0e0e0;
 }
-
 body.dark-mode .admin-info-modal-content .info-row span {
     color: #bbb;
 }
 
-/* public/css/admin.css (Añadir al final) */
+
+/* * ===== BOTONES Y OTROS ===== 
+ */
 .btn-danger {
-    background-color: #660b01;
+    /* Este era el botón "CREAR RESPALDO". Lo alineamos al nuevo tema. */
+    background-color: var(--admin-primary); /* CAMBIADO */
     color: white;
 }
 .btn-danger:hover {
-    background-color: #ff0000;
+    background-color: #4a6581; /* Un tono más claro del primary */
 }
 
-/* public/css/admin.css (Añadir al final) */
-
-/* --- Estilos para el input dentro del modal de reseteo --- */
+/* Inputs del modal */
 .modal-input {
     width: 100%;
     padding: 10px;
@@ -216,44 +207,36 @@ body.dark-mode .admin-info-modal-content .info-row span {
     background-color: var(--subtle-gray);
     color: var(--text-color);
 }
-
 body.dark-mode .modal-input {
     background-color: #333;
     border-color: #555;
     color: #e0e0e0;
 }
 
-/* public/css/admin.css (Añadir al final) */
-
-/* Transición suave para el contenido del modal */
+/* Transiciones de modal */
 #reset-modal .modal-content {
     transition: all 0.3s ease-in-out;
 }
-
 #reset-modal .input-group {
     transition: all 0.3s ease-in-out;
     overflow: hidden;
 }
 
-/* --- Estilo para botones de icono deshabilitados --- */
+/* Botones deshabilitados */
 .admin-table .btn-icon[disabled] {
     color: #bbb;
     opacity: 0.5;
     cursor: not-allowed;
 }
-
 .admin-table .btn-icon[disabled]:hover {
-    background-color: transparent; /* Quita el efecto hover */
+    background-color: transparent;
     color: #bbb;
 }
-
 body.dark-mode .admin-table .btn-icon[disabled] {
     color: #555;
 }
 
-/* public/css/admin.css (Añadir al final) */
-
-/* Hace que las filas de la tabla parezcan enlaces */
+/* Cursor en filas de tabla */
 .admin-table tbody tr {
     cursor: pointer;
 }

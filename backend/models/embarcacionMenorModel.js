@@ -26,20 +26,33 @@ embarcacionMenorModel.add = async (data, solicitanteId) => {
     return { id: result.insertId, ...dataToInsert };
 };
 
+// ▼▼▼ FUNCIÓN MODIFICADA (MÁS SEGURA) ▼▼▼
 // Actualiza una embarcación por su ID
 embarcacionMenorModel.updateById = async (id, data) => {
-    const dataToUpdate = {
-        nombre_embarcacion: data.nombre_embarcacion,
-        matricula: data.matricula,
-        tonelaje_neto: data.tonelaje_neto,
-        marca: data.marca,
-        numero_serie: data.numero_serie,
-        potencia_hp: data.potencia_hp,
-        puerto_base: data.puerto_base
-    };
+    
+    // Objeto dinámico solo con los campos que SÍ vienen en 'data'
+    const dataToUpdate = {};
+    const allowedFields = [
+        'nombre_embarcacion', 'matricula', 'tonelaje_neto', 'marca', 
+        'numero_serie', 'potencia_hp', 'puerto_base'
+    ];
+
+    allowedFields.forEach(field => {
+        // Si el campo existe en 'data' (incluso si es null o string vacío), lo añadimos
+        if (data[field] !== undefined) {
+            dataToUpdate[field] = data[field];
+        }
+    });
+
+    // Si no se pasó ningún campo válido, no hacemos nada
+    if (Object.keys(dataToUpdate).length === 0) {
+        return { affectedRows: 0 };
+    }
+
     const [result] = await pool.query('UPDATE embarcaciones_menores SET ? WHERE id = ?', [dataToUpdate, id]);
     return result;
 };
+// ▲▲▲ FIN FUNCIÓN MODIFICADA ▲▲▲
 
 // Elimina una embarcación por su ID
 embarcacionMenorModel.deleteById = async (id) => {
@@ -47,16 +60,10 @@ embarcacionMenorModel.deleteById = async (id) => {
     return result;
 };
 
-// ▼▼▼ NUEVA FUNCIÓN ▼▼▼
-/**
- * Obtiene una embarcación específica por su ID.
- * @param {number} id - El ID de la embarcación.
- * @returns {object|null} La embarcación encontrada o null si no existe.
- */
+// Obtiene una embarcación específica por su ID. (Ya estaba correcta)
 embarcacionMenorModel.getById = async (id) => {
     const [rows] = await pool.query('SELECT * FROM embarcaciones_menores WHERE id = ?', [id]);
     return rows[0] || null; // Devuelve el primer resultado o null
 };
-// ▲▲▲ FIN NUEVA FUNCIÓN ▲▲▲
 
 module.exports = embarcacionMenorModel;

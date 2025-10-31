@@ -5,7 +5,7 @@ const integranteModel = require('../models/integranteModel');
 const solicitanteModel = require('../models/solicitanteModel');
 // ▲▲▲ FIN PASO 1 ▲▲▲
 
-// Obtener la lista de integrantes
+// Obtener la lista de integrantes (del solicitante logueado)
 exports.getIntegrantes = async (req, res) => {
     try {
         const solicitanteId = req.user.solicitante_id;
@@ -47,6 +47,31 @@ exports.addIntegrante = async (req, res) => {
         }
     }
 };
+
+// ▼▼▼ FUNCIÓN AÑADIDA ▼▼▼
+/**
+ * Obtener un integrante específico por su ID.
+ * Usado por el panel de admin para rellenar el formulario de edición.
+ */
+exports.getIntegranteById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const integrante = await integranteModel.getById(id);
+        
+        if (!integrante) {
+            return res.status(404).json({ message: 'Integrante no encontrado.' });
+        }
+        
+        // Opcional: Verificar si el admin tiene permiso para ver esto
+        // Por ahora, si está protegido por 'protect', asumimos que es admin y puede verlo.
+        
+        res.status(200).json(integrante);
+    } catch (error) {
+        console.error("Error en getIntegranteById:", error);
+        res.status(500).json({ message: 'Error en el servidor al obtener el integrante.' });
+    }
+};
+// ▲▲▲ FIN FUNCIÓN AÑADIDA ▲▲▲
 
 // Actualizar un integrante existente
 exports.updateIntegrante = async (req, res) => {

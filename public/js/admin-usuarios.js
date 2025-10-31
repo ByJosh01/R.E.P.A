@@ -8,6 +8,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // ==========================================================
+    // ==== LÓGICA DE VALIDACIÓN (EXTRAÍDA DE ANEXOS) ====
+    // ==========================================================
+    const showFeedback = (inputElement, message, isValid) => {
+        let feedbackElement = inputElement.nextElementSibling;
+        while (feedbackElement && !feedbackElement.classList.contains('feedback-message')) {
+            feedbackElement = feedbackElement.nextElementSibling;
+        }
+
+        if (!feedbackElement) {
+             feedbackElement = document.createElement('div');
+             feedbackElement.className = 'feedback-message';
+             inputElement.closest('.anexo-field, .input-group')?.appendChild(feedbackElement);
+        }
+
+        inputElement.classList.remove('valid', 'invalid');
+        feedbackElement.classList.remove('valid', 'invalid');
+        
+        if (message) {
+            inputElement.classList.add(isValid ? 'valid' : 'invalid');
+            feedbackElement.classList.add(isValid ? 'valid' : 'invalid');
+            feedbackElement.textContent = message;
+        } else {
+            feedbackElement.textContent = '';
+        }
+    };
+    
+    // FUNCIONES DE FORMATO (RECREADAS)
+    const isValidCURP = (curp) => /^[A-Z]{4}\d{6}[HM][A-Z]{5}[0-9A-Z]{2}$/.test(curp.toUpperCase());
+    const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    // ==========================================================
+    // ==== FIN LÓGICA DE VALIDACIÓN ====
+    // ==========================================================
+
     // Elementos del DOM
     const userMenuTrigger = document.getElementById('user-menu-trigger');
     const userDropdown = document.getElementById('user-dropdown');
@@ -19,11 +53,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     let allUsuarios = []; // Para guardar datos originales
 
     // Modales de Info/Error
-    const infoModal = document.getElementById('admin-info-modal'); // Reutiliza el modal de admin
+    const infoModal = document.getElementById('admin-info-modal');
     const infoModalTitle = document.getElementById('admin-info-title');
     const infoModalContent = document.getElementById('admin-info-content');
     const infoModalIcon = document.getElementById('admin-info-icon');
-    const infoModalMessage = document.getElementById('admin-info-message'); // Asumiendo que añades un <p> con este ID
     const closeInfoModalBtn = document.getElementById('close-admin-info-btn');
 
     // Modales de Logout
@@ -36,10 +69,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const editForm = document.getElementById('edit-usuario-form');
     const cancelEditBtn = document.getElementById('cancel-edit-btn');
     const editUsuarioId = document.getElementById('edit-usuario-id');
+    const editEmailInput = document.getElementById('edit-email');
+    const editCurpInput = document.getElementById('edit-curp');
+    const editPasswordInput = document.getElementById('edit-password');
 
-    // =======================================================
-    // === FUNCIÓN REUTILIZABLE PARA MODALES DE INFO/ERROR ===
-    // =======================================================
+
+    // --- FUNCIÓN REUTILIZABLE PARA MODALES DE INFO/ERROR ---
     const showInfoModal = (title, content, isSuccess = true, onConfirm = null) => {
         if (!infoModal || !infoModalTitle || !infoModalContent || !infoModalIcon || !closeInfoModalBtn) {
             console.error("Elementos del modal de información no encontrados.");
@@ -47,7 +82,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         infoModalTitle.textContent = title;
-        // Diferenciar si es 'Ver Info' (HTML) o 'Éxito/Error' (texto)
         if (content.startsWith('<div')) {
             infoModalContent.innerHTML = content;
         } else {
@@ -65,9 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeInfoModalBtn.addEventListener('click', confirmHandler, { once: true });
     };
 
-    // =======================================================
-    // === LÓGICA DEL MENÚ DE ADMIN ===
-    // =======================================================
+    // --- LÓGICA DEL MENÚ DE ADMIN ---
     if (adminEmailPlaceholder) { adminEmailPlaceholder.textContent = currentUser.email; }
     if (userMenuTrigger && userDropdown) {
         userMenuTrigger.addEventListener('click', (e) => { e.stopPropagation(); userDropdown.classList.toggle('active'); });
@@ -112,12 +144,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 
-    // =======================================================
-    // === LÓGICA PARA CARGAR LA TABLA Y BUSCADOR ===
-    // =======================================================
-
-    // --- FUNCIÓN PARA FORMATEAR FECHA ---
-    const formatFecha = (dateString) => {
+    // --- LÓGICA PARA CARGAR LA TABLA Y BUSCADOR ---
+    const formatFecha = (dateString) => { /* ... (Implementación de formatFecha) ... */
         if (!dateString) return 'N/A';
         try {
             const date = new Date(dateString);
@@ -129,30 +157,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             return dateString;
         }
     };
-
-    // --- FUNCIÓN PARA RENDERIZAR LA TABLA (CON BOTÓN EDITAR) ---
-    const renderTabla = (usuarios) => {
+    
+    const renderTabla = (usuarios) => { /* ... (Implementación de renderTabla) ... */
         if(!tableBody) return;
         tableBody.innerHTML = '';
-
-        if (usuarios.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No se encontraron usuarios.</td></tr>`;
-            return;
-        }
+        if (usuarios.length === 0) { tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No se encontraron usuarios.</td></tr>`; return; }
 
         usuarios.forEach(user => {
             const row = tableBody.insertRow();
             row.dataset.id = user.id;
 
-            // Deshabilitar edición si es el propio superadmin (seguridad)
             let editButtonDisabled = '';
-            if (user.id === currentUser.id) { // Compara ID de usuario
-                editButtonDisabled = 'disabled';
-            }
-            // Superadmin puede editar a todos, admin no puede editar a superadmin
-            if (currentUser.rol === 'admin' && user.rol === 'superadmin') {
-                editButtonDisabled = 'disabled';
-            }
+            if (user.id === currentUser.id) { editButtonDisabled = 'disabled'; }
+            if (currentUser.rol === 'admin' && user.rol === 'superadmin') { editButtonDisabled = 'disabled'; }
 
             row.innerHTML = `
                 <td>${user.id}</td>
@@ -169,19 +186,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    // --- FUNCIÓN PARA CARGAR USUARIOS ---
-    const cargarUsuarios = async () => {
+    const cargarUsuarios = async () => { /* ... (Implementación de cargarUsuarios) ... */
         try {
-            const response = await fetch('/api/admin/usuarios', { // Endpoint de la ruta
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-             if (response.status === 403) { 
-                 showInfoModal('Acceso Denegado', 'No tienes permisos para ver esta sección.', false, () => window.location.href = 'admin.html'); 
-                 return;
-            }
-            if (!response.ok) {
-                throw new Error('No se pudieron cargar los usuarios.');
-            }
+            const response = await fetch('/api/admin/usuarios', { headers: { 'Authorization': `Bearer ${authToken}` } });
+             if (response.status === 403) { showInfoModal('Acceso Denegado', 'No tienes permisos para ver esta sección.', false, () => window.location.href = 'admin.html'); return; }
+            if (!response.ok) { throw new Error('No se pudieron cargar los usuarios.'); }
             allUsuarios = await response.json();
             renderTabla(allUsuarios);
         } catch (error) {
@@ -190,8 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // --- LÓGICA DE BÚSQUEDA ---
-    if (searchInput && tableBody) {
+    if (searchInput && tableBody) { /* ... (Implementación de búsqueda) ... */
         searchInput.addEventListener('input', () => {
             const searchTerm = searchInput.value.toLowerCase().trim();
             const filteredUsuarios = allUsuarios.filter(u => {
@@ -204,68 +212,113 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // =======================================================
-    // === LÓGICA PARA ACCIONES DE LA TABLA (EDITAR) ===
+    // === VALIDACIÓN EN TIEMPO REAL DEL FORMULARIO DE EDICIÓN ===
     // =======================================================
+    const setupEditFormValidation = () => {
+        
+        // Validar Email
+        if (editEmailInput) {
+            editEmailInput.setAttribute('maxlength', 60);
+            editEmailInput.addEventListener('input', (e) => {
+                if (!e.target.value) showFeedback(e.target, 'El email es obligatorio.', false);
+                else if (!isValidEmail(e.target.value)) showFeedback(e.target, 'Formato de correo incorrecto.', false);
+                else showFeedback(e.target, 'Correo válido.', true);
+            });
+        }
+        
+        // Validar CURP
+        if (editCurpInput) {
+            editCurpInput.setAttribute('maxlength', 18);
+            editCurpInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (!e.target.value) showFeedback(e.target, 'La CURP es obligatoria.', false);
+                else if (!isValidCURP(e.target.value)) showFeedback(e.target, 'Formato de CURP incorrecto.', false);
+                else showFeedback(e.target, 'CURP válido.', true);
+            });
+        }
+        
+        // Validar Contraseña (si se ingresa)
+        if (editPasswordInput) {
+            editPasswordInput.addEventListener('input', (e) => {
+                const value = e.target.value.trim();
+                if (value.length > 0 && value.length < 6) showFeedback(e.target, 'Mínimo 6 caracteres.', false);
+                else if (value.length >= 6) showFeedback(e.target, 'Contraseña OK. Se actualizará al guardar.', true);
+                else showFeedback(e.target, '', true); // Si está vacío, es opcional y válido.
+            });
+        }
+    };
+    setupEditFormValidation();
+
+
+    // --- LÓGICA PARA ACCIONES DE LA TABLA (EDITAR) ---
     
     // --- Cerrar Modal de Edición ---
-    const closeEditModal = () => { if (editModal) editModal.classList.remove('visible'); };
+    const closeEditModal = () => { if (editModal) editModal.classList.remove('visible'); 
+        editForm.querySelectorAll('.valid, .invalid').forEach(el => el.classList.remove('valid', 'invalid')); // Limpia feedback
+        editForm.querySelectorAll('.feedback-message').forEach(el => el.textContent = '');
+        editForm.reset(); // Limpia campos
+    };
     if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
     if (editModal) editModal.addEventListener('click', (e) => { if (e.target === editModal) closeEditModal(); });
 
-    // --- Abrir Modal de Edición (Event Listener en la Tabla) ---
+    // --- Abrir Modal de Edición (Disparar validación al abrir) ---
     if (tableBody) {
         tableBody.addEventListener('click', async (e) => {
             const button = e.target.closest('button.btn-edit-usuario');
             if (!button || button.disabled) return;
 
             const usuarioId = button.dataset.id;
-            console.log(`Editando usuario ID: ${usuarioId}`);
             
             try {
-                // 1. Obtener datos del usuario específico
-                const response = await fetch(`/api/admin/usuarios/${usuarioId}`, { 
-                    headers: { 'Authorization': `Bearer ${authToken}` } 
-                });
+                // 1. Obtener datos
+                const response = await fetch(`/api/admin/usuarios/${usuarioId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
                 if (!response.ok) throw new Error('No se pudieron obtener los datos del usuario.');
                 const data = await response.json();
 
-                // 2. Rellenar el modal
+                // 2. Rellenar y disparar validación
                 if (editForm && editUsuarioId && editModal) {
                     editForm.elements.email.value = data.email || '';
                     editForm.elements.curp.value = data.curp || '';
                     editForm.elements.rol.value = data.rol || 'solicitante';
-                    editForm.elements.password.value = ''; // Limpiar campo de contraseña
+                    editForm.elements.password.value = ''; 
                     editUsuarioId.value = data.id;
                     
+                    // Disparar eventos input para activar la validación y mostrar el feedback
+                    editEmailInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    editCurpInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    editPasswordInput.dispatchEvent(new Event('input', { bubbles: true })); 
+                    
                     editModal.classList.add('visible');
-                } else {
-                    console.error("Elementos del modal de edición de usuario no encontrados.");
-                }
+                } 
             } catch(error) {
-                console.error("Error al abrir modal de edición:", error);
                 showInfoModal('Error', error.message, false);
             }
         });
     }
 
-    // --- Enviar Formulario de Edición ---
+    // --- Enviar Formulario de Edición (Chequear validación final) ---
     if (editForm && editUsuarioId) {
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault(); 
-            const id = editUsuarioId.value;
-            if (!id) {
-                showInfoModal('Error', 'ID de usuario no encontrado.', false);
+            
+            // 1. Disparar validación final
+            editForm.querySelectorAll('input').forEach(input => input.dispatchEvent(new Event('input', { bubbles: true })));
+            
+            // 2. Chequear errores
+            const firstInvalidElement = editForm.querySelector('.invalid');
+            if (firstInvalidElement) {
+                showInfoModal('Formulario Incompleto', 'Por favor, revisa y corrige los campos marcados en rojo.', false);
+                firstInvalidElement.focus();
                 return;
             }
-
+            
+            const id = editUsuarioId.value;
             const data = {
                 email: editForm.elements.email.value,
                 curp: editForm.elements.curp.value.toUpperCase(),
                 rol: editForm.elements.rol.value,
-                password: editForm.elements.password.value // Enviar contraseña (vacía si no se cambia)
+                password: editForm.elements.password.value 
             };
-
-            // No enviar contraseña si el campo está vacío
             if (!data.password || data.password.trim() === '') {
                 delete data.password;
             }
@@ -273,10 +326,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const response = await fetch(`/api/admin/usuarios/${id}`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                     body: JSON.stringify(data)
                 });
 
@@ -285,7 +335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 closeEditModal();
                 showInfoModal('Éxito', result.message, true, () => {
-                   cargarUsuarios(); // Recargar la tabla
+                   cargarUsuarios(); 
                 });
 
             } catch (error) {

@@ -4,6 +4,9 @@ const { exec } = require('child_process');
 const path = require('path');
 const bcrypt = require('bcryptjs'); // <-- AÑADIR BCRYPT
 const solicitanteModel = require('../models/solicitanteModel');
+// ▼▼▼ LÍNEA AÑADIDA ▼▼▼
+const embarcacionMenorModel = require('../models/embarcacionMenorModel');
+// ▲▲▲ FIN LÍNEA AÑADIDA ▲▲▲
 const { generateRegistroPdf, generateGeneralReportPdf } = require('../services/pdfGenerator');
 
 exports.getAllSolicitantes = async (req, res) => {
@@ -237,11 +240,10 @@ exports.downloadGeneralReportPdf = async (req, res) => {
     await generateGeneralReportPdf(req, res); 
 };
 
-// ▼▼▼ NUEVAS FUNCIONES PARA EDITAR USUARIOS ▼▼▼
+// --- FUNCIONES PARA EDITAR USUARIOS ---
 exports.getUsuarioById = async (req, res) => {
     try {
         const { id } = req.params;
-        // Solo selecciona los campos que el admin puede ver/editar
         const [rows] = await pool.query(
             'SELECT id, email, curp, rol FROM usuarios WHERE id = ?',
             [id]
@@ -257,61 +259,98 @@ exports.getUsuarioById = async (req, res) => {
 };
 
 exports.updateUsuario = async (req, res) => {
-    const connection = await pool.getConnection(); // Usar transacción
+    const connection = await pool.getConnection();
     try {
         const { id } = req.params;
-        const { email, curp, rol, password } = req.body; // Incluir password
+        const { email, curp, rol, password } = req.body; 
 
-        // Validaciones básicas
         if (!email || !curp || !rol) {
             return res.status(400).json({ message: 'Faltan campos (email, curp, rol).' });
         }
         if (rol !== 'solicitante' && rol !== 'admin' && rol !== 'superadmin') {
             return res.status(400).json({ message: 'Rol inválido.' });
         }
-
-        // Evitar que un superadmin se quite el rol a sí mismo por accidente
         if (req.user.id == id && rol !== 'superadmin') {
              return res.status(403).json({ message: 'Un superadmin no puede cambiar su propio rol.' });
         }
         
-        await connection.beginTransaction(); // Iniciar transacción
+        await connection.beginTransaction(); 
 
-        // 1. Actualizar la tabla 'usuarios'
         let queryParams = [email, curp.toUpperCase(), rol];
         let queryUpdateUsuario = 'UPDATE usuarios SET email = ?, curp = ?, rol = ?';
 
-        // Si se proveyó una nueva contraseña, encriptarla y añadirla a la consulta
         if (password && password.trim() !== '') {
             const hashedPassword = await bcrypt.hash(password, 10);
             queryUpdateUsuario += ', password = ?';
             queryParams.push(hashedPassword);
         }
-
         queryUpdateUsuario += ' WHERE id = ?';
         queryParams.push(id);
-
         await connection.query(queryUpdateUsuario, queryParams);
         
-        // 2. También actualizamos el curp/email en la tabla 'solicitantes' vinculada (si existe)
         await connection.query(
             'UPDATE solicitantes SET curp = ?, correo_electronico = ? WHERE usuario_id = ?',
             [curp.toUpperCase(), email, id]
         );
         
-        await connection.commit(); // Confirmar cambios
+        await connection.commit(); 
 
         res.status(200).json({ message: 'Cuenta de usuario actualizada correctamente.' });
     } catch (error) {
-        await connection.rollback(); // Revertir en caso de error
+        await connection.rollback(); 
         console.error("Error en updateUsuario:", error);
-         // Manejar error de CURP/Email duplicado
         if (error.code === 'ER_DUP_ENTRY') {
              return res.status(409).json({ message: 'Error: El email o CURP ya está en uso por otra cuenta.' });
         }
         res.status(500).json({ message: 'Error en el servidor al actualizar el usuario.' });
     } finally {
-         if (connection) connection.release(); // Liberar conexión
+         if (connection) connection.release(); 
     }
 };
-// ▲▲▲ FIN NUEVAS FUNCIONES ▲▲▲
+
+// ▼▼▼ NUEVAS FUNCIONES PARA EDITAR EMBARCACIONES (ADMIN) ▼▼▼
+
+/**
+ * [ADMIN] Obtiene una embarcación específica por su ID.
+ */
+exports.getEmbarcacionById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const embarcacion = await embarcacionMenorModel.getById(id);
+        
+        if (!embarcacion) {
+            return res.status(404).json({ message: 'Embarcación no encontrada.' });
+        }
+        
+        // Como es un admin (verificado por middleware), puede verla.
+        res.status(200).json(embarcacion);
+    
+    } catch (error) {
+        console.error("Error en getEmbarcacionById (Admin):", error);
+        res.status(500).json({ message: 'Error en el servidor al obtener la embarcación.' });
+    }
+};
+
+/**
+ * [ADMIN] Actualiza una embarcación específica por su ID.
+ */
+exports.updateEmbarcacionById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Gracias al modelo actualizado, solo se actualizarán los 6 campos
+        // que vienen en req.body, y 'numero_serie' se ignorará (no se borrará).
+        const result = await embarcacionMenorModel.updateById(id, req.body);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Embarcación no encontrada, no se actualizó nada.' });
+        }
+
+        res.status(200).json({ message: 'Embarcación actualizada con éxito.' });
+    
+    } catch (error) {
+        console.error("Error en updateEmbarcacionById (Admin):", error);
+        res.status(500).json({ message: 'Error en el servidor al actualizar la embarcación.' });
+    }
+};
+// ▲▲▲ FIN NUEVAS FUNCIONES DE EMBARCACIONES ▲▲▲

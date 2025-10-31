@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <script src="js/auth-guard.js"></script>
     <title>Admin - Cuentas de Usuario</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/app-layout.css">
@@ -11,8 +13,9 @@
 </head>
 <body class="layout-app page-full-width">
     <main class="app-content">
+        
         <header class="content-header">
-            <div>
+        <div>
                 <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
             </div>
             <div class="user-menu">
@@ -22,9 +25,10 @@
                 </div>
                 <div class="dropdown-menu" id="user-dropdown">
                     <a href="#" id="view-admin-info">Ver Información</a>
+                    <a href="#" id="admin-goto-dashboard-btn">Ir al Dashboard (SUPER-ADMIN)</a>
                     <a href="#" id="admin-logout-btn">Cerrar Sesión</a>
                 </div>
-            </div>
+                </div>
             </header>
 
         <nav class="tabs-nav" style="margin-top: -30px; margin-bottom: 30px; background-color: white;">

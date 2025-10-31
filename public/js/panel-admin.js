@@ -86,6 +86,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cancelEditBtn = document.getElementById('cancel-edit-btn');
     const editSolicitanteId = document.getElementById('edit-solicitante-id');
 
+    // ==============================================
+    // ==== ¡SELECTOR DE BOTÓN AÑADIDO! ====
+    const btnDownloadGeneralReport = document.getElementById('btn-download-general-report');
+    // ==============================================
+
+
     // =======================================================
     // === FUNCIÓN REUTILIZABLE PARA MODALES DE INFO/ERROR ===
     // =======================================================
@@ -327,7 +333,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // ---- ▼▼▼ NUEVA LÓGICA PARA DESCARGAR PDF ▼▼▼ ----
+            // ---- ▼▼▼ LÓGICA PARA DESCARGAR PDF (COPIADA DE ADMIN.JS) ▼▼▼ ----
             else if (button.classList.contains('btn-download-pdf')) {
                 console.log('Descargar PDF para solicitante ID:', id);
                 button.disabled = true; // Deshabilita mientras descarga
@@ -377,7 +383,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     button.innerHTML = '<i class="fas fa-file-pdf"></i>';
                 }
             }
-            // ---- ▲▲▲ FIN NUEVA LÓGICA PDF ▲▲▲ ----
+            // ---- ▲▲▲ FIN LÓGICA PDF ▲▲▲ ----
         });
     }
 
@@ -398,7 +404,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 closeDeleteModal();
                 showInfoModal('Éxito', result.message, true, () => {
                     cargarSolicitantes(); // Recargar la tabla en lugar de toda la página
-                    // window.location.reload(); // Alternativa si prefieres recargar todo
                 });
 
             } catch (error) {
@@ -422,9 +427,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const data = {
-                 // Para el nombre, necesitamos separar nombre y apellidos si los guardas así
-                 // Esto es un ejemplo, ajusta según cómo guardes el nombre en tu BD
-                 // Quizás solo necesites enviar un campo 'nombre_completo' o mantenerlos separados
                  nombre: editForm.elements.nombre.value, // Asumiendo que es nombre completo
                  rfc: editForm.elements.rfc.value,
                  curp: editForm.elements.curp.value,
@@ -447,7 +449,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 closeEditModal();
                 showInfoModal('Éxito', result.message, true, () => {
                    cargarSolicitantes(); // Recargar tabla
-                   // window.location.reload();
                 });
 
             } catch (error) {
@@ -456,6 +457,53 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // ==============================================
+    // ==== ¡LÓGICA DEL REPORTE GENERAL AÑADIDA! ====
+    // ==============================================
+    if (btnDownloadGeneralReport) {
+        btnDownloadGeneralReport.addEventListener('click', async () => {
+            console.log('Descargando reporte general...');
+            btnDownloadGeneralReport.disabled = true;
+            btnDownloadGeneralReport.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+            try {
+                const response = await fetch(`/api/admin/download-reporte-general`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `Error ${response.status}: ${response.statusText}`;
+                    try { const errorData = await response.json(); errorMsg = errorData.message || errorMsg; } catch (e) {}
+                    throw new Error(errorMsg);
+                }
+
+                // Lógica para descargar el blob
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'Reporte_General_Solicitantes.pdf'; // Nombre por defecto
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+                    if (filenameMatch && filenameMatch.length > 1) filename = filenameMatch[1];
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none'; a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click();
+                window.URL.revokeObjectURL(url); a.remove();
+
+            } catch (error) {
+                console.error("Error al descargar reporte general:", error);
+                showInfoModal('Error de Descarga', `No se pudo descargar el reporte: ${error.message}`, false);
+            } finally {
+                btnDownloadGeneralReport.disabled = false;
+                btnDownloadGeneralReport.innerHTML = '<i class="fas fa-file-pdf"></i> Descargar Reporte General';
+            }
+        });
+    }
+    // ==============================================
 
     // --- CARGA INICIAL ---
     cargarSolicitantes();

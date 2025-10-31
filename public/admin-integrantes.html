@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="js/auth-guard.js"></script>
     <title>Admin - Todos los Integrantes</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/app-layout.css">
@@ -11,9 +13,10 @@
 </head>
 <body class="layout-app page-full-width">
     <main class="app-content">
-        <header class="content-header">
-            <div>
-                 <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
+        
+        <header class="content-header"> 
+        <div>
+                <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
             </div>
              <div class="user-menu">
                 <div class="user-menu-trigger" id="user-menu-trigger">
@@ -22,9 +25,10 @@
                 </div>
                 <div class="dropdown-menu" id="user-dropdown">
                     <a href="#" id="view-admin-info">Ver Información</a>
+                    <a href="#" id="admin-goto-dashboard-btn">Ir al Dashboard (SUPER-ADMIN)</a>
                     <a href="#" id="admin-logout-btn">Cerrar Sesión</a>
                 </div>
-            </div>
+             </div>
         </header>
 
         <nav class="tabs-nav" style="margin-top: -30px; margin-bottom: 30px; background-color: white;">
@@ -38,6 +42,11 @@
             <div class="content-card">
                 <h1 class="content-title">Lista de Todos los Integrantes</h1>
                 <p style="margin-bottom: 20px; color: #666;">Esta tabla muestra todos los integrantes registrados por todos los solicitantes.</p>
+
+                <div class="input-group" style="max-width: 500px; margin-bottom: 20px;">
+                    <label for="search-input" style="text-align: left;"><i class="fas fa-search"></i> Buscar Integrante:</label>
+                    <input type="text" id="search-input" class="modal-input" placeholder="Escriba un Nombre, RFC o CURP para filtrar...">
+                </div>
                 <div class="table-container">
                     <table class="admin-table">
                         <thead>
@@ -48,10 +57,11 @@
                                 <th>Teléfono</th>
                                 <th>Municipio</th>
                                 <th>Actividad</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="integrantes-table-body">
-                            <tr><td colspan="6" style="text-align: center;">Cargando datos...</td></tr>
+                            <tr><td colspan="7" style="text-align: center;">Cargando datos...</td></tr> 
                         </tbody>
                     </table>
                 </div>
@@ -61,15 +71,67 @@
 
     <div id="admin-info-modal" class="modal-overlay">
         <div class="modal-content">
-            <i class="modal-icon fas fa-user-circle success"></i>
-            <h2 id="admin-info-modal-title">Información</h2>
+            <i id="admin-info-icon" class="modal-icon fas fa-user-circle success"></i> 
+            <h2 id="admin-info-title">Información</h2>
             <div id="admin-info-content" class="admin-info-modal-content">
                 </div>
             <div class="modal-buttons">
-                <button id="close-admin-modal-btn" class="btn btn-primary">Cerrar</button>
+                <button id="close-admin-info-btn" class="btn btn-primary">Cerrar</button>
             </div>
         </div>
     </div>
+
+    <div id="edit-integrante-modal" class="modal-overlay">
+        <div class="modal-content large">
+            <h2>Editar Integrante</h2>
+            <form id="edit-integrante-form" class="anexo-form" novalidate>
+                <div class="anexo-grid">
+                    
+                    <input type="hidden" id="edit-integrante-id">
+                    
+                    <div class="anexo-field span-12">
+                        <label for="edit-nombre_completo">Nombre Completo:</label>
+                        <input type="text" id="edit-nombre_completo" class="modal-input" required>
+                    </div>
+                    
+                    <div class="anexo-field span-6">
+                        <label for="edit-rfc">RFC:</label>
+                        <input type="text" id="edit-rfc" class="modal-input" maxlength="13">
+                    </div>
+
+                    <div class="anexo-field span-6">
+                        <label for="edit-curp">CURP:</label>
+                        <input type="text" id="edit-curp" class="modal-input" maxlength="18">
+                    </div>
+
+                    <div class="anexo-field span-6">
+                        <label for="edit-telefono">Teléfono:</label>
+                        <input type="text" id="edit-telefono" class="modal-input" maxlength="10">
+                    </div>
+
+                    <div class="anexo-field span-6">
+                        <label for="edit-municipio">Municipio:</label>
+                        <input type="text" id="edit-municipio" class="modal-input">
+                    </div>
+
+                    <div class="anexo-field span-12">
+                        <label for="edit-actividad_desempena">Actividad que Desempeña:</label>
+                        <input type="text" id="edit-actividad_desempena" class="modal-input">
+                    </div>
+
+                    <div class="anexo-field span-12">
+                        <small id="edit-error-msg" style="color: red; display: none; width: 100%;"></small>
+                    </div>
+
+                </div>
+            </form>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button type="button" id="close-edit-modal-btn" class="btn btn-secondary">Cancelar</button>
+                <button type="submit" form="edit-integrante-form" class="btn btn-primary">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="js/admin-integrantes.js"></script>
 </body>
 </html>
