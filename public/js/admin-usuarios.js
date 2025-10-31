@@ -8,14 +8,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    const themeLink = document.createElement('link');
-    themeLink.rel = 'stylesheet';
-    if (currentUser.rol === 'superadmin') {
-        themeLink.href = 'css/admin.css'; // Tema Superadmin
-    } else if (currentUser.rol === 'admin') {
-        themeLink.href = 'css/panel-admin.css'; // Tema Admin (Guinda)
-    }
-    document.head.appendChild(themeLink);
+    // ==========================================================
+    // ==== LÓGICA DE ESTILOS DINÁMICA (CORREGIDA) ====
+    // ==========================================================
+    const manageStylesByRole = (rol) => {
+        const adminLink = document.getElementById('admin-theme-link');
+        const panelAdminLink = document.getElementById('panel-admin-theme-link');
+
+        if (rol === 'superadmin') {
+            // Activa admin.css y desactiva panel-admin.css
+            if (adminLink) adminLink.disabled = false;
+            if (panelAdminLink) panelAdminLink.disabled = true;
+        } else if (rol === 'admin') {
+            // Desactiva admin.css y activa panel-admin.css
+            if (adminLink) adminLink.disabled = true;
+            if (panelAdminLink) panelAdminLink.disabled = false;
+        }
+        
+        // Ajuste del título del header
+        const headerTitleElement = document.querySelector('.content-header div:first-child');
+        if (headerTitleElement) {
+            if (rol === 'superadmin') {
+                 headerTitleElement.innerHTML = '<i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración';
+            } else {
+                 headerTitleElement.innerHTML = '<i class="fas fa-user-cog" style="margin-right: 10px;"></i> Panel de Gestión';
+            }
+        }
+    };
+    
+    // Ejecutar gestión de estilos al inicio
+    manageStylesByRole(currentUser.rol);
+    // ==========================================================
+    // ==== FIN LÓGICA DE ESTILOS ====
+    // ==========================================================
+
 
     // ==========================================================
     // ==== LÓGICA DE VALIDACIÓN (EXTRAÍDA DE ANEXOS) ====
@@ -163,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     // --- LÓGICA PARA CARGAR LA TABLA Y BUSCADOR ---
-    const formatFecha = (dateString) => { /* ... (Implementación de formatFecha) ... */
+    const formatFecha = (dateString) => {
         if (!dateString) return 'N/A';
         try {
             const date = new Date(dateString);
@@ -176,7 +202,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
     
-    const renderTabla = (usuarios) => { /* ... (Implementación de renderTabla) ... */
+    const renderTabla = (usuarios) => {
         if(!tableBody) return;
         tableBody.innerHTML = '';
         if (usuarios.length === 0) { tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No se encontraron usuarios.</td></tr>`; return; }
@@ -204,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    const cargarUsuarios = async () => { /* ... (Implementación de cargarUsuarios) ... */
+    const cargarUsuarios = async () => {
         try {
             const response = await fetch('/api/admin/usuarios', { headers: { 'Authorization': `Bearer ${authToken}` } });
              if (response.status === 403) { showInfoModal('Acceso Denegado', 'No tienes permisos para ver esta sección.', false, () => window.location.href = 'admin.html'); return; }
@@ -217,7 +243,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    if (searchInput && tableBody) { /* ... (Implementación de búsqueda) ... */
+    if (searchInput && tableBody) {
         searchInput.addEventListener('input', () => {
             const searchTerm = searchInput.value.toLowerCase().trim();
             const filteredUsuarios = allUsuarios.filter(u => {
