@@ -1,36 +1,65 @@
 // public/js/panel-admin.js
-document.addEventListener('DOMContentLoaded', async () => {
-    // --- Verificaciones y Selectores Globales ---
-    const authToken = localStorage.getItem('authToken'); // Lo necesitas para los fetch
-    const currentUser = JSON.parse(sessionStorage.getItem('currentUser')); // Es VITAL para el rol
 
-    // ==========================================================
-    // ==== INICIO DE LA MODIFICACIÓN (AUTORIZACIÓN DE ROL) ====
-    // ==========================================================
-
-    // El 'auth-guard.js' (en el <head>) ya revisó si el user está logueado.
-    // Ahora, este script revisa si tiene el ROL CORRECTO.
+/**
+ * Función de chequeo de rol para el Admin.
+ * Se asegura de que solo el 'admin' pueda estar aquí.
+ * Patea a cualquier otro rol a su panel correspondiente.
+ * Devuelve 'true' si el chequeo pasa, 'false' si falla.
+ */
+function checkPanelAdminRole() {
+    // auth-guard.js (en el <head>) ya revisó si la sesión existe.
+    // Esta función revisa si el ROL es correcto.
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
 
     // Esta página es EXCLUSIVAMENTE para el rol 'admin'.
-    if (currentUser.rol !== 'admin') {
-        console.warn(`Acceso denegado: Rol '${currentUser.rol}' no autorizado para 'panel-admin.html'.`);
-
-        // Si es 'superadmin', lo pateamos a SU panel (admin.html).
-        if (currentUser.rol === 'superadmin') {
-            window.location.replace('/admin.html');
+    if (!currentUser || currentUser.rol !== 'admin') {
+        console.warn(`Acceso denegado: Rol '${currentUser ? currentUser.rol : 'null'}' no autorizado para 'panel-admin.html'. Redirigiendo...`);
         
-        // Si es 'solicitante' (o cualquier otro), lo pateamos a SU dashboard.
+        // Si es 'superadmin', lo pateamos a SU panel.
+        if (currentUser && currentUser.rol === 'superadmin') {
+            window.location.replace('/admin.html');
+        // Si es 'solicitante' o cualquier otro, al dashboard.
         } else {
             window.location.replace('/dashboard.html');
         }
-        return; // Detenemos la ejecución del resto del script
+        return false; // Indicar que la validación falló
     }
+    
+    return true; // La validación fue exitosa
+}
+
+// ==========================================================
+// ==== INICIO DE LA MODIFICACIÓN (SOLUCIÓN AL BOTÓN "ATRÁS") ====
+// ==========================================================
+
+// 1. ¡LA SOLUCIÓN! Ejecutar la lógica de rol en PAGESHOW
+window.addEventListener('pageshow', (event) => {
+    // 'event.persisted' es true si la página se restauró desde la caché
+    if (event.persisted) {
+        // Si la página se restaura desde la caché,
+        // VOLVEMOS a chequear el rol.
+        checkPanelAdminRole();
+    }
+});
+
+// 2. Ejecutar la lógica de rol en la carga normal
+document.addEventListener('DOMContentLoaded', async () => {
+    
+    // Corremos el chequeo de rol. Si falla, detenemos todo.
+    if (!checkPanelAdminRole()) {
+        return; // Detiene la ejecución del resto de DOMContentLoaded
+    }
+
+    // Si el chequeo pasa, el resto de tu script se ejecuta:
+    const authToken = localStorage.getItem('authToken');
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+    
     // ==========================================================
     // ==== FIN DE LA MODIFICACIÓN ====
     // ==========================================================
 
 
-    // Elementos del DOM (El resto de tu código original, sin cambios)
+    // Elementos del DOM (Tu código original, sin cambios)
     const userMenuTrigger = document.getElementById('user-menu-trigger');
     const userDropdown = document.getElementById('user-dropdown');
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');

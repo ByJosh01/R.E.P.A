@@ -1,32 +1,68 @@
 // public/js/admin.js
+
+/**
+ * Función de chequeo de rol para el Superadmin.
+ * Se asegura de que solo el 'superadmin' pueda estar aquí.
+ * Patea a cualquier otro rol a su panel correspondiente.
+ * Devuelve 'true' si el chequeo pasa, 'false' si falla.
+ */
+function checkSuperAdminRole() {
+    // auth-guard.js (en el <head>) ya revisó si la sesión existe.
+    // Esta función revisa si el ROL es correcto.
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+
+    // Si el rol NO es 'superadmin', es un error de autorización.
+    if (!currentUser || currentUser.rol !== 'superadmin') {
+        console.warn(`Acceso denegado: Rol '${currentUser ? currentUser.rol : 'null'}' no autorizado para 'admin.html'. Redirigiendo...`);
+        
+        // Si es 'admin', lo pateamos a SU panel.
+        if (currentUser && currentUser.rol === 'admin') {
+            window.location.replace('/panel-admin.html');
+        // Si es 'solicitante' o cualquier otro, al dashboard.
+        } else {
+            window.location.replace('/dashboard.html');
+        }
+        return false; // Indicar que la validación falló
+    }
+    
+    return true; // La validación fue exitosa
+}
+
+
+// ==========================================================
+// ==== INICIO DE LA MODIFICACIÓN (SOLUCIÓN AL BOTÓN "ATRÁS") ====
+// ==========================================================
+
+// 1. ¡LA SOLUCIÓN! Ejecutar la lógica de rol en PAGESHOW
+// Esto se dispara CADA VEZ que la página se muestra,
+// incluyendo al usar el botón "Atrás" (bfcache).
+window.addEventListener('pageshow', (event) => {
+    // 'event.persisted' es true si la página se restauró desde la caché
+    if (event.persisted) {
+        // Si la página se restaura desde la caché,
+        // VOLVEMOS a chequear el rol.
+        checkSuperAdminRole();
+    }
+});
+
+// 2. Ejecutar la lógica de rol en la carga normal
 document.addEventListener('DOMContentLoaded', async () => {
     
-    // El 'auth-guard.js' (en el <head>) ya verificó si 'authToken' y 'currentUser' existen.
-    // Si este script se ejecuta, es porque el usuario SÍ está logueado.
+    // Corremos el chequeo de rol. Si falla, detenemos todo.
+    if (!checkSuperAdminRole()) {
+        return; // Detiene la ejecución del resto de DOMContentLoaded
+    }
+
+    // Si el chequeo pasa, el resto de tu script se ejecuta:
     const authToken = localStorage.getItem('authToken');
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
-    
-    // ==========================================================
-    // ==== INICIO DE LA MODIFICACIÓN (BLOQUE DE SEGURIDAD) ====
-    // ==========================================================
-    
-    // Ya no necesitamos: if (!authToken || !currentUser) { ... }
-    // El 'auth-guard.js' ya lo hizo por nosotros, de forma más rápida.
 
-    // ¡ESTA ES LA LÍNEA CLAVE!
-    // Ahora solo verificamos la AUTORIZACIÓN (el rol).
-    if (currentUser.rol !== 'superadmin') {
-        console.warn('Acceso denegado: Se requiere rol "superadmin". Redirigiendo a panel-admin.html');
-        // Lo enviamos a su panel correcto (o al dashboard si tampoco es admin)
-        window.location.href = 'panel-admin.html'; 
-        return; // Detiene la ejecución del resto del script
-    }
     // ==========================================================
     // ==== FIN DE LA MODIFICACIÓN ====
     // ==========================================================
 
 
-    // Elementos del DOM (Sin cambios)
+    // Elementos del DOM (Tu código original, sin cambios)
     const userMenuTrigger = document.getElementById('user-menu-trigger');
     const userDropdown = document.getElementById('user-dropdown');
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
