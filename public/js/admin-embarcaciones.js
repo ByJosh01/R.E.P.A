@@ -340,4 +340,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.location.href = 'home.html';
         });
     }
+
+
+    const adminGotoDashboardBtn = document.getElementById('admin-goto-dashboard-btn');
+    if (adminGotoDashboardBtn) {
+        adminGotoDashboardBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = 'dashboard.html';
+        });
+    }
 });

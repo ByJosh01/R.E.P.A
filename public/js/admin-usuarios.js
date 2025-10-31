@@ -8,6 +8,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    const themeLink = document.createElement('link');
+    themeLink.rel = 'stylesheet';
+    if (currentUser.rol === 'superadmin') {
+        themeLink.href = 'css/admin.css'; // Tema Superadmin
+    } else if (currentUser.rol === 'admin') {
+        themeLink.href = 'css/panel-admin.css'; // Tema Admin (Guinda)
+    }
+    document.head.appendChild(themeLink);
+
     // ==========================================================
     // ==== LÓGICA DE VALIDACIÓN (EXTRAÍDA DE ANEXOS) ====
     // ==========================================================
@@ -48,6 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
     const viewAdminInfoBtn = document.getElementById('view-admin-info');
     const adminLogoutBtn = document.getElementById('admin-logout-btn');
+    const adminGotoDashboardBtn = document.getElementById('admin-goto-dashboard-btn');
     const tableBody = document.getElementById('usuarios-table-body');
     const searchInput = document.getElementById('search-input');
     let allUsuarios = []; // Para guardar datos originales
@@ -133,6 +143,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             logoutModal.classList.add('visible');
         });
+
+
+        if (adminGotoDashboardBtn) {
+        adminGotoDashboardBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = 'dashboard.html';
+        });
+    }
         const closeModal = () => logoutModal.classList.remove('visible');
         if(cancelLogoutBtn) cancelLogoutBtn.addEventListener('click', closeModal);
         logoutModal.addEventListener('click', (e) => { if (e.target === logoutModal) closeModal(); });

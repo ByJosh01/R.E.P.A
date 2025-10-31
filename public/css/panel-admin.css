@@ -1,0 +1,241 @@
+/* public/css/panel-admin.css (TEMA "ROJIZO GUINDA") */
+
+/* * ===== NUEVO TEMA GUINDA =====
+ * Aquí definimos la nueva paleta de colores.
+ */
+:root {
+    --guinda-primary: #700000;      /* Guinda Oscuro (para header/activos) */
+    --guinda-accent: #9d2424;       /* Rojo Brillante (para iconos/botones) */
+    --guinda-accent-hover: #7c1313; /* Rojo más oscuro para hover */
+    --guinda-table-header: #fbe9e7; /* Rojo muy claro (para header de tabla) */
+    --guinda-accent-light-bg: rgba(211, 47, 47, 0.1); /* Fondo claro para hover de icono */
+}
+
+/* * ===== ESTILO DEL ENCABEZADO ===== 
+ */
+.content-header {
+    background-color: var(--guinda-primary);
+}
+
+
+/* * ===== ESTILOS DE TABLAS ===== 
+ */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+    margin-top: 20px;
+}
+
+.admin-table thead th {
+    background-color: var(--guinda-table-header); /* CAMBIADO */
+    color: #333;
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 2px solid #ffcdd2; /* CAMBIADO (borde rojo claro) */
+    font-weight: bold;
+}
+
+.admin-table tbody td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.admin-table tbody tr:hover {
+    background-color: var(--subtle-gray);
+}
+
+.admin-table tbody tr:last-of-type {
+    border-bottom: 2px solid var(--guinda-accent); /* CAMBIADO */
+}
+
+/* Estilos para los botones de icono (Editar/Eliminar) */
+.admin-table .btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    margin: 0 3px;
+    color: var(--guinda-accent); /* CAMBIADO */
+    font-size: 1.1em;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    text-shadow: none; 
+}
+
+.admin-table .btn-icon:hover {
+    color: var(--guinda-accent-hover); /* CAMBIADO */
+    background-color: var(--guinda-accent-light-bg); /* CAMBIADO */
+    transform: scale(1.1);
+}
+
+/* --- Estilos para el Modo Oscuro (Dark Mode) --- */
+/* (Se mantienen los estilos de dark mode, pero con acento guinda) */
+body.dark-mode .admin-table thead th {
+    background-color: #333;
+    color: #e0e0e0;
+    border-bottom-color: #555;
+}
+body.dark-mode .admin-table tbody td {
+    border-bottom-color: #444;
+}
+body.dark-mode .admin-table .btn-icon {
+    color: var(--guinda-accent); /* Ajustado al nuevo rojo */
+}
+body.dark-mode .admin-table .btn-icon:hover {
+    color: #e57373; /* Rojo claro para hover en dark mode */
+    background-color: var(--guinda-accent-light-bg);
+}
+
+
+/* * ===== MENÚ DESPLEGABLE DE USUARIO ===== 
+ */
+.user-menu {
+    position: relative;
+}
+.user-menu-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+.user-menu-trigger:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+.user-menu-trigger i {
+    font-size: 0.8em;
+}
+.dropdown-menu {
+    position: absolute;
+    top: 110%;
+    right: 0;
+    background-color: var(--white-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    width: 200px;
+    z-index: 10;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.dropdown-menu.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+.dropdown-menu a {
+    display: block;
+    padding: 12px 18px;
+    text-decoration: none;
+    color: var(--text-color);
+    font-size: 0.9em;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.dropdown-menu a:hover {
+    background-color: var(--subtle-gray);
+    color: var(--guinda-accent); /* CAMBIADO */
+}
+body.dark-mode .dropdown-menu a:hover {
+    color: white;
+}
+
+
+/* * ===== CONTENIDO MODAL ===== 
+ */
+.admin-info-modal-content {
+    margin: 25px 0;
+    text-align: left;
+}
+.admin-info-modal-content .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+.admin-info-modal-content .info-row:last-child {
+    border-bottom: none;
+}
+.admin-info-modal-content .info-row label {
+    font-weight: 500;
+    color: #333;
+}
+.admin-info-modal-content .info-row span {
+    color: #555;
+    text-align: right;
+}
+/* Dark Mode para modal */
+body.dark-mode .admin-info-modal-content .info-row {
+    border-bottom-color: #444;
+}
+body.dark-mode .admin-info-modal-content .info-row label {
+    color: #e0e0e0;
+}
+body.dark-mode .admin-info-modal-content .info-row span {
+    color: #bbb;
+}
+
+
+/* * ===== BOTONES Y OTROS ===== 
+ */
+.btn-danger {
+    /* El CSS original lo ponía azul, lo regresamos a rojo/guinda */
+    background-color: var(--guinda-accent); /* CAMBIADO */
+    color: white;
+}
+.btn-danger:hover {
+    background-color: var(--guinda-accent-hover); /* CAMBIADO */
+}
+
+/* Inputs del modal */
+.modal-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1em;
+    margin-top: 5px;
+    background-color: var(--subtle-gray);
+    color: var(--text-color);
+}
+body.dark-mode .modal-input {
+    background-color: #333;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+/* Transiciones de modal */
+#reset-modal .modal-content {
+    transition: all 0.3s ease-in-out;
+}
+#reset-modal .input-group {
+    transition: all 0.3s ease-in-out;
+    overflow: hidden;
+}
+
+/* Botones deshabilitados */
+.admin-table .btn-icon[disabled] {
+    color: #bbb;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.admin-table .btn-icon[disabled]:hover {
+    background-color: transparent;
+    color: #bbb;
+}
+body.dark-mode .admin-table .btn-icon[disabled] {
+    color: #555;
+}
+
+/* Cursor en filas de tabla */
+.admin-table tbody tr {
+    cursor: pointer;
+}
