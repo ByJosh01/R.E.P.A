@@ -19,6 +19,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // ==========================================================
+    // ==== LÓGICA DE ESTILOS DINÁMICA (NUEVA) ====
+    // ==========================================================
+    const manageStylesByRole = (rol) => {
+        // Usamos los IDs del HTML
+        const adminLink = document.getElementById('admin-theme-link');
+        const panelAdminLink = document.getElementById('panel-admin-theme-link');
+
+        if (rol === 'superadmin') {
+            // Activa admin.css (Tema Azul Pizarra)
+            if (adminLink) adminLink.disabled = false;
+            // Desactiva panel-admin.css
+            if (panelAdminLink) panelAdminLink.disabled = true;
+        } else if (rol === 'admin') {
+            // Activa panel-admin.css (Tu tema secundario)
+            if (adminLink) adminLink.disabled = true;
+            // Desactiva admin.css
+            if (panelAdminLink) panelAdminLink.disabled = false;
+        }
+        
+        // El icono del header debe reflejar el rol
+        const headerTitleElement = document.querySelector('.content-header div:first-child');
+        if (headerTitleElement) {
+            if (rol === 'superadmin') {
+                 headerTitleElement.innerHTML = '<i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración';
+            } else {
+                 headerTitleElement.innerHTML = '<i class="fas fa-user-cog" style="margin-right: 10px;"></i> Panel de Gestión';
+            }
+        }
+    };
+    
+    // Ejecutar gestión de estilos al inicio
+    manageStylesByRole(currentUser.rol);
+    // ==========================================================
+    // ==== FIN LÓGICA DE ESTILOS DINÁMICA ====
+    // ==========================================================
+
+
     // --- FUNCIÓN DE FEEDBACK (Recreada de utilidades) ---
     const showFeedback = (inputElement, message, isValid) => {
         let feedbackElement = inputElement.nextElementSibling;
@@ -27,10 +65,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (parent) feedbackElement = parent.querySelector('.feedback-message');
         }
 
-        if (!feedbackElement) { // Si no lo encuentra, lo creamos para el modal de edición
+        if (!feedbackElement) { 
              feedbackElement = document.createElement('div');
              feedbackElement.className = 'feedback-message';
-             inputElement.closest('.anexo-field, .input-group').appendChild(feedbackElement);
+             inputElement.closest('.anexo-field, .input-group')?.appendChild(feedbackElement);
         }
 
         inputElement.classList.remove('valid', 'invalid');
@@ -51,23 +89,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ----------------------------------------------------------------------
 
 
-    // --- LÓGICA DE NAVEGACIÓN (Omitida por brevedad) ---
+    // --- LÓGICA DE NAVEGACIÓN ---
     const navSolicitantes = document.getElementById('nav-solicitantes');
     const navCuentas = document.getElementById('nav-cuentas');
-    const headerTitleElement = document.querySelector('.content-header div:first-child');
+    // Navegación se ajusta en base al rol
     if (navSolicitantes && navCuentas) {
         if (currentUser.rol === 'superadmin') {
             navSolicitantes.href = 'admin.html';
             navCuentas.style.display = 'inline-block';
-            if (headerTitleElement) headerTitleElement.innerHTML = '<i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración';
         } else {
             navSolicitantes.href = 'panel-admin.html';
             navCuentas.style.display = 'none';
-            if (headerTitleElement) headerTitleElement.innerHTML = '<i class="fas fa-user-cog" style="margin-right: 10px;"></i> Panel de Gestión';
         }
     }
 
-    // --- LÓGICA DE MODAL DE INFO (Omitida por brevedad) ---
+    // --- LÓGICA DE MODAL DE INFO ---
     const infoModal = document.getElementById('admin-info-modal');
     const infoModalTitle = document.getElementById('admin-info-title');
     const infoModalContent = document.getElementById('admin-info-content');
@@ -93,11 +129,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeInfoModalBtn.addEventListener('click', confirmHandler, { once: true });
     };
 
-    // --- LÓGICA DE TABLA Y BÚSQUEDA (Omitida por brevedad) ---
+    // --- LÓGICA DE TABLA Y BÚSQUEDA ---
     const tableBody = document.getElementById('integrantes-table-body');
     const searchInput = document.getElementById('search-input');
     
-    const renderTabla = (integrantes) => { /* ... (Función para renderizar) ... */
+    const renderTabla = (integrantes) => { 
         tableBody.innerHTML = '';
         if (integrantes.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No se encontraron integrantes.</td></tr>';
@@ -208,7 +244,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     setupFormValidation(editForm);
 
-    // --- LÓGICA DE EDICIÓN Y ENVÍO (Adaptada para usar validación) ---
+    // --- LÓGICA DE EDICIÓN Y ENVÍO ---
     const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
     const editErrorMsg = document.getElementById('edit-error-msg');
     const editIdField = document.getElementById('edit-integrante-id');
@@ -224,13 +260,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         editForm.querySelectorAll('.valid, .invalid').forEach(el => el.classList.remove('valid', 'invalid'));
         editForm.querySelectorAll('.feedback-message').forEach(el => el.textContent = '');
 
-        // ... (Cargar datos)
         try {
             const res = await fetch(`/api/integrantes/${id}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!res.ok) throw new Error('No se pudo cargar la info.');
             const integrante = await res.json();
             editIdField.value = integrante.id;
-            // Rellenar campos y disparar validación inicial para mostrar feedback
+            
             fields.forEach(f => {
                 const element = editFormFields[f];
                 if(element) {
@@ -304,7 +339,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-    // --- FIN LÓGICA DE EDICIÓN Y ENVÍO ---
 
     // --- LÓGICA DEL MENÚ DE USUARIO (Omitida por brevedad) ---
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');

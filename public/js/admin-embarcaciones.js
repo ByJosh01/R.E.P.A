@@ -1,4 +1,4 @@
-// public/js/admin-embarcaciones.js (Versión con Edición y Filtro)
+// public/js/admin-embarcaciones.js (Versión con Edición, Filtro y Validación)
 document.addEventListener('DOMContentLoaded', async () => {
     const authToken = localStorage.getItem('authToken');
     let currentUser = null;
@@ -19,6 +19,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // ==========================================================
+    // ==== LÓGICA DE ESTILOS DINÁMICA (IMPLEMENTADA) ====
+    // ==========================================================
+    const manageStylesByRole = (rol) => {
+        const adminLink = document.getElementById('admin-theme-link');
+        const panelAdminLink = document.getElementById('panel-admin-theme-link');
+
+        if (rol === 'superadmin') {
+            // Activa admin.css y desactiva panel-admin.css
+            if (adminLink) adminLink.disabled = false;
+            if (panelAdminLink) panelAdminLink.disabled = true;
+        } else if (rol === 'admin') {
+            // Desactiva admin.css y activa panel-admin.css
+            if (adminLink) adminLink.disabled = true;
+            if (panelAdminLink) panelAdminLink.disabled = false;
+        }
+        
+        // Ajuste del título del header
+        const headerTitleElement = document.querySelector('.content-header div:first-child');
+        if (headerTitleElement) {
+            if (rol === 'superadmin') {
+                 headerTitleElement.innerHTML = '<i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración';
+            } else {
+                 headerTitleElement.innerHTML = '<i class="fas fa-user-cog" style="margin-right: 10px;"></i> Panel de Gestión';
+            }
+        }
+    };
+    
+    // Ejecutar gestión de estilos al inicio
+    manageStylesByRole(currentUser.rol);
+    // ==========================================================
+    // ==== FIN LÓGICA DE ESTILOS DINÁMICA ====
+    // ==========================================================
+
+
     // --- FUNCIÓN DE FEEDBACK (Recreada de utilidades) ---
     const showFeedback = (inputElement, message, isValid) => {
         let feedbackElement = inputElement.nextElementSibling;
@@ -27,10 +62,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (parent) feedbackElement = parent.querySelector('.feedback-message');
         }
 
-        if (!feedbackElement) { // Si no lo encuentra, lo creamos para el modal de edición
+        if (!feedbackElement) { 
              feedbackElement = document.createElement('div');
              feedbackElement.className = 'feedback-message';
-             inputElement.closest('.anexo-field, .input-group').appendChild(feedbackElement);
+             inputElement.closest('.anexo-field, .input-group')?.appendChild(feedbackElement);
         }
 
         inputElement.classList.remove('valid', 'invalid');
@@ -47,22 +82,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // --- LÓGICA DE VALIDACIÓN DE FORMATO ESPECÍFICO (Recreada de anexo5.js) ---
     const matriculaRegex = /^6ª\s[A-Z]{2}-\d{1}-\d{1,4}-\d{2}$/;
-    
-    // --- LÓGICA DE NAVEGACIÓN Y MODAL DE INFO (Omitida por brevedad) ---
+    // ----------------------------------------------------------------------
+
+
+    // --- LÓGICA DE NAVEGACIÓN ---
     const navSolicitantes = document.getElementById('nav-solicitantes');
     const navCuentas = document.getElementById('nav-cuentas');
-    const headerTitleElement = document.querySelector('.content-header div:first-child'); 
+    // Navegación se ajusta en base al rol
     if (navSolicitantes && navCuentas) {
         if (currentUser.rol === 'superadmin') {
             navSolicitantes.href = 'admin.html';
             navCuentas.style.display = 'inline-block';
-            if(headerTitleElement) headerTitleElement.innerHTML = '<i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración';
         } else {
             navSolicitantes.href = 'panel-admin.html';
             navCuentas.style.display = 'none';
-            if(headerTitleElement) headerTitleElement.innerHTML = '<i class="fas fa-user-cog" style="margin-right: 10px;"></i> Panel de Gestión';
         }
     }
+
+
+    // --- LÓGICA DE MODAL DE INFO ---
     const infoModal = document.getElementById('admin-info-modal');
     const infoModalTitle = document.getElementById('admin-info-title');
     const infoModalContent = document.getElementById('admin-info-content');
@@ -86,13 +124,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
         closeInfoModalBtn.addEventListener('click', confirmHandler, { once: true });
     };
-    // --- FIN LÓGICA DE NAVEGACIÓN Y MODAL DE INFO ---
 
-    // --- LÓGICA DE TABLA Y BÚSQUEDA (Omitida por brevedad) ---
+    // --- LÓGICA DE TABLA Y BÚSQUEDA ---
     const tableBody = document.getElementById('embarcaciones-table-body');
     const searchInput = document.getElementById('search-input'); 
 
-    const renderTabla = (embarcaciones) => { /* ... (Función para renderizar) ... */
+    const renderTabla = (embarcaciones) => { 
         tableBody.innerHTML = '';
         if (embarcaciones.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No se encontraron embarcaciones.</td></tr>';
@@ -131,8 +168,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const response = await fetch('/api/admin/embarcaciones', { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!response.ok) throw new Error('No se pudieron cargar los datos.');
-            allEmbarcaciones = await response.json();
-            renderTabla(allEmbarcaciones);
+            allEmbarcaciones = await response.json(); 
+            renderTabla(allEmbarcaciones); 
         } catch (error) {
             tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">${error.message}</td></tr>`;
         }
@@ -147,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const setupFormValidation = (form) => {
         const fieldRules = {
             'edit-nombre_embarcacion': { type: 'text', maxLength: 40, required: true },
-            'edit-matricula': { type: 'matricula', maxLength: 20, required: false }, // Se puede requerir o no según tu DB
+            'edit-matricula': { type: 'matricula', maxLength: 20, required: false }, 
             'edit-tonelaje_neto': { type: 'decimal', maxLength: 10, required: true },
             'edit-marca': { type: 'text', maxLength: 40, required: false },
             'edit-potencia_hp': { type: 'numeric', maxLength: 5, required: true },
@@ -171,11 +208,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         input.value = input.value.replace(/[^0-9]/g, '');
                         break;
                     case 'decimal':
-                        // Lógica de decimal (como en anexo5.js)
                         input.value = input.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
                         break;
                     case 'matricula':
-                        // Permitir caracteres de matrícula
                         input.value = input.value.toUpperCase().replace(/[^A-Z0-9ª-\s]/g, '');
                         break;
                 }
@@ -304,7 +339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // --- FIN LÓGICA DE EDICIÓN Y ENVÍO ---
 
-    // --- LÓGICA DEL MENÚ DE USUARIO (Omitida por brevedad) ---
+    // --- LÓGICA DEL MENÚ DE USUARIO ---
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
     const userMenuTrigger = document.getElementById('user-menu-trigger');
     const userDropdown = document.getElementById('user-dropdown');
