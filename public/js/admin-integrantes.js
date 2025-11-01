@@ -1,4 +1,58 @@
 // public/js/admin-integrantes.js
+
+function ajustarUIporRol() {
+    const userSession = sessionStorage.getItem('currentUser');
+    if (!userSession) return; // El auth-guard ya debería haberlo sacado
+
+    try {
+        const user = JSON.parse(userSession);
+        const rol = user.rol;
+
+        const navSolicitantes = document.getElementById('nav-solicitantes');
+        const navCuentas = document.getElementById('nav-cuentas');
+        
+        // IDs de los CSS
+        const adminTheme = document.getElementById('admin-theme-link');
+        const panelAdminTheme = document.getElementById('panel-admin-theme-link');
+
+        // Si es un ADMIN normal
+        if (rol === 'admin') {
+            // 1. Ocultamos la pestaña "Cuentas"
+            if (navCuentas) navCuentas.style.display = 'none';
+
+            // 2. Arreglamos el link de "Solicitantes"
+            if (navSolicitantes) navSolicitantes.href = 'panel-admin.html';
+            
+            // 3. Cambiamos el CSS
+            if (adminTheme) adminTheme.disabled = true;
+            if (panelAdminTheme) panelAdminTheme.disabled = false;
+
+        // Si es SUPERADMIN
+        } else if (rol === 'superadmin') {
+            // 1. Mostramos la pestaña "Cuentas"
+            if (navCuentas) navCuentas.style.display = 'block'; // O 'inline-block'
+
+            // 2. Arreglamos el link de "Solicitantes"
+            if (navSolicitantes) navSolicitantes.href = 'admin.html';
+            
+            // 3. Cambiamos el CSS
+            if (adminTheme) adminTheme.disabled = false;
+            if (panelAdminTheme) panelAdminTheme.disabled = true;
+        }
+    } catch (e) {
+        console.error("Error al ajustar UI por rol:", e);
+    }
+}
+
+// 1. Ejecutar la lógica de UI en PAGESHOW (para el botón "atrás")
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        ajustarUIporRol();
+    }
+});
+
+
+
 document.addEventListener('DOMContentLoaded', async () => {
     const authToken = localStorage.getItem('authToken');
     let currentUser = null;
