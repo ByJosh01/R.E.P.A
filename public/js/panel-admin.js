@@ -208,11 +208,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             row.dataset.id = sol.solicitante_id;
             const nombreCompleto = [sol.nombre, sol.apellido_paterno, sol.apellido_materno].filter(Boolean).join(' ') || 'No registrado';
             
-            // Lógica para deshabilitar botones (Admin no puede borrar a nadie ni editar superadmin)
-            let deleteButtonDisabled = 'disabled'; // ADMIN no puede borrar a nadie
+            // Lógica para deshabilitar botones (Admin)
+            const isCurrentUser = (sol.solicitante_id === adminSolicitanteId);
+            let deleteButtonDisabled = ''; // Habilitado por defecto
             let editButtonDisabled = '';
-            if (sol.rol === 'superadmin') { editButtonDisabled = 'disabled'; } 
 
+            // REGLA 1: Admin NO puede editar a un superadmin.
+            if (sol.rol === 'superadmin') {
+                editButtonDisabled = 'disabled';
+            }
+
+            // REGLA 2: Admin NO puede borrarse a sí mismo, ni a otro admin, ni a un superadmin.
+            // Solo puede borrar a 'solicitante'.
+            if (isCurrentUser || sol.rol === 'admin' || sol.rol === 'superadmin') {
+                deleteButtonDisabled = 'disabled';
+            }
+            
             row.innerHTML = `
                 <td>${nombreCompleto}</td>
                 <td>${sol.rfc || 'N/A'}</td>

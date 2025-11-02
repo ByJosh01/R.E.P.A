@@ -4,23 +4,36 @@ const { exec } = require('child_process');
 const path = require('path');
 const bcrypt = require('bcryptjs'); // <-- AÑADIR BCRYPT
 const solicitanteModel = require('../models/solicitanteModel');
-// ▼▼▼ LÍNEA AÑADIDA ▼▼▼
 const embarcacionMenorModel = require('../models/embarcacionMenorModel');
-// ▲▲▲ FIN LÍNEA AÑADIDA ▲▲▲
 const { generateRegistroPdf, generateGeneralReportPdf } = require('../services/pdfGenerator');
 
 exports.getAllSolicitantes = async (req, res) => {
-    try {
-        const [solicitantes] = await pool.query(
-            `SELECT s.solicitante_id, s.nombre, s.apellido_paterno, s.apellido_materno, s.rfc, s.curp, s.actividad, u.rol
-             FROM solicitantes s
-             LEFT JOIN usuarios u ON s.usuario_id = u.id`
-        );
-        res.status(200).json(solicitantes);
-    } catch (error) {
-        console.error("Error en getAllSolicitantes:", error);
-        res.status(500).json({ message: 'Error en el servidor.' });
-    }
+    try {
+        // --- INICIO DEL CAMBIO ---
+
+        // 1. Obtenemos el rol del usuario que está haciendo la petición
+        // (Esto viene de tu middleware de autenticación)
+        const userRole = req.user.rol; 
+
+        // 2. Empezamos la consulta base
+        let baseQuery = 'SELECT s.solicitante_id, s.nombre, s.apellido_paterno, s.apellido_materno, s.rfc, s.curp, s.actividad, u.rol FROM solicitantes s LEFT JOIN usuarios u ON s.usuario_id = u.id';
+
+        // 3. Si el que pide es un 'admin' (normal), le filtramos la consulta
+        if (userRole === 'admin') {
+            baseQuery += ' WHERE u.rol = \'solicitante\'';
+        }
+        
+        // 4. Si es 'superadmin', no se añade el WHERE, por lo que la consulta trae a TODOS.
+        
+        const [solicitantes] = await pool.query(baseQuery);
+        
+        // --- FIN DEL CAMBIO ---
+
+        res.status(200).json(solicitantes);
+    } catch (error) {
+        console.error("Error en getAllSolicitantes:", error);
+        res.status(500).json({ message: 'Error en el servidor.' });
+    }
 };
 
 exports.resetDatabase = async (req, res) => {
@@ -59,27 +72,73 @@ exports.resetDatabase = async (req, res) => {
 };
 
 exports.deleteSolicitante = async (req, res) => {
-    const { id } = req.params;
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
-        const [solicitantes] = await connection.query('SELECT usuario_id FROM solicitantes WHERE solicitante_id = ?', [id]);
-        if (solicitantes.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({ message: 'Solicitante no encontrado.' });
-        }
-        const usuarioId = solicitantes[0].usuario_id;
-        await connection.query('UPDATE usuarios SET solicitante_id = NULL WHERE id = ?', [usuarioId]);
-        await connection.query('DELETE FROM usuarios WHERE id = ?', [usuarioId]);
-        await connection.commit();
-        res.status(200).json({ message: 'Usuario y solicitante eliminados exitosamente.' });
-    } catch (error) {
-        await connection.rollback();
-        console.error("Error en deleteSolicitante:", error);
-        res.status(500).json({ message: 'Error en el servidor al eliminar el usuario.' });
-    } finally {
-        if (connection) connection.release();
-    }
+    const { id } = req.params; // solicitante_id que se quiere borrar
+    const adminMakingRequest = req.user; // Info del admin logueado
+    const connection = await pool.getConnection();
+
+    try {
+        // --- PASO 1: Obtener la info del usuario a eliminar (su ID de usuario y su ROL) ---
+        const [targets] = await connection.query(
+            'SELECT s.usuario_id, u.rol FROM solicitantes s JOIN usuarios u ON s.usuario_id = u.id WHERE s.solicitante_id = ?',
+            [id]
+        );
+
+        if (targets.length === 0) {
+            connection.release();
+            return res.status(404).json({ message: 'Solicitante no encontrado.' });
+        }
+        
+        const targetUsuarioId = targets[0].usuario_id;
+        const targetRol = targets[0].rol;
+
+        // --- PASO 2: Aplicar reglas de seguridad ---
+        if (targetUsuarioId == adminMakingRequest.id) {
+            connection.release();
+            return res.status(403).json({ message: 'Acción no permitida: no puedes eliminar tu propia cuenta.' });
+        }
+
+        if (adminMakingRequest.rol === 'admin' && (targetRol === 'superadmin' || targetRol === 'admin')) {
+             connection.release();
+             return res.status(403).json({ message: 'Permiso denegado: los administradores solo pueden eliminar cuentas de solicitante.' });
+        }
+        
+        // --- PASO 3: Proceder con la eliminación (Eliminación en Cascada) ---
+        
+        await connection.beginTransaction(); // ¡Iniciamos la transacción!
+
+        // 3a. Definir todas las tablas "hijo" que dependen de 'solicitantes'
+        const childTables = [
+            'integrantes', 'embarcaciones_menores', 'datos_tecnicos_pesca',
+            'datos_tecnicos_acuacultura', 'unidad_pesquera', 'unidad_produccion',
+            'tipo_estanques', 'instrumentos_medicion', 'sistema_conservacion',
+            'equipo_transporte', 'embarcaciones', 'instalacion_hidraulica_aireacion'
+        ];
+
+        // 3b. Borrar todos los registros "hijo" asociados
+ 
+        for (const table of childTables) {
+            await connection.query(`DELETE FROM ${table} WHERE solicitante_id = ?`, [id]);
+       }
+
+        // 3c. Ahora sí, borrar el registro "padre" (solicitantes)
+        await connection.query('DELETE FROM solicitantes WHERE solicitante_id = ?', [id]);
+        
+        // 3d. Y finalmente, borrar el registro "abuelo" (usuarios)
+        await connection.query('DELETE FROM usuarios WHERE id = ?', [targetUsuarioId]);
+
+        // Si todo salió bien, confirmamos los cambios
+        await connection.commit();
+        res.status(200).json({ message: 'Usuario y todos sus datos asociados han sido eliminados.' });
+
+    } catch (error) {
+        // Si algo falla (un solo delete), revertimos TODO
+        await connection.rollback();
+        console.error("Error en deleteSolicitante:", error);
+        res.status(500).json({ message: 'Error en el servidor al eliminar el usuario.' });
+    } finally {
+        // Siempre liberamos la conexión
+        if (connection) connection.release();
+    }
 };
 
 exports.getSolicitanteById = async (req, res) => {
@@ -155,25 +214,46 @@ exports.getAllUsuarios = async (req, res) => {
 };
 
 exports.getAllIntegrantes = async (req, res) => {
-    try {
-        const [integrantes] = await pool.query('SELECT i.*, s.nombre as nombre_solicitante FROM integrantes i JOIN solicitantes s ON i.solicitante_id = s.solicitante_id ORDER BY i.id DESC');
-        res.status(200).json(integrantes);
-    } catch (error) {
-         console.error("Error en getAllIntegrantes:", error);
-         res.status(500).json({ message: 'Error en el servidor.' });
-    }
+    try {
+        const userRole = req.user.rol;
+
+        let baseQuery = 'SELECT i.*, s.nombre as nombre_solicitante FROM integrantes i JOIN solicitantes s ON i.solicitante_id = s.solicitante_id JOIN usuarios u ON s.usuario_id = u.id';
+
+        if (userRole === 'admin') {
+            baseQuery += ' WHERE u.rol = \'solicitante\'';
+        }
+
+        baseQuery += ' ORDER BY i.id DESC';
+        
+        const [integrantes] = await pool.query(baseQuery);
+        res.status(200).json(integrantes);
+
+    } catch (error) {
+         console.error("Error en getAllIntegrantes:", error);
+         res.status(500).json({ message: 'Error en el servidor.' });
+    }
 };
 
 exports.getAllEmbarcaciones = async (req, res) => {
-    try {
-        const [embarcaciones] = await pool.query('SELECT e.*, s.nombre as nombre_solicitante FROM embarcaciones_menores e JOIN solicitantes s ON e.solicitante_id = s.solicitante_id ORDER BY e.id DESC');
-        res.status(200).json(embarcaciones);
-    } catch (error) {
-        console.error("Error en getAllEmbarcaciones:", error);
-        res.status(500).json({ message: 'Error en el servidor.' });
-    }
-};
+    try {
+        const userRole = req.user.rol;
 
+        let baseQuery = 'SELECT e.*, s.nombre as nombre_solicitante FROM embarcaciones_menores e JOIN solicitantes s ON e.solicitante_id = s.solicitante_id JOIN usuarios u ON s.usuario_id = u.id';
+        
+        if (userRole === 'admin') {
+            baseQuery += ' WHERE u.rol = \'solicitante\'';
+        }
+
+        baseQuery += ' ORDER BY e.id DESC';
+        
+        const [embarcaciones] = await pool.query(baseQuery);
+        res.status(200).json(embarcaciones);
+
+    } catch (error) {
+        console.error("Error en getAllEmbarcaciones:", error);
+        res.status(500).json({ message: 'Error en el servidor.' });
+    }
+};
 
 exports.getSolicitanteDetails = async (req, res) => {
     try {
