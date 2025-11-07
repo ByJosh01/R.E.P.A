@@ -65,7 +65,7 @@ app.use(
 // (Esto es nuevo)
 const apiLimiter = rateLimit({
 	windowMs: 15 * 60 * 1000, // 15 minutos
-	max: 100, // Limita cada IP a 100 peticiones por ventana de 15 mins
+	max: 1000, // <-- AUMENTA ESTE NÚMERO (antes era 100)
 	standardHeaders: true, 
 	legacyHeaders: false, 
     message: 'Demasiadas peticiones desde esta IP, por favor intenta de nuevo en 15 minutos.'

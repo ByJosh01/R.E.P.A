@@ -6,7 +6,7 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const brevo = require('@getbrevo/brevo');
-const { validationResult } = require('express-validator'); // <-- 1. IMPORTADO
+const { validationResult } = require('express-validator'); // <-- IMPORTADO
 
 // --- VARIABLES DE ENTORNO ---
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -21,7 +21,7 @@ const generateToken = (userId) => {
 };
 
 exports.registerUser = async (req, res) => {
-    // --- 2. AÑADIDO: Bloque de validación ---
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ message: errors.array()[0].msg });
@@ -31,7 +31,9 @@ exports.registerUser = async (req, res) => {
     try {
         const { curp, email, password, recaptchaToken } = req.body;
 
-        if (!recaptchaToken) { /* ... */ }
+        if (!recaptchaToken) { 
+            return res.status(400).json({ message: 'Falló la verificación reCAPTCHA (token no provisto).' });
+        }
 
         const verificationURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
         const verificationResponse = await axios.post(verificationURL);
@@ -46,7 +48,7 @@ exports.registerUser = async (req, res) => {
 
         const homeLink = `${CLIENT_URL}/home.html`;
 
-        // --- 3. CORRECCIÓN DE SEGURIDAD CRÍTICA ---
+        // --- CORRECCIÓN DE SEGURIDAD (Sin contraseña en email) ---
         const htmlContent = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6;">
             <p>Estimado pescador, le estamos enviando sus <strong>Datos de acceso</strong> que deberá usar para ingresar al formulario de captura de los <strong>avisos de arribo.</strong></p>
@@ -70,7 +72,6 @@ exports.registerUser = async (req, res) => {
         `;
         // --- FIN DE LA CORRECCIÓN ---
 
-        // (Toda la lógica de Brevo sigue igual)
         let apiInstance = new brevo.TransactionalEmailsApi();
         apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
         let sendSmtpEmail = new brevo.SendSmtpEmail(); 
@@ -80,13 +81,8 @@ exports.registerUser = async (req, res) => {
         sendSmtpEmail.to = [ { email: email } ];
 
         apiInstance.sendTransacEmail(sendSmtpEmail)
-            .then(function(data) {
-                console.log('Correo de bienvenida enviado por Brevo. ID: ' + data.messageId);
-            })
-            .catch(function(error) {
-                console.error("Error al enviar correo de bienvenida con Brevo:", error.response ? error.response.body : error.message);
-            });
-        // --- FIN DEL REEMPLAZO ---
+            .then(data => console.log('Correo de bienvenida enviado por Brevo. ID: ' + data.messageId))
+            .catch(error => console.error("Error al enviar correo de bienvenida con Brevo:", error.response ? error.response.body : error.message));
 
         res.status(201).json({ message: 'Usuario registrado exitosamente.' });
     } catch (error) {
@@ -96,7 +92,7 @@ exports.registerUser = async (req, res) => {
 };
 
 exports.loginUser = async (req, res) => {
-    // --- AÑADIDO: Bloque de validación ---
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ message: errors.array()[0].msg });
@@ -124,7 +120,7 @@ exports.loginUser = async (req, res) => {
 };
 
 exports.forgotPassword = async (req, res) => {
-    // --- AÑADIDO: Bloque de validación ---
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ message: errors.array()[0].msg });
@@ -138,10 +134,8 @@ exports.forgotPassword = async (req, res) => {
             const token = crypto.randomBytes(32).toString('hex');
             const expires = Date.now() + 15 * 60 * 1000;
             await userModel.saveResetToken(email, token, expires);
-
             const resetLink = `${CLIENT_URL}/reset-password.html?token=${token}`;
 
-            // (Toda la lógica de Brevo sigue igual)
             let apiInstance = new brevo.TransactionalEmailsApi();
             apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
             let sendSmtpEmail = new brevo.SendSmtpEmail();
@@ -151,15 +145,9 @@ exports.forgotPassword = async (req, res) => {
             sendSmtpEmail.to = [ { email: email } ];
 
             apiInstance.sendTransacEmail(sendSmtpEmail)
-                .then(function(data) {
-                    console.log('Correo de recuperación enviado por Brevo. ID: ' + data.messageId);
-                })
-                .catch(function(error) {
-                    console.error("Error al enviar correo de recuperación con Brevo:", error.response ? error.response.body : error.message);
-             });
-            // --- FIN ---
+                .then(data => console.log('Correo de recuperación enviado por Brevo. ID: ' + data.messageId))
+                .catch(error => console.error("Error al enviar correo de recuperación con Brevo:", error.response ? error.response.body : error.message));
         }
-        // Se responde 200 incluso si el email no existe para no dar pistas a atacantes
         res.status(200).json({ message: 'Si tu correo está registrado, recibirás un enlace.' });
     } catch (error) {
         console.error("Error en forgotPassword:", error);
@@ -168,7 +156,7 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetPassword = async (req, res) => {
-    // --- AÑADIDO: Bloque de validación ---
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ message: errors.array()[0].msg });
@@ -180,7 +168,7 @@ exports.resetPassword = async (req, res) => {
         const tokenData = await userModel.findTokenData(token);
         if (!tokenData || new Date(tokenData.expires).getTime() < Date.now()) {
             return res.status(400).json({ message: 'Token inválido o expirado.' });
-     }
+        }
         await userModel.updateUserPassword(tokenData.email, newPassword);
         await userModel.deleteResetToken(token);
         res.status(200).json({ message: 'Contraseña actualizada con éxito.' });

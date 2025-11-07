@@ -2,33 +2,22 @@
 const pool = require('../db');
 const { exec } = require('child_process');
 const path = require('path');
-const bcrypt = require('bcryptjs'); // <-- AÑADIR BCRYPT
+const bcrypt = require('bcryptjs');
 const solicitanteModel = require('../models/solicitanteModel');
 const embarcacionMenorModel = require('../models/embarcacionMenorModel');
 const { generateRegistroPdf, generateGeneralReportPdf } = require('../services/pdfGenerator');
+const { validationResult } = require('express-validator'); // <-- IMPORTADO
 
 exports.getAllSolicitantes = async (req, res) => {
     try {
-        // --- INICIO DEL CAMBIO ---
-
-        // 1. Obtenemos el rol del usuario que está haciendo la petición
-        // (Esto viene de tu middleware de autenticación)
         const userRole = req.user.rol; 
-
-        // 2. Empezamos la consulta base
         let baseQuery = 'SELECT s.solicitante_id, s.nombre, s.apellido_paterno, s.apellido_materno, s.rfc, s.curp, s.actividad, u.rol FROM solicitantes s LEFT JOIN usuarios u ON s.usuario_id = u.id';
 
-        // 3. Si el que pide es un 'admin' (normal), le filtramos la consulta
         if (userRole === 'admin') {
             baseQuery += ' WHERE u.rol = \'solicitante\'';
         }
         
-        // 4. Si es 'superadmin', no se añade el WHERE, por lo que la consulta trae a TODOS.
-        
         const [solicitantes] = await pool.query(baseQuery);
-        
-        // --- FIN DEL CAMBIO ---
-
         res.status(200).json(solicitantes);
     } catch (error) {
         console.error("Error en getAllSolicitantes:", error);
@@ -37,6 +26,7 @@ exports.getAllSolicitantes = async (req, res) => {
 };
 
 exports.resetDatabase = async (req, res) => {
+    // Esta ruta no usa express-validator, su seguridad es la masterPassword
     const { masterPassword } = req.body;
     const superAdminUserId = req.user.id; 
 
@@ -72,12 +62,18 @@ exports.resetDatabase = async (req, res) => {
 };
 
 exports.deleteSolicitante = async (req, res) => {
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ message: errors.array()[0].msg });
+    }
+    // --- Fin del bloque ---
+
     const { id } = req.params; // solicitante_id que se quiere borrar
     const adminMakingRequest = req.user; // Info del admin logueado
     const connection = await pool.getConnection();
 
     try {
-        // --- PASO 1: Obtener la info del usuario a eliminar (su ID de usuario y su ROL) ---
         const [targets] = await connection.query(
             'SELECT s.usuario_id, u.rol FROM solicitantes s JOIN usuarios u ON s.usuario_id = u.id WHERE s.solicitante_id = ?',
             [id]
@@ -91,7 +87,6 @@ exports.deleteSolicitante = async (req, res) => {
         const targetUsuarioId = targets[0].usuario_id;
         const targetRol = targets[0].rol;
 
-        // --- PASO 2: Aplicar reglas de seguridad ---
         if (targetUsuarioId == adminMakingRequest.id) {
             connection.release();
             return res.status(403).json({ message: 'Acción no permitida: no puedes eliminar tu propia cuenta.' });
@@ -102,46 +97,40 @@ exports.deleteSolicitante = async (req, res) => {
              return res.status(403).json({ message: 'Permiso denegado: los administradores solo pueden eliminar cuentas de solicitante.' });
         }
         
-        // --- PASO 3: Proceder con la eliminación (Eliminación en Cascada) ---
-        
-        await connection.beginTransaction(); // ¡Iniciamos la transacción!
+        await connection.beginTransaction(); 
 
-        // 3a. Definir todas las tablas "hijo" que dependen de 'solicitantes'
         const childTables = [
             'integrantes', 'embarcaciones_menores', 'datos_tecnicos_pesca',
             'datos_tecnicos_acuacultura', 'unidad_pesquera', 'unidad_produccion',
             'tipo_estanques', 'instrumentos_medicion', 'sistema_conservacion',
             'equipo_transporte', 'embarcaciones', 'instalacion_hidraulica_aireacion'
         ];
-
-        // 3b. Borrar todos los registros "hijo" asociados
- 
         for (const table of childTables) {
             await connection.query(`DELETE FROM ${table} WHERE solicitante_id = ?`, [id]);
        }
-
-        // 3c. Ahora sí, borrar el registro "padre" (solicitantes)
         await connection.query('DELETE FROM solicitantes WHERE solicitante_id = ?', [id]);
-        
-        // 3d. Y finalmente, borrar el registro "abuelo" (usuarios)
         await connection.query('DELETE FROM usuarios WHERE id = ?', [targetUsuarioId]);
 
-        // Si todo salió bien, confirmamos los cambios
         await connection.commit();
         res.status(200).json({ message: 'Usuario y todos sus datos asociados han sido eliminados.' });
 
     } catch (error) {
-        // Si algo falla (un solo delete), revertimos TODO
         await connection.rollback();
         console.error("Error en deleteSolicitante:", error);
         res.status(500).json({ message: 'Error en el servidor al eliminar el usuario.' });
     } finally {
-        // Siempre liberamos la conexión
         if (connection) connection.release();
     }
 };
 
 exports.getSolicitanteById = async (req, res) => {
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ message: errors.array()[0].msg });
+    }
+    // --- Fin del bloque ---
+
     try {
         const { id } = req.params;
         const [rows] = await pool.query(
@@ -162,10 +151,16 @@ exports.getSolicitanteById = async (req, res) => {
 };
 
 exports.updateSolicitante = async (req, res) => {
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ message: errors.array()[0].msg });
+    }
+    // --- Fin del bloque ---
+
     try {
         const { id } = req.params;
-        // El body ahora también puede incluir 'rol'
-        const { nombre, rfc, curp, actividad, rol } = req.body;
+        const data = req.body; // El body ya fue validado y saneado
 
         const [solicitantes] = await pool.query('SELECT usuario_id FROM solicitantes WHERE solicitante_id = ?', [id]);
         if (solicitantes.length === 0) {
@@ -173,27 +168,47 @@ exports.updateSolicitante = async (req, res) => {
         }
         const usuarioId = solicitantes[0].usuario_id;
         
-        // Separar nombre
-        const nombreParts = (nombre || '').split(' ');
-        const nombre_solo = nombreParts.shift() || '';
-        const apellido_paterno = nombreParts.shift() || '';
-        const apellido_materno = nombreParts.join(' ') || '';
+        // Mapeo de datos (basado en solicitanteModel.js)
+        const dataToUpdate = {
+            nombre: data.nombre,
+            apellido_paterno: data.apellidoPaterno,
+            apellido_materno: data.apellidoMaterno,
+            rfc: data.rfc,
+            curp: data.curp,
+            telefono: data.telefono,
+            correo_electronico: data.email,
+            nombre_representante_legal: data.representanteLegal,
+            actividad: data.actividad,
+            entidad_federativa: data.entidad,
+            municipio: data.municipio,
+            localidad: data.localidad,
+            colonia: data.colonia,
+            codigo_postal: data.cp,
+            calle: data.calle,
+            no_exterior: data.numExterior,
+            no_interior: data.numInterior,
+            numero_integrantes: data.numIntegrantes
+        };
 
-        // Actualizar solicitantes
-        await pool.query(
-            'UPDATE solicitantes SET nombre = ?, apellido_paterno = ?, apellido_materno = ?, rfc = ?, curp = ?, actividad = ? WHERE solicitante_id = ?',
-            [nombre_solo, apellido_paterno, apellido_materno, rfc, curp, actividad, id]
-        );
+        // Filtramos campos undefined para no sobreescribir con NULL accidentalmente
+        Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
+
+        // Actualizar solicitantes si hay datos para actualizar
+        if (Object.keys(dataToUpdate).length > 0) {
+            await pool.query(
+                'UPDATE solicitantes SET ? WHERE solicitante_id = ?',
+                [dataToUpdate, id]
+            );
+        }
 
         // Actualizar rol en usuarios (si se proveyó)
-        if (rol) {
-            // Prevenir que el admin se quite el rol a sí mismo
-            if (req.user.id == usuarioId && rol !== req.user.rol) {
+        if (data.rol) {
+            if (req.user.id == usuarioId && data.rol !== req.user.rol) {
                  return res.status(403).json({ message: 'No puedes cambiar tu propio rol.' });
             }
             await pool.query(
                 'UPDATE usuarios SET rol = ? WHERE id = ?',
-                [rol, usuarioId]
+                [data.rol, usuarioId]
             );
         }
         res.status(200).json({ message: 'Datos del solicitante actualizados correctamente.' });
@@ -216,18 +231,13 @@ exports.getAllUsuarios = async (req, res) => {
 exports.getAllIntegrantes = async (req, res) => {
     try {
         const userRole = req.user.rol;
-
         let baseQuery = 'SELECT i.*, s.nombre as nombre_solicitante FROM integrantes i JOIN solicitantes s ON i.solicitante_id = s.solicitante_id JOIN usuarios u ON s.usuario_id = u.id';
-
         if (userRole === 'admin') {
             baseQuery += ' WHERE u.rol = \'solicitante\'';
         }
-
         baseQuery += ' ORDER BY i.id DESC';
-        
         const [integrantes] = await pool.query(baseQuery);
         res.status(200).json(integrantes);
-
     } catch (error) {
          console.error("Error en getAllIntegrantes:", error);
          res.status(500).json({ message: 'Error en el servidor.' });
@@ -237,18 +247,13 @@ exports.getAllIntegrantes = async (req, res) => {
 exports.getAllEmbarcaciones = async (req, res) => {
     try {
         const userRole = req.user.rol;
-
         let baseQuery = 'SELECT e.*, s.nombre as nombre_solicitante FROM embarcaciones_menores e JOIN solicitantes s ON e.solicitante_id = s.solicitante_id JOIN usuarios u ON s.usuario_id = u.id';
-        
         if (userRole === 'admin') {
             baseQuery += ' WHERE u.rol = \'solicitante\'';
         }
-
         baseQuery += ' ORDER BY e.id DESC';
-        
         const [embarcaciones] = await pool.query(baseQuery);
         res.status(200).json(embarcaciones);
-
     } catch (error) {
         console.error("Error en getAllEmbarcaciones:", error);
         res.status(500).json({ message: 'Error en el servidor.' });
@@ -256,6 +261,13 @@ exports.getAllEmbarcaciones = async (req, res) => {
 };
 
 exports.getSolicitanteDetails = async (req, res) => {
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ message: errors.array()[0].msg });
+    }
+    // --- Fin del bloque ---
+
     try {
         const { id } = req.params;
         const [perfilRows] = await pool.query('SELECT * FROM solicitantes WHERE solicitante_id = ?', [id]);
@@ -289,6 +301,7 @@ exports.getSolicitanteDetails = async (req, res) => {
 };
 
 exports.backupDatabase = async (req, res) => {
+    // No necesita validación
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
     const fileName = `repa_backup_${timestamp}.sql`;
     const { MYSQL_DATABASE } = process.env;
@@ -310,18 +323,30 @@ exports.backupDatabase = async (req, res) => {
     }
 };
 
-// --- FUNCIÓN PDF INDIVIDUAL ---
 exports.downloadRegistroPdf = async (req, res) => {
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).send("Error: ID de solicitante no válido.");
+    }
+    // --- Fin del bloque ---
+
     await generateRegistroPdf(req, res);
 };
 
-// --- FUNCIÓN PDF GENERAL ---
 exports.downloadGeneralReportPdf = async (req, res) => {
+    // No necesita validación
     await generateGeneralReportPdf(req, res); 
 };
 
-// --- FUNCIONES PARA EDITAR USUARIOS ---
 exports.getUsuarioById = async (req, res) => {
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ message: errors.array()[0].msg });
+    }
+    // --- Fin del bloque ---
+
     try {
         const { id } = req.params;
         const [rows] = await pool.query(
@@ -339,17 +364,20 @@ exports.getUsuarioById = async (req, res) => {
 };
 
 exports.updateUsuario = async (req, res) => {
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ message: errors.array()[0].msg });
+    }
+    // --- Fin del bloque ---
+
     const connection = await pool.getConnection();
     try {
         const { id } = req.params;
         const { email, curp, rol, password } = req.body; 
 
-        if (!email || !curp || !rol) {
-            return res.status(400).json({ message: 'Faltan campos (email, curp, rol).' });
-        }
-        if (rol !== 'solicitante' && rol !== 'admin' && rol !== 'superadmin') {
-            return res.status(400).json({ message: 'Rol inválido.' });
-        }
+        // Validación manual eliminada (ya la hizo express-validator)
+
         if (req.user.id == id && rol !== 'superadmin') {
              return res.status(403).json({ message: 'Un superadmin no puede cambiar su propio rol.' });
         }
@@ -388,12 +416,14 @@ exports.updateUsuario = async (req, res) => {
     }
 };
 
-// ▼▼▼ NUEVAS FUNCIONES PARA EDITAR EMBARCACIONES (ADMIN) ▼▼▼
-
-/**
- * [ADMIN] Obtiene una embarcación específica por su ID.
- */
 exports.getEmbarcacionById = async (req, res) => {
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ message: errors.array()[0].msg });
+    }
+    // --- Fin del bloque ---
+
     try {
         const { id } = req.params;
         const embarcacion = await embarcacionMenorModel.getById(id);
@@ -402,7 +432,6 @@ exports.getEmbarcacionById = async (req, res) => {
             return res.status(404).json({ message: 'Embarcación no encontrada.' });
         }
         
-        // Como es un admin (verificado por middleware), puede verla.
         res.status(200).json(embarcacion);
     
     } catch (error) {
@@ -411,15 +440,17 @@ exports.getEmbarcacionById = async (req, res) => {
     }
 };
 
-/**
- * [ADMIN] Actualiza una embarcación específica por su ID.
- */
 exports.updateEmbarcacionById = async (req, res) => {
+    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ message: errors.array()[0].msg });
+    }
+    // --- Fin del bloque ---
+
     try {
         const { id } = req.params;
         
-        // Gracias al modelo actualizado, solo se actualizarán los 6 campos
-        // que vienen en req.body, y 'numero_serie' se ignorará (no se borrará).
         const result = await embarcacionMenorModel.updateById(id, req.body);
         
         if (result.affectedRows === 0) {
@@ -433,4 +464,3 @@ exports.updateEmbarcacionById = async (req, res) => {
         res.status(500).json({ message: 'Error en el servidor al actualizar la embarcación.' });
     }
 };
-// ▲▲▲ FIN NUEVAS FUNCIONES DE EMBARCACIONES ▲▲▲
