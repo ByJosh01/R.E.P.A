@@ -5,7 +5,6 @@ const cors = require('cors');
 const path = require('path');
 
 // --- 1. DEPENDENCIAS DE SEGURIDAD AÑADIDAS ---
-// Estas librerías las instalaste con: npm install helmet express-rate-limit
 const helmet = require('helmet'); 
 const rateLimit = require('express-rate-limit');
 // --- FIN DE DEPENDENCIAS AÑADIDAS ---
@@ -23,59 +22,55 @@ const app = express();
 // ==== INICIO: BLOQUE DE CONFIGURACIÓN DE SEGURIDAD ====
 // =================================================================
 
+// --- ¡¡LÍNEA FINAL AÑADIDA!! ---
+// Esto es ESENCIAL para que express-rate-limit funcione correctamente en Render
+app.set('trust proxy', 1); 
+// ---------------------------------
+
 // --- 2. CONFIGURACIÓN DE CORS SEGURO ---
-// (Esto reemplaza tu app.use(cors()) simple)
-// ¡¡RECUERDA CAMBIAR ESTO POR TU URL REAL DE RENDER!!
 const whiteList = [
-    'https://proyecto-repa.onrender.com',
-    'http://localhost:5500', 
-    'http://127.0.0.1:5500', 
-    'http://localhost:3000' // Para tu desarrollo local
+    'https://proyecto-repa.onrender.com', // ¡Tu URL correcta!
+    'http://localhost:5500', 
+    'http://127.0.0.1:5500', 
+    'http://localhost:3000' // Para tu desarrollo local
 ];
 
 const corsOptions = {
-    origin: function (origin, callback) {
-        // Permitir peticiones sin 'origin' (como las de Postman o apps móviles)
-        // o si el origen está en nuestra lista blanca (whiteList)
-        if (whiteList.includes(origin) || !origin) {
-            callback(null, true);
-        } else {
-            callback(new Error('Acceso denegado por CORS'));
-        }
-    }
+    origin: function (origin, callback) {
+        if (whiteList.includes(origin) || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Acceso denegado por CORS'));
+        }
+    }
 };
 
 app.use(cors(corsOptions)); // Aplicamos la configuración segura de CORS
 
 // --- 3. CONFIGURACIÓN DE HELMET (PARA PERMITIR RECAPTCHA) ---
-// (Esto es nuevo)
 app.use(
-    helmet.contentSecurityPolicy({
-        directives: {
-            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-            // Permitir scripts de 'self' (tu dominio), google.com y gstatic.com
-            "script-src": ["'self'", "https://www.google.com/recaptcha/", "https://www.gstatic.com/"],
-            // Permitir iframes (donde vive el widget) de google.com
-            "frame-src": ["'self'", "https://www.google.com/recaptcha/"]
-        },
-    })
+    helmet.contentSecurityPolicy({
+        directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            "script-src": ["'self'", "https://www.google.com/recaptcha/", "https://www.gstatic.com/"],
+            "frame-src": ["'self'", "https://www.google.com/recaptcha/"]
+        },
+    })
 );
 
 // --- 4. CONFIGURACIÓN DE RATE LIMIT ---
-// (Esto es nuevo)
 const apiLimiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutos
-	max: 1000, // <-- AUMENTA ESTE NÚMERO (antes era 100)
-	standardHeaders: true, 
-	legacyHeaders: false, 
-    message: 'Demasiadas peticiones desde esta IP, por favor intenta de nuevo en 15 minutos.'
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 1000, // Dejado en 1000 para pruebas
+    standardHeaders: true, 
+    legacyHeaders: false, 
+    message: 'Demasiadas peticiones desde esta IP, por favor intenta de nuevo en 15 minutos.'
 });
 
 // =================================================================
 // ==== FIN: BLOQUE DE CONFIGURACIÓN DE SEGURIDAD ====
 // =================================================================
 
-// (Esto es de tu código original)
 app.use(express.json());
 
 // (Tu middleware anti-caché. Esto está perfecto y se queda igual)
