@@ -27,7 +27,7 @@ const app = express();
 // (Esto reemplaza tu app.use(cors()) simple)
 // ¡¡RECUERDA CAMBIAR ESTO POR TU URL REAL DE RENDER!!
 const whiteList = [
-    'https://proyecto-repa.onrender.com/', // <-- CAMBIA ESTO
+    'https://proyecto-repa.onrender.com',
     'http://localhost:5500', 
     'http://127.0.0.1:5500', 
     'http://localhost:3000' // Para tu desarrollo local
