@@ -1,5 +1,7 @@
 // backend/db.js
 const mysql = require('mysql2/promise');
+const fs = require('fs'); // <-- 1. IMPORTA 'fs'
+const path = require('path'); // <-- 2. IMPORTA 'path'
 
 const pool = mysql.createPool({
     host: process.env.MYSQL_HOST,
@@ -11,11 +13,13 @@ const pool = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0,
     
-    // --- ESTA ES LA LÍNEA QUE DEBES AGREGAR ---
+    // --- 3. MODIFICA ESTE BLOQUE ---
     ssl: {
+        // Lee el archivo de certificado que subiste
+        ca: fs.readFileSync(path.join(__dirname, 'tidb-ca.pem')), 
         rejectUnauthorized: true
     }
-    // ----------------------------------------
+    // -----------------------------
 });
 
 pool.getConnection()
