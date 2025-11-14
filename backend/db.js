@@ -13,13 +13,13 @@ const pool = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0,
     
-    // --- 3. MODIFICA ESTE BLOQUE ---
+    // --- 3. ESTE ES EL BLOQUE CORREGIDO ---
     ssl: {
-        // Lee el archivo de certificado que subiste
-        ca: fs.readFileSync(path.join(__dirname, '../isrgrootx1.pem')), 
+        // Lee el archivo de certificado (SIN EL ../)
+        ca: fs.readFileSync(path.join(__dirname, 'isrgrootx1.pem')), 
         rejectUnauthorized: true
     }
-    // -----------------------------
+    // ------------------------------------
 });
 
 pool.getConnection()
