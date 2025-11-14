@@ -16,7 +16,7 @@ const pool = mysql.createPool({
     // --- 3. MODIFICA ESTE BLOQUE ---
     ssl: {
         // Lee el archivo de certificado que subiste
-        ca: fs.readFileSync(path.join(__dirname, 'tidb-ca.pem')), 
+        ca: fs.readFileSync(path.join(__dirname, '../isrgrootx1.pem')), 
         rejectUnauthorized: true
     }
     // -----------------------------
