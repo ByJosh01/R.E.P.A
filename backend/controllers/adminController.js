@@ -170,11 +170,11 @@ exports.updateSolicitante = async (req, res) => {
         
         // Mapeo de datos (basado en solicitanteModel.js)
         const dataToUpdate = {
-            nombre: data.nombre,
-            apellido_paterno: data.apellidoPaterno,
-            apellido_materno: data.apellidoMaterno,
-            rfc: data.rfc,
-            curp: data.curp,
+            nombre: data.nombre,
+            apellido_paterno: data.apellido_paterno, 
+            apellido_materno: data.apellido_materno, 
+            rfc: data.rfc,
+            curp: data.curp,
             telefono: data.telefono,
             correo_electronico: data.email,
             nombre_representante_legal: data.representanteLegal,

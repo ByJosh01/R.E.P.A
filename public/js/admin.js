@@ -425,10 +425,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!id) { showInfoModal('Error', 'ID de solicitante no encontrado.', false); return; }
             
              const nombreCompleto = editForm.elements.nombre.value.trim();
-             const nombreParts = nombreCompleto.split(' ');
-             const nombre_solo = nombreParts.shift() || '';
-             const apellido_paterno = nombreParts.shift() || '';
-             const apellido_materno = nombreParts.join(' ') || '';
+             const nombreParts = nombreCompleto.split(' ');
+             
+             let nombre_solo = '';
+             let apellido_paterno = '';
+             let apellido_materno = '';
+
+             if (nombreParts.length === 1) {
+                 // Solo un nombre/palabra (ej: "Ejemplo")
+                 nombre_solo = nombreParts[0];
+             } else if (nombreParts.length === 2) {
+                 // Asumimos Nombre y Apellido Paterno (ej: "Juan Perez")
+                 nombre_solo = nombreParts[0];
+                 apellido_paterno = nombreParts[1];
+             } else if (nombreParts.length >= 3) {
+                 // Asumimos [Nombre(s)] [Paterno] [Materno] (ej: "Juan Jose Perez Garcia")
+                 apellido_materno = nombreParts.pop() || ''; // "Garcia"
+                 apellido_paterno = nombreParts.pop() || ''; // "Perez"
+                 nombre_solo = nombreParts.join(' ');     // "Juan Jose"
+             }
 
             const data = {
                 nombre: nombre_solo, 
