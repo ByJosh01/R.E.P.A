@@ -154,20 +154,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (adminGoToDashboardBtn) { adminGoToDashboardBtn.addEventListener('click', (e) => { e.preventDefault(); window.location.href = 'dashboard.html'; }); }
 
     if (viewAdminInfoBtn && adminInfoModal && adminInfoContent) {
-        viewAdminInfoBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            try {
-                const r = await fetch('/api/perfil', { headers: { 'Authorization': `Bearer ${authToken}` } });
-                if (!r.ok) throw new Error('No se pudo obtener la info.');
-                const p = await r.json();
-                if(adminInfoModalTitle) adminInfoModalTitle.textContent = 'Información del Superadministrador';
-                adminInfoContent.innerHTML = `<div class="info-row"><label>Nombre:</label> <span>${p.nombre||'N/A'}</span></div><div class="info-row"><label>CURP:</label> <span>${p.curp}</span></div><div class="info-row"><label>RFC:</label> <span>${p.rfc||'N/A'}</span></div><div class="info-row"><label>Email:</label> <span>${p.correo_electronico}</span></div><div class="info-row"><label>Municipio:</label> <span>${p.municipio||'N/A'}</span></div>`;
-                adminInfoModal.classList.add('visible');
-            } catch (err) {
-                showInfoModal('Error', err.message, false);
-            }
-        });
-    }
+        viewAdminInfoBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                const r = await fetch('/api/perfil', { headers: { 'Authorization': `Bearer ${authToken}` } });
+                if (!r.ok) throw new Error('No se pudo obtener la info.');
+                const p = await r.json();
+
+                const nombreCompletoAdmin = [p.nombre, p.apellido_paterno, p.apellido_materno].filter(Boolean).join(' ') || 'N/A';
+                
+                if(adminInfoModalTitle) adminInfoModalTitle.textContent = 'Información del Superadministrador';
+              
+                // Esta línea ya no tiene el 'img-margin' ni la 'S' extra
+                adminInfoContent.innerHTML = `<div class="info-row"><label>Nombre:</label> <span>${nombreCompletoAdmin}</span></div><div class="info-row"><label>CURP:</label> <span>${p.curp}</span></div><div class="info-row"><label>RFC:</label> <span>${p.rfc||'N/A'}</span></div><div class="info-row"><label>Email:</label> <span>${p.correo_electronico}</span></div><div class="info-row"><label>Municipio:</label> <span>${p.municipio||'N/A'}</span></div>`;
+
+                adminInfoModal.classList.add('visible');
+            } catch (err) {
+                showInfoModal('Error', err.message, false);
+        }
+        });
+    }
 
     if (adminInfoModal) { adminInfoModal.addEventListener('click', (e) => { if (e.target === adminInfoModal) adminInfoModal.classList.remove('visible'); }); }
     if (closeAdminModalBtn) { closeAdminModalBtn.addEventListener('click', () => { if(adminInfoModal) adminInfoModal.classList.remove('visible'); }); }
