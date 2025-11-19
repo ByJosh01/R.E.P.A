@@ -3,64 +3,63 @@ const pool = require('../db');
 const bcrypt = require('bcryptjs');
 
 const findUserByEmail = async (email) => {
-    // Busca en la tabla 'usuarios'
     const [rows] = await pool.query('SELECT * FROM usuarios WHERE email = ?', [email]);
     return rows[0] || null;
 };
 
 const findUserByCurp = async (curp) => {
-    // Busca en la tabla 'usuarios'
+    // Aseguramos mayúsculas consistentes
     const [rows] = await pool.query('SELECT * FROM usuarios WHERE curp = ?', [curp.toUpperCase()]);
     return rows[0] || null;
 };
 
-// --- FUNCIÓN CORREGIDA Y SIMPLIFICADA ---
 const createUser = async (userData) => {
     const { curp, email, password } = userData;
     const hashedPassword = await bcrypt.hash(password, 10);
     
+    // Obtenemos una conexión dedicada del pool para la transacción
     const connection = await pool.getConnection();
-    await connection.beginTransaction();
     
     try {
-        // 1. Insertamos el registro de autenticación en la tabla `usuarios`
+        await connection.beginTransaction();
+        
+        // 1. Insertar en tabla usuarios
         const [userResult] = await connection.query(
             'INSERT INTO usuarios (curp, email, password) VALUES (?, ?, ?)',
             [curp.toUpperCase(), email, hashedPassword]
         );
         const newUserId = userResult.insertId;
 
-        // 2. Insertamos el perfil en la tabla `solicitantes`, vinculándolo con el ID del usuario.
-        //    ¡Aquí ya NO intentamos insertar la contraseña!
+        // 2. Insertar perfil en tabla solicitantes
+        // Importante: Usamos la misma conexión 'connection' para mantener la transacción
         await connection.query(
             'INSERT INTO solicitantes (usuario_id, curp, correo_electronico) VALUES (?, ?, ?)',
             [newUserId, curp.toUpperCase(), email]
         );
         
-        // Si ambas inserciones fueron exitosas, guardamos los cambios.
+        // Si todo salió bien, guardamos los cambios
         await connection.commit();
         
         return { id: newUserId, curp, email };
 
     } catch (error) {
-        // Si algo falla, deshacemos todo.
+        // Si algo falla, revertimos todo
         await connection.rollback();
-        console.error("Error en la transacción de createUser:", error);
-        throw error;
+        console.error("❌ Error en transacción createUser:", error);
+        throw error; // Re-lanzamos el error para que el controlador lo vea
     } finally {
-        // Liberamos la conexión.
+        // SIEMPRE liberamos la conexión, pase lo que pase
         connection.release();
     }
 };
 
 const updateUserPassword = async (email, newPassword) => {
-    // La contraseña SÓLO se actualiza en la tabla `usuarios`
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await pool.query('UPDATE usuarios SET password = ? WHERE email = ?', [hashedPassword, email]);
 };
 
-// --- El resto de las funciones (tokens, etc.) se mantienen sin cambios ---
 const saveResetToken = async (email, token, expires) => {
+    // Eliminamos tokens viejos del mismo usuario para mantener limpieza
     await pool.query('DELETE FROM password_reset_tokens WHERE email = ?', [email]);
     await pool.query(
         'INSERT INTO password_reset_tokens (email, token, expires) VALUES (?, ?, ?)',

@@ -1,10 +1,12 @@
-// public/anexos.js - Versión Modularizada FINAL
+// public/anexos.js - Versión Modularizada FINAL y SEGURA
 
 import { initAnexo1, cargarDatosAnexo1 } from './js/anexo1.js';
 import { initAnexo2, cargarIntegrantes } from './js/anexo2.js';
 import { initAnexo3, cargarDatosAnexo3 } from './js/anexo3.js';
 import { initAnexo4, cargarDatosAnexo4 } from './js/anexo4.js';
 import { initAnexo5, cargarEmbarcaciones } from './js/anexo5.js';
+// 1. IMPORTAMOS LA FUNCIÓN DE LOGOUT SEGURO
+import { logoutUser } from './js/utils.js'; 
 
 document.addEventListener('DOMContentLoaded', () => {
     // =======================================================
@@ -51,21 +53,33 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // =======================================================
-    // == 3. LÓGICA DE UI GENERAL
+    // == 3. LÓGICA DE UI GENERAL Y SEGURIDAD
     // =======================================================
-    if (!authToken || !currentUser) { window.location.href = 'home.html'; return; }
+    
+    // 2. CAMBIO DE SEGURIDAD: Usar replace() si no hay sesión
+    if (!authToken || !currentUser) { 
+        localStorage.removeItem('authToken');
+        sessionStorage.removeItem('currentUser');
+        window.location.replace('home.html'); // <--- DESTRUCTIVO
+        return; 
+    }
+
     if (sidebarUserName) { sidebarUserName.textContent = currentUser.email; }
 
     if (themeToggle) {
         const themeIcon = themeToggle.querySelector('i');
         const applyTheme = (theme) => {
-            body.classList.toggle('dark-mode', theme === 'dark');
-            if (themeIcon) {
-                themeIcon.classList.toggle('fa-sun', theme === 'dark');
-                themeIcon.classList.toggle('fa-moon', theme !== 'dark');
+            if (theme === 'dark') {
+                body.classList.add('dark-mode');
+                if(themeIcon) { themeIcon.classList.remove('fa-moon'); themeIcon.classList.add('fa-sun'); }
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.remove('dark-mode');
+                if(themeIcon) { themeIcon.classList.remove('fa-sun'); themeIcon.classList.add('fa-moon'); }
+                localStorage.setItem('theme', 'light');
             }
-            localStorage.setItem('theme', theme);
         };
+        // Corrección leve en lógica toggle para consistencia
         const savedTheme = localStorage.getItem('theme') || 'light';
         applyTheme(savedTheme);
         themeToggle.addEventListener('click', () => {
@@ -79,15 +93,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeBtn) closeBtn.addEventListener('click', () => { document.body.classList.remove('sidebar-open'); });
     if (overlay) overlay.addEventListener('click', () => { document.body.classList.remove('sidebar-open'); });
 
+    // 3. CAMBIO DE SEGURIDAD: Lógica de Logout
     if (logoutBtn && logoutModal) {
         logoutBtn.addEventListener('click', (e) => { e.preventDefault(); logoutModal.classList.add('visible'); });
         const closeModal = () => logoutModal.classList.remove('visible');
         document.getElementById('cancel-logout-btn').addEventListener('click', closeModal);
         logoutModal.addEventListener('click', (e) => { if (e.target === logoutModal) closeModal(); });
+        
         document.getElementById('confirm-logout-btn').addEventListener('click', () => {
-            sessionStorage.removeItem('currentUser');
-            localStorage.removeItem('authToken');
-            window.location.href = 'home.html';
+            logoutUser(); // <--- Usamos la función importada de utils.js
         });
     }
     
@@ -96,6 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const closeModal = () => cancelModal.classList.remove('visible');
         document.getElementById('deny-cancel-btn').addEventListener('click', closeModal);
         cancelModal.addEventListener('click', (e) => { if (e.target === cancelModal) closeModal(); });
+        
+        // Navegación interna (aquí href está bien, pero replace es opcional si no quieres que vuelvan al modal)
         document.getElementById('confirm-cancel-btn').addEventListener('click', () => { window.location.href = 'datos-personales.html'; });
     }
 
@@ -132,6 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const inicializarPaginaAnexos = async () => {
         try {
             const response = await fetch('/api/perfil', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            if (response.status === 401) { // Si el token expiró mientras navegaba
+                 logoutUser(); 
+                 return;
+            }
             const perfil = response.ok ? await response.json() : null;
             actualizarEstadoTabs(perfil);
         } catch (error) {

@@ -3,13 +3,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-
-// --- 1. DEPENDENCIAS DE SEGURIDAD AÑADIDAS ---
 const helmet = require('helmet'); 
 const rateLimit = require('express-rate-limit');
-// --- FIN DE DEPENDENCIAS AÑADIDAS ---
+const hpp = require('hpp'); // <--- NUEVA PROTECCIÓN (Evita ataques de duplicación de parámetros)
 
-// Tus rutas (esto está igual)
+// Importación de Rutas
 const authRoutes = require('./routes/authRoutes');
 const anexoRoutes = require('./routes/anexoRoutes');
 const integranteRoutes = require('./routes/integranteRoutes');
@@ -19,101 +17,117 @@ const adminRoutes = require('./routes/adminRoutes');
 const app = express();
 
 // =================================================================
-// ==== INICIO: BLOQUE DE CONFIGURACIÓN DE SEGURIDAD ====
+// ==== CONFIGURACIÓN DE SEGURIDAD (HARDENING) ====
 // =================================================================
 
-// --- ¡¡LÍNEA FINAL AÑADIDA!! ---
-// Esto es ESENCIAL para que express-rate-limit funcione correctamente en Render
-app.set('trust proxy', 1); 
-// ---------------------------------
+// 0. OCULTAR TECNOLOGÍA
+// Evita que hackers sepan fácilmente que usas Express
+app.disable('x-powered-by');
 
-// --- 2. CONFIGURACIÓN DE CORS SEGURO ---
+// 1. TRUST PROXY (ESENCIAL PARA RENDER)
+// Permite leer la IP real del usuario a través del balanceador de Render
+app.set('trust proxy', 1); 
+
+// 2. CORS SEGURO
 const whiteList = [
-    'https://proyecto-repa.onrender.com', // ¡Tu URL correcta!
-    'http://localhost:5500', 
-    'http://127.0.0.1:5500', 
-    'http://localhost:3000' // Para tu desarrollo local
+    'https://proyecto-repa.onrender.com', 
+    'http://localhost:5500', 
+    'http://127.0.0.1:5500', 
+    'http://localhost:3000'
 ];
 
 const corsOptions = {
-    origin: function (origin, callback) {
-        if (whiteList.includes(origin) || !origin) {
-            callback(null, true);
-        } else {
-            callback(new Error('Acceso denegado por CORS'));
-        }
-    }
+    origin: function (origin, callback) {
+        if (whiteList.includes(origin) || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Acceso denegado por CORS'));
+        }
+    }
 };
+app.use(cors(corsOptions));
 
-app.use(cors(corsOptions)); // Aplicamos la configuración segura de CORS
-
-// --- 3. CONFIGURACIÓN DE HELMET (PARA PERMITIR RECAPTCHA) ---
+// 3. HELMET (HEADERS HTTP & CSP)
+// Configurado para permitir: FontAwesome, Google Fonts, Estilos Inline y ReCAPTCHA
 app.use(
-    helmet.contentSecurityPolicy({
-        directives: {
-            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-            "script-src": ["'self'", "https://www.google.com/recaptcha/", "https://www.gstatic.com/"],
-            "frame-src": ["'self'", "https://www.google.com/recaptcha/"]
-        },
-    })
+    helmet.contentSecurityPolicy({
+        directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            "script-src": ["'self'", "https://www.google.com/recaptcha/", "https://www.gstatic.com/", "https://cdnjs.cloudflare.com"],
+            "frame-src": ["'self'", "https://www.google.com/recaptcha/"],
+            "style-src": [
+                "'self'", 
+                "'unsafe-inline'", // Necesario para tus estilos personalizados en HTML
+                "https://fonts.googleapis.com/", 
+                "https://cdnjs.cloudflare.com",
+                "https://cdn.jsdelivr.net"
+            ],
+            "font-src": [
+                "'self'", 
+                "https://fonts.gstatic.com/", 
+                "https://cdnjs.cloudflare.com", 
+                "data:"
+            ],
+            "img-src": ["'self'", "data:", "https:"],
+            "connect-src": ["'self'", "https://www.google.com/recaptcha/"] 
+        },
+    })
 );
 
-// --- 4. CONFIGURACIÓN DE RATE LIMIT ---
+// 4. RATE LIMIT (PROTECCIÓN DDOS)
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 1000, // Dejado en 1000 para pruebas
-    standardHeaders: true, 
-    legacyHeaders: false, 
-    message: 'Demasiadas peticiones desde esta IP, por favor intenta de nuevo en 15 minutos.'
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 1000, // Máximo de peticiones por IP
+    standardHeaders: true, 
+    legacyHeaders: false, 
+    message: { message: 'Demasiadas peticiones desde esta IP, intenta más tarde.' }
 });
 
 // =================================================================
-// ==== FIN: BLOQUE DE CONFIGURACIÓN DE SEGURIDAD ====
+// ==== MIDDLEWARES GLOBALES ====
 // =================================================================
 
-app.use(express.json());
+app.use(express.json()); // Parser JSON
+app.use(hpp()); // <--- ACTIVA LA PROTECCIÓN HPP AQUÍ
 
-// (Tu middleware anti-caché. Esto está perfecto y se queda igual)
+// Middleware Anti-Caché para páginas protegidas
 app.use((req, res, next) => {
-    const protectedPages = [
-        '/dashboard.html',
-        '/admin.html',
-        '/panel-admin.html',
-        '/anexos.html',
-        '/datos-personales.html',
-        '/detalle-solicitante.html',
-        '/admin-usuarios.html',
-        '/admin-integrantes.html',
-        '/admin-embarcaciones.html'
-    ];
+    const protectedPages = [
+        '/dashboard.html', '/admin.html', '/panel-admin.html', '/anexos.html',
+        '/datos-personales.html', '/detalle-solicitante.html', '/admin-usuarios.html',
+        '/admin-integrantes.html', '/admin-embarcaciones.html'
+    ];
 
-    if (protectedPages.includes(req.path)) {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-    }
-    next();
+    if (protectedPages.includes(req.path)) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+    }
+    next();
 });
 
-// (Tu línea de estáticos. Esto está perfecto y se queda igual)
+// Archivos Estáticos (Tu Frontend)
 app.use(express.static(path.join(__dirname, '../public')));
 
-// (Tu ruta raíz. Esto está perfecto y se queda igual)
+// Ruta Raíz
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public', 'home.html'));
+    res.sendFile(path.join(__dirname, '../public', 'home.html'));
 });
 
-// --- 5. RUTAS API (MODIFICADAS PARA USAR EL LIMITADOR) ---
+// =================================================================
+// ==== RUTAS API ====
+// =================================================================
+
+// Aplicamos el limitador a todas las rutas API
 app.use('/api', apiLimiter, authRoutes); 
 app.use('/api', apiLimiter, integranteRoutes);
 app.use('/api/embarcaciones', apiLimiter, embarcacionMenorRoutes);
 app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api', apiLimiter, anexoRoutes); 
 app.use('/api/anexos', apiLimiter, anexoRoutes); 
-// --- FIN DE RUTAS API ---
 
-// (Tu puerto. Esto está perfecto y se queda igual)
-const PORT = 3000;
+// Puerto
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Servidor escuchando en el puerto ${PORT}`);
+    console.log(`✅ Servidor seguro escuchando en el puerto ${PORT}`);
 });

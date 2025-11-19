@@ -1,4 +1,9 @@
 // public/datos-personales.js
+
+// SI usaste la configuración de módulos (type="module") en tu HTML, 
+// descomenta la siguiente línea:
+// import { logoutUser } from './utils.js'; 
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- LÓGICA DE LA INTERFAZ (UI) ---
     const themeToggle = document.getElementById('theme-toggle');
@@ -37,15 +42,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const authToken = localStorage.getItem('authToken');
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
 
+    // Verificación inicial: Si no hay datos, ¡fuera!
     if (!authToken || !currentUser) {
         localStorage.removeItem('authToken');
         sessionStorage.removeItem('currentUser');
-        window.location.href = 'home.html';
+        window.location.replace('/home.html'); // <--- CAMBIO: Usar replace aquí también
         return;
     }
 
+    // --- MODAL DE CERRAR SESIÓN (AQUÍ ESTÁ EL CAMBIO CLAVE) ---
     const logoutBtn = document.getElementById('logout-btn-sidebar');
     const logoutModal = document.getElementById('logout-modal');
+    
     if (logoutBtn && logoutModal) {
         const cancelLogoutBtn = document.getElementById('cancel-logout-btn');
         const confirmLogoutBtn = document.getElementById('confirm-logout-btn');
@@ -66,20 +74,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // ▼▼▼ ESTA ES LA PARTE QUE CORRIGE EL PROBLEMA DEL "ATRÁS" ▼▼▼
         confirmLogoutBtn.addEventListener('click', () => {
+            // 1. Borramos credenciales
             sessionStorage.removeItem('currentUser');
             localStorage.removeItem('authToken');
-            window.location.href = 'home.html';
+            
+            // 2. REDIRECCIÓN DESTRUCTIVA
+            // .replace() borra la página actual del historial.
+            // Si el usuario intenta dar "Atrás", no volverá aquí.
+            window.location.replace('/home.html'); 
         });
+        // ▲▲▲ FIN DE LA CORRECCIÓN ▲▲▲
     }
 
     document.getElementById('sidebar-user-name').textContent = currentUser.email || 'Cargando...';
     document.getElementById('user-email-summary').textContent = currentUser.email || 'Cargando...';
     document.getElementById('user-curp-summary').textContent = currentUser.curp || 'Cargando...';
 
-    // ▼▼▼ ESTA ES LA FUNCIÓN ACTUALIZADA ▼▼▼
     const actualizarEstadoAnexos = (perfil) => {
-        // Selectores de los elementos HTML (las "tarjetas" y sus etiquetas de estado)
         const anexoCards = {
             anexo1: document.getElementById('anexo1-card'),
             anexo2: document.getElementById('anexo2-card'),
@@ -95,7 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
             anexo5: anexoCards.anexo5?.querySelector('.status-badge'),
         };
 
-        // Mapa que conecta la clave del perfil con su tarjeta y etiqueta HTML
         const anexoMap = {
             anexo1_completo: { card: anexoCards.anexo1, badge: anexoBadges.anexo1 },
             anexo2_completo: { card: anexoCards.anexo2, badge: anexoBadges.anexo2 },
@@ -104,16 +116,13 @@ document.addEventListener('DOMContentLoaded', () => {
             anexo5_completo: { card: anexoCards.anexo5, badge: anexoBadges.anexo5 },
         };
 
-        // Función auxiliar para poner el estado correcto en una tarjeta
         const setStatus = (card, badge, text, statusClass, isEnabled) => {
-            if (!card || !badge) return; // Si el elemento no existe, no hacemos nada
-
+            if (!card || !badge) return; 
             badge.textContent = text;
-            badge.className = 'status-badge'; // Limpia clases anteriores
+            badge.className = 'status-badge'; 
             if (statusClass) {
                 badge.classList.add(statusClass);
             }
-
             if (isEnabled) {
                 card.classList.remove('disabled');
             } else {
@@ -121,51 +130,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // ---- Lógica Principal de Actualización ----
-
         const anexo1Completo = perfil.anexo1_completo === true;
 
-        // 1. Actualiza el Anexo 1
         setStatus(
             anexoMap.anexo1_completo.card,
             anexoMap.anexo1_completo.badge,
             anexo1Completo ? 'Completo' : 'Incompleto',
             anexo1Completo ? 'status-complete' : 'status-incomplete',
-            true // Anexo 1 siempre está habilitado
+            true 
         );
 
-        // 2. Actualiza los Anexos 2 al 5
         for (const key in anexoMap) {
-            // Saltamos el anexo 1 porque ya lo procesamos
             if (key === 'anexo1_completo') continue;
-
             const { card, badge } = anexoMap[key];
-            if (!card || !badge) continue; // Si la tarjeta no existe, la saltamos
+            if (!card || !badge) continue; 
 
-            const isAnexoCompleto = perfil[key] === true; // Verifica si ESTE anexo está completo
+            const isAnexoCompleto = perfil[key] === true; 
 
             if (anexo1Completo) {
-                // Si Anexo 1 está completo, los demás pueden estar Completos o Disponibles
                 setStatus(
                     card,
                     badge,
                     isAnexoCompleto ? 'Completo' : 'Disponible',
                     isAnexoCompleto ? 'status-complete' : 'status-available',
-                    true // Habilitado
+                    true 
                 );
             } else {
-                // Si Anexo 1 NO está completo, los demás están Bloqueados
                 setStatus(
                     card,
                     badge,
                     'Bloqueado',
-                    '', // Sin clase de color específica para bloqueado
-                    false // Deshabilitado
+                    '', 
+                    false 
                 );
             }
         }
 
-        // 3. Oculta Anexos según la actividad (tu lógica existente)
         const actividad = perfil.actividad;
         if (anexoCards.anexo3) anexoCards.anexo3.style.display = 'block';
         if (anexoCards.anexo4) anexoCards.anexo4.style.display = 'block';
@@ -176,8 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (anexoCards.anexo3) anexoCards.anexo3.style.display = 'none';
         }
     };
-    // ▲▲▲ FIN DE LA FUNCIÓN ACTUALIZADA ▲▲▲
-
 
     const cargarDatosDelPerfil = async () => {
         try {
@@ -188,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const perfil = await response.json();
             
-
             if (!perfil) {
                 console.log("Perfil no encontrado para el usuario.");
                 return;
@@ -203,16 +200,15 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('razon-social-summary').textContent = nombreCompleto || 'No registrado';
             document.getElementById('municipio-summary').textContent = perfil.municipio || 'No registrado';
 
-            // Llamamos a la función actualizada para poner los estados
             actualizarEstadoAnexos(perfil);
 
         } catch (error) {
-            alert(error.message);
+            // Si falla la carga, no necesariamente cerramos sesión, pero mostramos alerta.
+            // Podrías redirigir si es error 401 (No autorizado)
             console.error("Fallo al cargar perfil completo:", error);
         }
     };
 
-    // --- Ejecutar la carga inicial ---
     cargarDatosDelPerfil();
 
-}); // Fin de DOMContentLoaded
+});

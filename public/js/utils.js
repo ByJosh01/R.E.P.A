@@ -9,7 +9,7 @@
 export function showFeedback(inputElement, message, isValid) {
     if (!inputElement) return;
     let feedbackElement = inputElement.nextElementSibling;
-    // Búsqueda más robusta del elemento de feedback
+    
     if (!feedbackElement || !feedbackElement.classList.contains('feedback-message')) {
         const parent = inputElement.closest('.anexo-field, .cantidad-cell');
         if (parent) feedbackElement = parent.querySelector('.feedback-message');
@@ -32,3 +32,18 @@ export function showFeedback(inputElement, message, isValid) {
 export const isValidRFC = (rfc) => /^([A-ZÑ&]{3,4}) ?(?:- ?)?(\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])) ?(?:- ?)?([A-Z\d]{2})([A\d])$/.test(rfc);
 export const isValidCURP = (curp) => /^[A-Z]{1}[AEIOU]{1}[A-Z]{2}[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|1[0-9]|2[0-9]|3[0-1])[HM]{1}(AS|BC|BS|CC|CS|CH|CL|CM|DF|DG|GT|GR|HG|JC|MC|MN|MS|NT|NL|OC|PL|QT|QR|SP|SL|SR|TC|TS|TL|VZ|YN|ZS|NE)[B-DF-HJ-NP-TV-Z]{3}[0-9A-Z]{1}[0-9]{1}$/.test(curp);
 export const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+// --- NUEVA FUNCIÓN DE LOGOUT ---
+/**
+ * Cierra la sesión del usuario de manera segura y redirige.
+ */
+export function logoutUser() {
+    // 1. Borrar credenciales
+    localStorage.removeItem('authToken');
+    sessionStorage.removeItem('currentUser');
+
+    // 2. Redirección "Destructiva"
+    // .replace() reemplaza la entrada actual en el historial.
+    // Esto hace más difícil regresar con el botón "Atrás".
+    window.location.replace('/home.html');
+}
