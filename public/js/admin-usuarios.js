@@ -3,29 +3,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Verificaciones y Selectores Globales ---
     const authToken = localStorage.getItem('authToken');
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+    
+    // Si no hay sesión, usamos replace para evitar volver con "Atrás"
     if (!authToken || !currentUser || (currentUser.rol !== 'admin' && currentUser.rol !== 'superadmin')) {
-        window.location.href = 'home.html';
+        window.location.replace('home.html');
         return;
     }
 
     // ==========================================================
-    // ==== LÓGICA DE ESTILOS DINÁMICA (CORREGIDA) ====
+    // ==== LÓGICA DE ESTILOS DINÁMICA ====
     // ==========================================================
     const manageStylesByRole = (rol) => {
         const adminLink = document.getElementById('admin-theme-link');
         const panelAdminLink = document.getElementById('panel-admin-theme-link');
 
         if (rol === 'superadmin') {
-            // Activa admin.css y desactiva panel-admin.css
             if (adminLink) adminLink.disabled = false;
             if (panelAdminLink) panelAdminLink.disabled = true;
         } else if (rol === 'admin') {
-            // Desactiva admin.css y activa panel-admin.css
             if (adminLink) adminLink.disabled = true;
             if (panelAdminLink) panelAdminLink.disabled = false;
         }
         
-        // Ajuste del título del header
         const headerTitleElement = document.querySelector('.content-header div:first-child');
         if (headerTitleElement) {
             if (rol === 'superadmin') {
@@ -35,16 +34,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     };
-    
-    // Ejecutar gestión de estilos al inicio
     manageStylesByRole(currentUser.rol);
-    // ==========================================================
-    // ==== FIN LÓGICA DE ESTILOS ====
-    // ==========================================================
 
 
     // ==========================================================
-    // ==== LÓGICA DE VALIDACIÓN (EXTRAÍDA DE ANEXOS) ====
+    // ==== LÓGICA DE VALIDACIÓN ====
     // ==========================================================
     const showFeedback = (inputElement, message, isValid) => {
         let feedbackElement = inputElement.nextElementSibling;
@@ -70,12 +64,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
     
-    // FUNCIONES DE FORMATO (RECREADAS)
     const isValidCURP = (curp) => /^[A-Z]{4}\d{6}[HM][A-Z]{5}[0-9A-Z]{2}$/.test(curp.toUpperCase());
     const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    // ==========================================================
-    // ==== FIN LÓGICA DE VALIDACIÓN ====
-    // ==========================================================
 
     // Elementos del DOM
     const userMenuTrigger = document.getElementById('user-menu-trigger');
@@ -86,21 +76,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const adminGotoDashboardBtn = document.getElementById('admin-goto-dashboard-btn');
     const tableBody = document.getElementById('usuarios-table-body');
     const searchInput = document.getElementById('search-input');
-    let allUsuarios = []; // Para guardar datos originales
+    let allUsuarios = []; 
 
-    // Modales de Info/Error
+    // Modales
     const infoModal = document.getElementById('admin-info-modal');
     const infoModalTitle = document.getElementById('admin-info-title');
     const infoModalContent = document.getElementById('admin-info-content');
     const infoModalIcon = document.getElementById('admin-info-icon');
     const closeInfoModalBtn = document.getElementById('close-admin-info-btn');
 
-    // Modales de Logout
     const logoutModal = document.getElementById('logout-modal');
     const cancelLogoutBtn = document.getElementById('cancel-logout-btn');
     const confirmLogoutBtn = document.getElementById('confirm-logout-btn');
 
-    // Modales de Edición
     const editModal = document.getElementById('edit-usuario-modal');
     const editForm = document.getElementById('edit-usuario-form');
     const cancelEditBtn = document.getElementById('cancel-edit-btn');
@@ -110,13 +98,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const editPasswordInput = document.getElementById('edit-password');
 
 
-    // --- FUNCIÓN REUTILIZABLE PARA MODALES DE INFO/ERROR ---
+    // --- FUNCIÓN REUTILIZABLE PARA MODALES ---
     const showInfoModal = (title, content, isSuccess = true, onConfirm = null) => {
-        if (!infoModal || !infoModalTitle || !infoModalContent || !infoModalIcon || !closeInfoModalBtn) {
-            console.error("Elementos del modal de información no encontrados.");
-            alert(`${title}: ${content}`);
-            return;
-        }
+        if (!infoModal) { alert(`${title}: ${content}`); return; }
+        
         infoModalTitle.textContent = title;
         if (content.startsWith('<div')) {
             infoModalContent.innerHTML = content;
@@ -135,15 +120,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeInfoModalBtn.addEventListener('click', confirmHandler, { once: true });
     };
 
-    // --- LÓGICA DEL MENÚ DE ADMIN ---
+    // --- MENÚ DE ADMIN ---
     if (adminEmailPlaceholder) { adminEmailPlaceholder.textContent = currentUser.email; }
     if (userMenuTrigger && userDropdown) {
         userMenuTrigger.addEventListener('click', (e) => { e.stopPropagation(); userDropdown.classList.toggle('active'); });
     }
     window.addEventListener('click', () => { if (userDropdown && userDropdown.classList.contains('active')) { userDropdown.classList.remove('active'); } });
 
-    // --- Ver Info Admin ---
-    if (viewAdminInfoBtn && infoModal && infoModalContent) {
+    // --- INFO ADMIN ---
+    if (viewAdminInfoBtn) {
         viewAdminInfoBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             try {
@@ -157,38 +142,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-    if (infoModal) {
-        infoModal.addEventListener('click', (e) => {
-            if (e.target === infoModal) infoModal.classList.remove('visible');
-        });
-    }
+    if (infoModal) infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.remove('visible'); });
 
-    // --- Logout Admin ---
+    // --- LOGOUT ADMIN ---
     if (adminLogoutBtn && logoutModal) {
-        adminLogoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            logoutModal.classList.add('visible');
-        });
-
-
-        if (adminGotoDashboardBtn) {
-        adminGotoDashboardBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.href = 'dashboard.html';
-        });
-    }
+        adminLogoutBtn.addEventListener('click', (e) => { e.preventDefault(); logoutModal.classList.add('visible'); });
+        if (adminGotoDashboardBtn) adminGotoDashboardBtn.addEventListener('click', (e) => { e.preventDefault(); window.location.href = 'dashboard.html'; });
         const closeModal = () => logoutModal.classList.remove('visible');
         if(cancelLogoutBtn) cancelLogoutBtn.addEventListener('click', closeModal);
         logoutModal.addEventListener('click', (e) => { if (e.target === logoutModal) closeModal(); });
+        
         if(confirmLogoutBtn) confirmLogoutBtn.addEventListener('click', () => {
             sessionStorage.removeItem('currentUser');
             localStorage.removeItem('authToken');
-            window.location.href = 'home.html';
+            // Redirección segura
+            window.location.replace('home.html');
         });
     }
 
-
-    // --- LÓGICA PARA CARGAR LA TABLA Y BUSCADOR ---
+    // --- LÓGICA DE TABLA (CORREGIDA) ---
     const formatFecha = (dateString) => {
         if (!dateString) return 'N/A';
         try {
@@ -197,9 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 year: 'numeric', month: '2-digit', day: '2-digit', 
                 hour: '2-digit', minute: '2-digit', hour12: true 
             });
-        } catch (e) {
-            return dateString;
-        }
+        } catch (e) { return dateString; }
     };
     
     const renderTabla = (usuarios) => {
@@ -215,17 +185,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (user.id === currentUser.id) { editButtonDisabled = 'disabled'; }
             if (currentUser.rol === 'admin' && user.rol === 'superadmin') { editButtonDisabled = 'disabled'; }
 
+            // Estilo para el badge de rol
+            let roleBadgeStyle = 'background-color: #6c757d; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;';
+            if (user.rol === 'superadmin') roleBadgeStyle = 'background-color: #6f42c1; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;';
+            if (user.rol === 'admin') roleBadgeStyle = 'background-color: #0d6efd; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;';
+
             row.innerHTML = `
-                <td>${user.id}</td>
+                <td><strong>${user.id}</strong></td>
                 <td>${user.email || 'N/A'}</td>
                 <td>${user.curp || 'N/A'}</td>
-                <td>${user.rol || 'N/A'}</td>
+                <td><span style="${roleBadgeStyle}">${user.rol || 'N/A'}</span></td>
                 <td>${formatFecha(user.creado_en)}</td>
                 <td>
                     <button class="btn-icon btn-edit-usuario" title="Editar" data-id="${user.id}" ${editButtonDisabled}>
                         <i class="fas fa-pencil-alt"></i>
                     </button>
-                    </td>
+                </td>
             `;
         });
     };
@@ -233,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cargarUsuarios = async () => {
         try {
             const response = await fetch('/api/admin/usuarios', { headers: { 'Authorization': `Bearer ${authToken}` } });
-             if (response.status === 403) { showInfoModal('Acceso Denegado', 'No tienes permisos para ver esta sección.', false, () => window.location.href = 'admin.html'); return; }
+             if (response.status === 403) { showInfoModal('Acceso Denegado', 'No tienes permisos para ver esta sección.', false, () => window.location.replace('admin.html')); return; }
             if (!response.ok) { throw new Error('No se pudieron cargar los usuarios.'); }
             allUsuarios = await response.json();
             renderTabla(allUsuarios);
@@ -255,12 +230,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // =======================================================
-    // === VALIDACIÓN EN TIEMPO REAL DEL FORMULARIO DE EDICIÓN ===
-    // =======================================================
+    // --- VALIDACIÓN DE EDICIÓN ---
     const setupEditFormValidation = () => {
-        
-        // Validar Email
         if (editEmailInput) {
             editEmailInput.setAttribute('maxlength', 60);
             editEmailInput.addEventListener('input', (e) => {
@@ -269,8 +240,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 else showFeedback(e.target, 'Correo válido.', true);
             });
         }
-        
-        // Validar CURP
         if (editCurpInput) {
             editCurpInput.setAttribute('maxlength', 18);
             editCurpInput.addEventListener('input', (e) => {
@@ -280,32 +249,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 else showFeedback(e.target, 'CURP válido.', true);
             });
         }
-        
-        // Validar Contraseña (si se ingresa)
         if (editPasswordInput) {
             editPasswordInput.addEventListener('input', (e) => {
                 const value = e.target.value.trim();
                 if (value.length > 0 && value.length < 6) showFeedback(e.target, 'Mínimo 6 caracteres.', false);
                 else if (value.length >= 6) showFeedback(e.target, 'Contraseña OK. Se actualizará al guardar.', true);
-                else showFeedback(e.target, '', true); // Si está vacío, es opcional y válido.
+                else showFeedback(e.target, '', true);
             });
         }
     };
     setupEditFormValidation();
 
 
-    // --- LÓGICA PARA ACCIONES DE LA TABLA (EDITAR) ---
-    
-    // --- Cerrar Modal de Edición ---
+    // --- ACCIONES DE TABLA ---
     const closeEditModal = () => { if (editModal) editModal.classList.remove('visible'); 
-        editForm.querySelectorAll('.valid, .invalid').forEach(el => el.classList.remove('valid', 'invalid')); // Limpia feedback
+        editForm.querySelectorAll('.valid, .invalid').forEach(el => el.classList.remove('valid', 'invalid'));
         editForm.querySelectorAll('.feedback-message').forEach(el => el.textContent = '');
-        editForm.reset(); // Limpia campos
+        editForm.reset(); 
     };
     if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
     if (editModal) editModal.addEventListener('click', (e) => { if (e.target === editModal) closeEditModal(); });
 
-    // --- Abrir Modal de Edición (Disparar validación al abrir) ---
     if (tableBody) {
         tableBody.addEventListener('click', async (e) => {
             const button = e.target.closest('button.btn-edit-usuario');
@@ -314,12 +278,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const usuarioId = button.dataset.id;
             
             try {
-                // 1. Obtener datos
                 const response = await fetch(`/api/admin/usuarios/${usuarioId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
                 if (!response.ok) throw new Error('No se pudieron obtener los datos del usuario.');
                 const data = await response.json();
 
-                // 2. Rellenar y disparar validación
                 if (editForm && editUsuarioId && editModal) {
                     editForm.elements.email.value = data.email || '';
                     editForm.elements.curp.value = data.curp || '';
@@ -327,7 +289,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     editForm.elements.password.value = ''; 
                     editUsuarioId.value = data.id;
                     
-                    // Disparar eventos input para activar la validación y mostrar el feedback
                     editEmailInput.dispatchEvent(new Event('input', { bubbles: true }));
                     editCurpInput.dispatchEvent(new Event('input', { bubbles: true }));
                     editPasswordInput.dispatchEvent(new Event('input', { bubbles: true })); 
@@ -340,15 +301,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- Enviar Formulario de Edición (Chequear validación final) ---
+    // --- GUARDAR EDICIÓN ---
     if (editForm && editUsuarioId) {
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault(); 
             
-            // 1. Disparar validación final
             editForm.querySelectorAll('input').forEach(input => input.dispatchEvent(new Event('input', { bubbles: true })));
             
-            // 2. Chequear errores
             const firstInvalidElement = editForm.querySelector('.invalid');
             if (firstInvalidElement) {
                 showInfoModal('Formulario Incompleto', 'Por favor, revisa y corrige los campos marcados en rojo.', false);
@@ -389,7 +348,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- CARGA INICIAL ---
+    // Carga inicial
     cargarUsuarios();
-
-}); // Fin de DOMContentLoaded
+});

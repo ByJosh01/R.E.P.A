@@ -13,15 +13,60 @@
     <link rel="stylesheet" href="css/admin.css" id="admin-theme-link">
     <link rel="stylesheet" href="css/panel-admin.css" id="panel-admin-theme-link">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+        /* Estilos específicos para los botones dentro de los inputs (como en Anexo 5) */
+        .input-wrapper {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            position: relative;
+        }
+        .btn-mini {
+            padding: 0 12px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #333;
+            height: 38px; /* Altura para igualar al input */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .btn-mini:hover {
+            background-color: #e0e0e0;
+        }
+        .btn-help {
+            color: #007bff;
+            border-color: #007bff;
+            background-color: white;
+        }
+        .btn-help:hover {
+            background-color: #f0f8ff;
+        }
+        /* Ajuste para validación visual */
+        .feedback-message {
+            font-size: 0.85em;
+            margin-top: 4px;
+            min-height: 1.2em;
+        }
+        .feedback-message.valid { color: green; }
+        .feedback-message.invalid { color: red; }
+        input.invalid { border-color: red; }
+        input.valid { border-color: green; }
+    </style>
 </head>
 <body class="layout-app page-full-width">
     <main class="app-content">
         
         <header class="content-header">
-        <div>
-                 <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
+            <div>
+                <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
             </div>
-             <div class="user-menu">
+            <div class="user-menu">
                 <div class="user-menu-trigger" id="user-menu-trigger">
                     <span id="admin-email-placeholder">Cargando...</span>
                     <i class="fas fa-chevron-down"></i>
@@ -31,10 +76,10 @@
                     <a href="#" id="admin-goto-dashboard-btn">Ir al Dashboard </a>
                     <a href="#" id="admin-logout-btn">Cerrar Sesión</a>
                 </div>
-                </div>
+            </div>
         </header>
 
-         <nav class="tabs-nav" style="margin-top: -30px; margin-bottom: 30px; background-color: white;">
+        <nav class="tabs-nav" style="margin-top: -30px; margin-bottom: 30px; background-color: white;">
             <a href="admin.html" class="tab-link" id="nav-solicitantes">Solicitantes</a>
             <a href="admin-usuarios.html" class="tab-link" id="nav-cuentas" style="display: none;">Cuentas (Usuarios)</a>
             <a href="admin-integrantes.html" class="tab-link" id="nav-integrantes">Integrantes</a>
@@ -77,53 +122,69 @@
             <i id="admin-info-icon" class="modal-icon fas fa-user-circle success"></i>
             <h2 id="admin-info-title">Información</h2>
             <div id="admin-info-content" class="admin-info-modal-content">
-                 </div>
+            </div>
             <div class="modal-buttons">
                 <button id="close-admin-info-btn" class="btn btn-primary">Cerrar</button>
             </div>
         </div>
     </div>
-    
+        
     <div id="edit-embarcacion-modal" class="modal-overlay">
         <div class="modal-content large">
-            <h2>Editar Embarcación</h2>
+            <h2>Editar Datos de la Embarcación</h2>
             <form id="edit-embarcacion-form" class="anexo-form" novalidate>
-                <div class="anexo-grid">
+                <input type="hidden" id="edit-embarcacion-id">
+                
+                <div class="anexo-grid" style="grid-template-columns: repeat(4, 1fr);">
                     
-                    <input type="hidden" id="edit-embarcacion-id">
-                    
-                    <div class="anexo-field span-12">
+                    <div class="anexo-field span-4">
                         <label for="edit-nombre_embarcacion">Nombre Embarcación:</label>
-                        <input type="text" id="edit-nombre_embarcacion" class="modal-input" required>
+                        <input type="text" id="edit-nombre_embarcacion" name="nombre_embarcacion" required>
+                        <div class="feedback-message"></div>
                     </div>
                     
-                    <div class="anexo-field span-6">
+                    <div class="anexo-field span-2">
                         <label for="edit-matricula">Matrícula:</label>
-                        <input type="text" id="edit-matricula" class="modal-input">
+                        <div class="input-wrapper">
+                            <input type="text" id="edit-matricula" name="matricula" style="flex: 1;">
+                            <button type="button" id="btn-insert-ordinal-edit" class="btn-mini" title="Insertar 'ª'">ª</button>
+                            <button type="button" id="btn-help-matricula-edit" class="btn-mini btn-help" title="Ayuda de Formato"><i class="fas fa-question-circle"></i></button>
+                        </div>
+                        <div class="feedback-message"></div>
                     </div>
 
-                    <div class="anexo-field span-6">
+                    <div class="anexo-field span-2">
                         <label for="edit-tonelaje_neto">Tonelaje Neto:</label>
-                        <input type="text" id="edit-tonelaje_neto" class="modal-input">
+                        <input type="text" id="edit-tonelaje_neto" name="tonelaje_neto">
+                        <div class="feedback-message"></div>
                     </div>
 
-                    <div class="anexo-field span-6">
+                    <div class="anexo-field span-2">
                         <label for="edit-marca">Marca Motor:</label>
-                        <input type="text" id="edit-marca" class="modal-input">
+                        <input type="text" id="edit-marca" name="marca">
+                        <div class="feedback-message"></div>
                     </div>
 
-                    <div class="anexo-field span-6">
+                    <div class="anexo-field span-2">
+                        <label for="edit-numero_serie">Número de Serie:</label>
+                        <input type="text" id="edit-numero_serie" name="numero_serie">
+                        <div class="feedback-message"></div>
+                    </div>
+
+                    <div class="anexo-field span-2">
                         <label for="edit-potencia_hp">Potencia (HP):</label>
-                        <input type="text" id="edit-potencia_hp" class="modal-input">
+                        <input type="text" id="edit-potencia_hp" name="potencia_hp">
+                        <div class="feedback-message"></div>
                     </div>
 
-                    <div class="anexo-field span-12">
+                    <div class="anexo-field span-2">
                         <label for="edit-puerto_base">Puerto Base:</label>
-                        <input type="text" id="edit-puerto_base" class="modal-input">
+                        <input type="text" id="edit-puerto_base" name="puerto_base">
+                        <div class="feedback-message"></div>
                     </div>
 
-                    <div class="anexo-field span-12">
-                        <small id="edit-error-msg" style="color: red; display: none; width: 100%;"></small>
+                    <div class="anexo-field span-4">
+                        <small id="edit-error-msg" style="color: red; display: none; width: 100%; text-align: center; margin-top: 10px;"></small>
                     </div>
 
                 </div>
@@ -134,7 +195,18 @@
             </div>
         </div>
     </div>
-    
+
+    <div id="matricula-help-modal" class="modal-overlay">
+        <div class="modal-content large">
+            <h2>Ejemplo de Matrícula</h2>
+            <p>El formato debe seguir estrictamente esta estructura (ejemplo: 6ª BA-2-53-21).</p>
+            <img src="matricula.png" alt="Ejemplo de matrícula de embarcación" style="width: 100%; border-radius: 8px; margin-top: 15px;">
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button id="close-matricula-help-btn" class="btn btn-primary">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="js/admin-embarcaciones.js"></script>
 </body>
 </html>

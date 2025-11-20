@@ -1,126 +1,33 @@
-// public/js/admin-embarcaciones.js (Versión con Edición, Filtro y Validación)
+// public/js/admin-embarcaciones.js
 
-function ajustarUIporRol() {
-    const userSession = sessionStorage.getItem('currentUser');
-    if (!userSession) return; // El auth-guard ya debería haberlo sacado
+// --- 1. FUNCIONES AUXILIARES GLOBALES ---
 
-    try {
-        const user = JSON.parse(userSession);
-        const rol = user.rol;
+const insertOrdinalChar = (inputElement) => {
+    const charToInsert = 'ª';
+    const startPos = inputElement.selectionStart;
+    const endPos = inputElement.selectionEnd;
+    const currentValue = inputElement.value;
+    inputElement.value = currentValue.substring(0, startPos) + charToInsert + currentValue.substring(endPos);
+    const newCursorPos = startPos + charToInsert.length;
+    inputElement.selectionStart = newCursorPos;
+    inputElement.selectionEnd = newCursorPos;
+    inputElement.focus();
+    inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+};
 
-        const navSolicitantes = document.getElementById('nav-solicitantes');
-        const navCuentas = document.getElementById('nav-cuentas');
-        
-        // IDs de los CSS
-        const adminTheme = document.getElementById('admin-theme-link');
-        const panelAdminTheme = document.getElementById('panel-admin-theme-link');
-
-        // Si es un ADMIN normal
-        if (rol === 'admin') {
-            // 1. Ocultamos la pestaña "Cuentas"
-            if (navCuentas) navCuentas.style.display = 'none';
-
-            // 2. Arreglamos el link de "Solicitantes"
-            if (navSolicitantes) navSolicitantes.href = 'panel-admin.html';
-            
-            // 3. Cambiamos el CSS
-            if (adminTheme) adminTheme.disabled = true;
-            if (panelAdminTheme) panelAdminTheme.disabled = false;
-
-        // Si es SUPERADMIN
-        } else if (rol === 'superadmin') {
-            // 1. Mostramos la pestaña "Cuentas"
-            if (navCuentas) navCuentas.style.display = 'block'; // O 'inline-block'
-
-            // 2. Arreglamos el link de "Solicitantes"
-            if (navSolicitantes) navSolicitantes.href = 'admin.html';
-            
-            // 3. Cambiamos el CSS
-            if (adminTheme) adminTheme.disabled = false;
-            if (panelAdminTheme) panelAdminTheme.disabled = true;
-        }
-    } catch (e) {
-        console.error("Error al ajustar UI por rol:", e);
-    }
-}
-
-// 1. Ejecutar la lógica de UI en PAGESHOW (para el botón "atrás")
-window.addEventListener('pageshow', (event) => {
-    if (event.persisted) {
-        ajustarUIporRol();
-    }
-});
-
-
-document.addEventListener('DOMContentLoaded', async () => {
-    const authToken = localStorage.getItem('authToken');
-    let currentUser = null;
-    let allEmbarcaciones = []; 
-
-    try {
-        const currentUserJSON = sessionStorage.getItem('currentUser');
-        if (currentUserJSON) {
-            currentUser = JSON.parse(currentUserJSON);
-        }
-    } catch (error) {
-        console.error("Error al parsear currentUser desde sessionStorage:", error);
-    }
-
-    if (!authToken || !currentUser) {
-        console.error("Falta authToken o currentUser, redirigiendo a home.");
-        window.location.href = 'home.html';
-        return;
-    }
-
-    // ==========================================================
-    // ==== LÓGICA DE ESTILOS DINÁMICA (IMPLEMENTADA) ====
-    // ==========================================================
-    const manageStylesByRole = (rol) => {
-        const adminLink = document.getElementById('admin-theme-link');
-        const panelAdminLink = document.getElementById('panel-admin-theme-link');
-
-        if (rol === 'superadmin') {
-            // Activa admin.css y desactiva panel-admin.css
-            if (adminLink) adminLink.disabled = false;
-            if (panelAdminLink) panelAdminLink.disabled = true;
-        } else if (rol === 'admin') {
-            // Desactiva admin.css y activa panel-admin.css
-            if (adminLink) adminLink.disabled = true;
-            if (panelAdminLink) panelAdminLink.disabled = false;
-        }
-        
-        // Ajuste del título del header
-        const headerTitleElement = document.querySelector('.content-header div:first-child');
-        if (headerTitleElement) {
-            if (rol === 'superadmin') {
-                 headerTitleElement.innerHTML = '<i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración';
-            } else {
-                 headerTitleElement.innerHTML = '<i class="fas fa-user-cog" style="margin-right: 10px;"></i> Panel de Gestión';
-            }
-        }
-    };
-    
-    // Ejecutar gestión de estilos al inicio
-    manageStylesByRole(currentUser.rol);
-    // ==========================================================
-    // ==== FIN LÓGICA DE ESTILOS DINÁMICA ====
-    // ==========================================================
-
-
-    // --- FUNCIÓN DE FEEDBACK (Recreada de utilidades) ---
-    const showFeedback = (inputElement, message, isValid) => {
-        let feedbackElement = inputElement.nextElementSibling;
-        if (!feedbackElement || !feedbackElement.classList.contains('feedback-message')) {
-            const parent = inputElement.closest('.anexo-field, .input-group');
+const showFeedback = (inputElement, message, isValid) => {
+    let feedbackElement = inputElement.nextElementSibling;
+    if (!feedbackElement || !feedbackElement.classList.contains('feedback-message')) {
+        const wrapper = inputElement.closest('.input-wrapper');
+        if (wrapper) {
+            feedbackElement = wrapper.nextElementSibling;
+        } else {
+            const parent = inputElement.closest('.anexo-field');
             if (parent) feedbackElement = parent.querySelector('.feedback-message');
         }
+    }
 
-        if (!feedbackElement) { 
-             feedbackElement = document.createElement('div');
-             feedbackElement.className = 'feedback-message';
-             inputElement.closest('.anexo-field, .input-group')?.appendChild(feedbackElement);
-        }
-
+    if (feedbackElement && feedbackElement.classList.contains('feedback-message')) {
         inputElement.classList.remove('valid', 'invalid');
         feedbackElement.classList.remove('valid', 'invalid');
         
@@ -131,45 +38,79 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             feedbackElement.textContent = '';
         }
-    };
-    
-    // --- LÓGICA DE VALIDACIÓN DE FORMATO ESPECÍFICO (Recreada de anexo5.js) ---
-    const matriculaRegex = /^6ª\s[A-Z]{2}-\d{1}-\d{1,4}-\d{2}$/;
-    // ----------------------------------------------------------------------
+    }
+};
 
+function ajustarUIporRol() {
+    const userSession = sessionStorage.getItem('currentUser');
+    if (!userSession) return;
 
-    // --- LÓGICA DE NAVEGACIÓN ---
-    const navSolicitantes = document.getElementById('nav-solicitantes');
-    const navCuentas = document.getElementById('nav-cuentas');
-    // Navegación se ajusta en base al rol
-    if (navSolicitantes && navCuentas) {
-        if (currentUser.rol === 'superadmin') {
-            navSolicitantes.href = 'admin.html';
-            navCuentas.style.display = 'inline-block';
-        } else {
-            navSolicitantes.href = 'panel-admin.html';
-            navCuentas.style.display = 'none';
+    try {
+        const user = JSON.parse(userSession);
+        const rol = user.rol;
+        const navSolicitantes = document.getElementById('nav-solicitantes');
+        const navCuentas = document.getElementById('nav-cuentas');
+        const adminTheme = document.getElementById('admin-theme-link');
+        const panelAdminTheme = document.getElementById('panel-admin-theme-link');
+        const headerTitleElement = document.querySelector('.content-header div:first-child');
+
+        if (rol === 'admin') {
+            if (navCuentas) navCuentas.style.display = 'none';
+            if (navSolicitantes) navSolicitantes.href = 'panel-admin.html';
+            if (adminTheme) adminTheme.disabled = true;
+            if (panelAdminTheme) panelAdminTheme.disabled = false;
+            if (headerTitleElement) headerTitleElement.innerHTML = '<i class="fas fa-user-cog" style="margin-right: 10px;"></i> Panel de Gestión';
+
+        } else if (rol === 'superadmin') {
+            if (navCuentas) navCuentas.style.display = 'inline-block';
+            if (navSolicitantes) navSolicitantes.href = 'admin.html';
+            if (adminTheme) adminTheme.disabled = false;
+            if (panelAdminTheme) panelAdminTheme.disabled = true;
+            if (headerTitleElement) headerTitleElement.innerHTML = '<i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración';
         }
+    } catch (e) {
+        console.error("Error al ajustar UI por rol:", e);
+    }
+}
+
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) ajustarUIporRol();
+});
+
+// --- 2. INICIO DOM CONTENT LOADED ---
+document.addEventListener('DOMContentLoaded', async () => {
+    const authToken = localStorage.getItem('authToken');
+    let currentUser = null;
+    let allEmbarcaciones = []; 
+
+    try {
+        const currentUserJSON = sessionStorage.getItem('currentUser');
+        if (currentUserJSON) currentUser = JSON.parse(currentUserJSON);
+    } catch (error) { console.error("Error parse user:", error); }
+
+    if (!authToken || !currentUser) {
+        window.location.replace('home.html');
+        return;
     }
 
+    ajustarUIporRol();
 
-    // --- LÓGICA DE MODAL DE INFO ---
+    // --- MODAL DE INFO (GENÉRICO) ---
     const infoModal = document.getElementById('admin-info-modal');
     const infoModalTitle = document.getElementById('admin-info-title');
     const infoModalContent = document.getElementById('admin-info-content');
     const infoModalIcon = document.getElementById('admin-info-icon');
     const closeInfoModalBtn = document.getElementById('close-admin-info-btn');
+    
     const showInfoModal = (title, content, isSuccess = true, onConfirm = null) => {
-        if (!infoModal || !infoModalTitle || !infoModalContent || !infoModalIcon || !closeInfoModalBtn) {
-            console.error("Elementos del modal de información no encontrados.");
-            alert(`${title}: ${content}`);
-            return;
-        }
+        if (!infoModal) { alert(`${title}: ${content}`); return; }
         infoModalTitle.textContent = title;
         infoModalContent.innerHTML = content.startsWith('<div') ? content : `<p style="text-align: center;">${content}</p>`;
         infoModalIcon.className = 'modal-icon fas';
+        infoModalIcon.classList.remove('fa-check-circle', 'fa-times-circle', 'success', 'error'); // Limpiar clases previas
         infoModalIcon.classList.add(isSuccess ? 'fa-check-circle' : 'fa-times-circle', isSuccess ? 'success' : 'error');
         infoModal.classList.add('visible');
+        
         const confirmHandler = () => {
             infoModal.classList.remove('visible');
             if (onConfirm) onConfirm();
@@ -178,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeInfoModalBtn.addEventListener('click', confirmHandler, { once: true });
     };
 
-    // --- LÓGICA DE TABLA Y BÚSQUEDA ---
+    // --- TABLA Y BÚSQUEDA ---
     const tableBody = document.getElementById('embarcaciones-table-body');
     const searchInput = document.getElementById('search-input'); 
 
@@ -228,44 +169,81 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
     cargarDatosIniciales();
-    // --- FIN LÓGICA DE TABLA Y BÚSQUEDA ---
 
-    // --- LÓGICA DE VALIDACIÓN DEL MODAL ---
+    // ============================================================
+    // === LÓGICA DEL MODAL DE EDICIÓN (CORREGIDA) ===
+    // ============================================================
+    
     const editModal = document.getElementById('edit-embarcacion-modal');
     const editForm = document.getElementById('edit-embarcacion-form');
+    const editIdField = document.getElementById('edit-embarcacion-id');
+    const editErrorMsg = document.getElementById('edit-error-msg');
+    // IMPORTANTE: Definir el botón de cerrar aquí, antes de usarlo
+    const closeEditModalBtn = document.getElementById('close-edit-modal-btn'); 
+    
+    const fields = [
+        'nombre_embarcacion', 'matricula', 'tonelaje_neto', 
+        'marca', 'numero_serie', 'potencia_hp', 'puerto_base'
+    ];
+    
+    const editFormFields = {};
+    fields.forEach(f => editFormFields[f] = document.getElementById(`edit-${f}`));
 
+    // 1. BOTONES DE AYUDA Y MATRÍCULA
+    const btnEditOrdinal = document.getElementById('btn-insert-ordinal-edit');
+    const btnHelpEdit = document.getElementById('btn-help-matricula-edit');
+    const matriculaHelpModal = document.getElementById('matricula-help-modal');
+    const closeMatriculaHelpBtn = document.getElementById('close-matricula-help-btn');
+    const inputEditMatricula = document.getElementById('edit-matricula');
+
+    if (btnEditOrdinal && inputEditMatricula) {
+        btnEditOrdinal.addEventListener('click', (e) => {
+            e.preventDefault();
+            insertOrdinalChar(inputEditMatricula);
+        });
+    }
+
+    if (btnHelpEdit && matriculaHelpModal) {
+        btnHelpEdit.addEventListener('click', (e) => {
+            e.preventDefault();
+            matriculaHelpModal.classList.add('visible');
+        });
+    }
+
+    if (closeMatriculaHelpBtn && matriculaHelpModal) {
+        closeMatriculaHelpBtn.addEventListener('click', () => matriculaHelpModal.classList.remove('visible'));
+        matriculaHelpModal.addEventListener('click', (e) => {
+            if(e.target === matriculaHelpModal) matriculaHelpModal.classList.remove('visible');
+        });
+    }
+
+    // 2. VALIDACIÓN
     const setupFormValidation = (form) => {
+        const matriculaRegex = /^6ª\s[A-Z]{2}-\d{1}-\d{1,4}-\d{2}$/;
         const fieldRules = {
-            'edit-nombre_embarcacion': { type: 'text', maxLength: 40, required: true },
-            'edit-matricula': { type: 'matricula', maxLength: 20, required: false }, 
-            'edit-tonelaje_neto': { type: 'decimal', maxLength: 10, required: true },
-            'edit-marca': { type: 'text', maxLength: 40, required: false },
-            'edit-potencia_hp': { type: 'numeric', maxLength: 5, required: true },
-            'edit-puerto_base': { type: 'text', maxLength: 40, required: false }
+            'edit-nombre_embarcacion': { type: 'text', required: true, maxLength: 40 },
+            'edit-matricula': { type: 'matricula', required: false, maxLength: 20 }, 
+            'edit-tonelaje_neto': { type: 'decimal', required: true, maxLength: 10 },
+            'edit-marca': { type: 'text', required: false, maxLength: 40 },
+            'edit-numero_serie': { type: 'alphanum', required: false, maxLength: 40 },
+            'edit-potencia_hp': { type: 'numeric', required: true, maxLength: 5 },
+            'edit-puerto_base': { type: 'text', required: false, maxLength: 40 }
         };
 
         for (const fieldId in fieldRules) {
             const input = document.getElementById(fieldId);
             if (!input) continue;
-            
             const rule = fieldRules[fieldId];
             input.setAttribute('maxlength', rule.maxLength);
             if(rule.required) input.setAttribute('required', 'required');
 
             input.addEventListener('input', () => {
                 switch (rule.type) {
-                    case 'text':
-                        input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
-                        break;
-                    case 'numeric':
-                        input.value = input.value.replace(/[^0-9]/g, '');
-                        break;
-                    case 'decimal':
-                        input.value = input.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-                        break;
-                    case 'matricula':
-                        input.value = input.value.toUpperCase().replace(/[^A-Z0-9ª-\s]/g, '');
-                        break;
+                    case 'text': input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''); break;
+                    case 'numeric': input.value = input.value.replace(/[^0-9]/g, ''); break;
+                    case 'decimal': input.value = input.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'); break;
+                    case 'alphanum': input.value = input.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''); break;
+                    case 'matricula': input.value = input.value.toUpperCase().replace(/[^A-Z0-9ª-\s]/g, ''); break;
                 }
 
                 let isValid = true;
@@ -285,26 +263,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (input.value.length > 0 || rule.required) {
                     showFeedback(input, message, isValid);
                 } else {
-                    showFeedback(input, '', true);
+                    showFeedback(input, '', true); 
                 }
             });
         }
     };
-    setupFormValidation(editForm);
-    // --- FIN LÓGICA DE VALIDACIÓN DEL MODAL ---
+    if (editForm) setupFormValidation(editForm);
 
-
-    // --- LÓGICA DE EDICIÓN Y ENVÍO (Adaptada para usar validación) ---
-    const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
-    const editErrorMsg = document.getElementById('edit-error-msg');
-    const editIdField = document.getElementById('edit-embarcacion-id');
-    const fields = [
-        'nombre_embarcacion', 'matricula', 'tonelaje_neto', 
-        'marca', 'potencia_hp', 'puerto_base'
-    ];
-    const editFormFields = {};
-    fields.forEach(f => editFormFields[f] = document.getElementById(`edit-${f}`));
-
+    // 3. ABRIR MODAL
     const openEditModal = async (id) => {
         editErrorMsg.style.display = 'none';
         editForm.reset(); 
@@ -313,10 +279,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const res = await fetch(`/api/admin/embarcaciones/${id}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
-            if (!res.ok) throw new Error('No se pudo cargar la información de la embarcación.');
+            if (!res.ok) throw new Error('No se pudo cargar la información.');
             const embarcacion = await res.json();
-            editIdField.value = embarcacion.id;
             
+            editIdField.value = embarcacion.id;
             fields.forEach(f => {
                 const element = editFormFields[f];
                 if(element) {
@@ -325,7 +291,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
             editModal.classList.add('visible');
-        } catch (error) { alert(error.message); }
+        } catch (error) { 
+            alert(error.message); 
+        }
     };
 
     tableBody.addEventListener('click', (e) => {
@@ -333,19 +301,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (editButton) openEditModal(editButton.dataset.id);
     });
 
-    if (closeEditModalBtn) closeEditModalBtn.addEventListener('click', () => editModal.classList.remove('visible'));
-    if (editModal) editModal.addEventListener('click', (e) => { if (e.target === editModal) editModal.classList.remove('visible'); });
+    // 4. CERRAR MODAL (Aquí estaba el error antes)
+    if (closeEditModalBtn) {
+        closeEditModalBtn.addEventListener('click', () => {
+            editModal.classList.remove('visible');
+        });
+    }
+    
+    if (editModal) {
+        editModal.addEventListener('click', (e) => { 
+            if (e.target === editModal) editModal.classList.remove('visible'); 
+        });
+    }
 
+    // 5. GUARDAR CAMBIOS
     if (editForm) {
         editForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+            e.preventDefault(); // <--- ESTO ES CRUCIAL PARA EVITAR LA RECARGA
             
-            // Disparar validación final
             editForm.querySelectorAll('input').forEach(input => input.dispatchEvent(new Event('input', { bubbles: true })));
             
             const firstInvalidElement = editForm.querySelector('.invalid');
             if (firstInvalidElement) {
-                showInfoModal('Formulario Incompleto', 'Por favor, revisa y corrige los campos marcados en rojo.', false);
+                editErrorMsg.textContent = 'Por favor, revisa y corrige los campos marcados en rojo.';
+                editErrorMsg.style.display = 'block';
                 firstInvalidElement.focus();
                 return;
             }
@@ -358,23 +337,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 submitButton.textContent = 'Guardando...';
             }
             editErrorMsg.style.display = 'none';
+            
             const data = {};
             fields.forEach(f => data[f] = editFormFields[f].value);
 
             try {
                 const res = await fetch(`/api/admin/embarcaciones/${id}`, {
-                    method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                     body: JSON.stringify(data)
                 });
 
                 const resData = await res.json();
-                if (!res.ok) throw new Error(resData.message || 'Error al guardar los cambios.');
+                if (!res.ok) throw new Error(resData.message || 'Error al guardar.');
                 
                 const index = allEmbarcaciones.findIndex(em => em.id == id);
                 if (index !== -1) {
                     allEmbarcaciones[index] = { ...allEmbarcaciones[index], ...data };
                 }
-                searchInput.dispatchEvent(new Event('input'));
+                searchInput.dispatchEvent(new Event('input')); 
 
                 editModal.classList.remove('visible');
                 showInfoModal('Éxito', resData.message, true); 
@@ -390,20 +371,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-    // --- FIN LÓGICA DE EDICIÓN Y ENVÍO ---
 
-    // --- LÓGICA DEL MENÚ DE USUARIO ---
+    // --- MENÚ DE USUARIO ---
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
     const userMenuTrigger = document.getElementById('user-menu-trigger');
     const userDropdown = document.getElementById('user-dropdown');
     const viewAdminInfoBtn = document.getElementById('view-admin-info');
     const adminLogoutBtn = document.getElementById('admin-logout-btn');
+    const adminGotoDashboardBtn = document.getElementById('admin-goto-dashboard-btn');
 
-    if (adminEmailPlaceholder) adminEmailPlaceholder.textContent = currentUser.email;
-    if (userMenuTrigger) userMenuTrigger.addEventListener('click', (e) => { e.stopPropagation(); userDropdown?.classList.toggle('active'); });
-    window.addEventListener('click', () => { if (userDropdown?.classList.contains('active')) userDropdown.classList.remove('active'); });
+    if (adminEmailPlaceholder && currentUser) adminEmailPlaceholder.textContent = currentUser.email;
+    
+    if (userMenuTrigger) {
+        userMenuTrigger.addEventListener('click', (e) => { 
+            e.stopPropagation(); 
+            userDropdown?.classList.toggle('active'); 
+        });
+    }
+    
+    window.addEventListener('click', () => { 
+        if (userDropdown?.classList.contains('active')) userDropdown.classList.remove('active'); 
+    });
 
-    if (viewAdminInfoBtn && infoModal && infoModalContent) {
+    if (viewAdminInfoBtn) {
         viewAdminInfoBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             try {
@@ -417,7 +407,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showInfoModal('Error', 'Error al obtener información del perfil.', false);
             }
         });
-        infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.remove('visible'); });
     }
 
     if (adminLogoutBtn) {
@@ -425,12 +414,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             localStorage.removeItem('authToken');
             sessionStorage.removeItem('currentUser');
-            window.location.href = 'home.html';
+            window.location.replace('home.html');
         });
     }
 
-
-    const adminGotoDashboardBtn = document.getElementById('admin-goto-dashboard-btn');
     if (adminGotoDashboardBtn) {
         adminGotoDashboardBtn.addEventListener('click', (e) => {
             e.preventDefault();

@@ -1800,3 +1800,22 @@ body.dark-mode .admin-table .btn-download-pdf:hover {
 body.dark-mode .admin-table .btn-download-pdf:disabled {
      color: #adb5bd;
  }
+
+ /* ======================================================= */
+/* ======== AJUSTE PARA MODALES GRANDES (ANEXO 5) ======== */
+/* ======================================================= */
+
+/* Clase específica para modales con la clase "large" en el HTML */
+.modal-content.large {
+    padding: 50px;      /* Aumentado de 30px a 50px para más espacio interno */
+    max-width: 850px;   /* Más ancho para que las columnas se vean bien */
+    width: 95%;         /* Ocupa casi todo el ancho en pantallas medianas */
+}
+
+/* Ajuste responsive: en celulares reducimos el padding para no perder espacio */
+@media (max-width: 600px) {
+    .modal-content.large {
+        padding: 20px;
+        max-width: 100%;
+    }
+}

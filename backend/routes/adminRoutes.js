@@ -3,9 +3,11 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const { protect, isAdminOrSuperAdmin, isSuperAdmin } = require('../middleware/authMiddleware');
-const { body, param } = require('express-validator'); // <-- IMPORTADO
+const { body, param } = require('express-validator');
 
 // --- Rutas compartidas (Admin y Superadmin) ---
+
+// 1. Solicitantes
 router.get('/solicitantes', protect, isAdminOrSuperAdmin, adminController.getAllSolicitantes);
 
 router.delete('/solicitantes/:id', 
@@ -26,15 +28,13 @@ router.get('/solicitantes/:id',
     adminController.getSolicitanteById
 );
 
-// Asumo que esta ruta actualiza los mismos campos del Anexo 1
 router.put('/solicitantes/:id', 
     protect, 
     isAdminOrSuperAdmin, 
     [
         param('id', 'El ID del solicitante no es válido').isInt({ min: 1 }),
         
-        // Reglas de validación basadas en solicitanteModel.js
-        // Hago la mayoría opcionales para un PUT de admin, pero puedes cambiarlas a not().isEmpty()
+        // Validaciones opcionales pero saneadas
         body('nombre').optional({ checkFalsy: true }).trim().escape(),
         body('apellidoPaterno').optional({ checkFalsy: true }).trim().escape(),
         body('apellidoMaterno').optional({ checkFalsy: true }).trim().escape(),
@@ -57,8 +57,19 @@ router.put('/solicitantes/:id',
     adminController.updateSolicitante
 );
 
+router.get('/solicitante-detalles/:id', 
+    protect, 
+    isAdminOrSuperAdmin, 
+    [
+        param('id', 'El ID del solicitante no es válido').isInt({ min: 1 })
+    ], 
+    adminController.getSolicitanteDetails
+);
+
+// 2. Integrantes
 router.get('/integrantes', protect, isAdminOrSuperAdmin, adminController.getAllIntegrantes);
 
+// 3. Embarcaciones
 router.get('/embarcaciones', protect, isAdminOrSuperAdmin, adminController.getAllEmbarcaciones);
 
 router.get('/embarcaciones/:id', 
@@ -70,14 +81,13 @@ router.get('/embarcaciones/:id',
     adminController.getEmbarcacionById
 );
 
-// Asumo que esta ruta edita 'embarcaciones_menores'
+// EDITAR EMBARCACIÓN (Aquí conecta tu Modal)
 router.put('/embarcaciones/:id', 
     protect, 
     isAdminOrSuperAdmin, 
     [
         param('id', 'El ID de la embarcación no es válido').isInt({ min: 1 }),
         
-        // Reglas copiadas de embarcacionMenorRoutes.js
         body('nombre_embarcacion', 'El nombre de la embarcación es obligatorio').not().isEmpty().trim().escape(),
         body('matricula', 'La matrícula es obligatoria').not().isEmpty().trim().escape(),
         body('tonelaje_neto', 'El tonelaje debe ser un número positivo').optional({ checkFalsy: true }).isFloat({ min: 0 }).toFloat(),
@@ -89,15 +99,7 @@ router.put('/embarcaciones/:id',
     adminController.updateEmbarcacionById
 );
 
-router.get('/solicitante-detalles/:id', 
-    protect, 
-    isAdminOrSuperAdmin, 
-    [
-        param('id', 'El ID del solicitante no es válido').isInt({ min: 1 })
-    ], 
-    adminController.getSolicitanteDetails
-);
-
+// 4. Reportes PDF
 router.get('/download-pdf/:solicitanteId', 
     protect, 
     isAdminOrSuperAdmin, 
@@ -121,7 +123,7 @@ router.get('/usuarios/:id',
     adminController.getUsuarioById
 );
 
-// Basado en los campos de userModel.js (asumiendo que el rol se guarda en la tabla 'usuarios')
+// Actualizar Usuario
 router.put('/usuarios/:id', 
     protect, 
     isSuperAdmin, 
@@ -137,15 +139,17 @@ router.put('/usuarios/:id',
             .isLength({ min: 18, max: 18 })
             .trim()
             .escape(),
-        body('rol', 'El rol no es válido (debe ser usuario, admin, o superadmin)')
+            
+        body('rol', 'El rol no es válido')
             .not().isEmpty()
-            .isIn(['usuario', 'admin', 'superadmin'])
+            .isIn(['solicitante', 'admin', 'superadmin']) 
             .trim()
             .escape(),
     ], 
     adminController.updateUsuario
 );
 
+// Gestión de Base de Datos
 router.post('/reset-database', protect, isSuperAdmin, adminController.resetDatabase);
 router.get('/backup-database', protect, isSuperAdmin, adminController.backupDatabase);
 
