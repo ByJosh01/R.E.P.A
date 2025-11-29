@@ -1,7 +1,22 @@
 // public/js/detalle-solicitante.js
 
 /**
- * ▼▼▼ FUNCIÓN 1: GESTIONAR ESTILOS (A TU MANERA) ▼▼▼
+ * [SEGURIDAD XSS] Función para escapar caracteres HTML peligrosos.
+ * Convierte <, >, &, ", ' en sus entidades HTML seguras.
+ * Úsalo siempre antes de insertar datos de usuario en innerHTML.
+ */
+function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+/**
+ * FUNCIÓN 1: GESTIONAR ESTILOS (A TU MANERA)
  * Habilita/deshabilita los CSS según el rol.
  */
 function manageStylesByRole(currentUser) {
@@ -35,7 +50,7 @@ function manageStylesByRole(currentUser) {
 }
 
 /**
- * ▼▼▼ FUNCIÓN 2: VERIFICAR ROL Y TOKEN (Igual que antes) ▼▼▼
+ * FUNCIÓN 2: VERIFICAR ROL Y TOKEN (Igual que antes)
  */
 function checkRoleAndToken(authToken, currentUser) {
     if (!authToken || !currentUser) {
@@ -55,7 +70,7 @@ function checkRoleAndToken(authToken, currentUser) {
 }
 
 /**
- * ▼▼▼ FUNCIÓN 3: CONFIGURAR MENÚ DE USUARIO (Igual que antes) ▼▼▼
+ * FUNCIÓN 3: CONFIGURAR MENÚ DE USUARIO (Igual que antes)
  */
 function setupUserMenu(currentUser) {
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
@@ -64,7 +79,8 @@ function setupUserMenu(currentUser) {
     const userDropdown = document.getElementById('user-dropdown');
 
     if (adminEmailPlaceholder) {
-        adminEmailPlaceholder.textContent = currentUser.email;
+        // Aquí usamos escapeHTML por si acaso el email tiene caracteres raros
+        adminEmailPlaceholder.textContent = currentUser.email; 
     }
     if (userMenuTrigger && userDropdown) {
         userMenuTrigger.addEventListener('click', (e) => {
@@ -95,8 +111,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
 
     // --- 1. Ejecutamos las funciones de gestión ---
-    
-    // ►►► CAMBIO: Se llama a tu función de estilos PRIMERO
     manageStylesByRole(currentUser); 
     
     if (!checkRoleAndToken(authToken, currentUser)) {
@@ -108,7 +122,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     // ▼▼▼ TU CÓDIGO (Botón volver, carga de datos, etc.) ▼▼▼
-    // (Esto se mantiene exactamente igual que como lo tenías)
 
     const btnVolver = document.getElementById('btn-volver-admin');
     if (btnVolver) {
@@ -148,14 +161,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const perfil = data.perfil;
         if (perfil) {
+            // [SEGURIDAD XSS] Aplicamos escapeHTML a todas las variables
             perfilContainer.innerHTML = `
-                <div class="info-row"><label>Nombre Completo:</label> <span>${perfil.nombre || ''} ${perfil.apellido_paterno || ''} ${perfil.apellido_materno || ''}</span></div>
-                <div class="info-row"><label>RFC:</label> <span>${perfil.rfc || 'N/A'}</span></div>
-                <div class="info-row"><label>CURP:</label> <span>${perfil.curp || 'N/A'}</span></div>
-                <div class="info-row"><label>Teléfono:</label> <span>${perfil.telefono || 'N/A'}</span></div>
-                <div class="info-row"><label>Email:</label> <span>${perfil.correo_electronico || 'N/A'}</span></div>
-                <div class="info-row"><label>Actividad:</label> <span>${perfil.actividad || 'N/A'}</span></div>
-                <div class="info-row"><label>Municipio:</label> <span>${perfil.municipio || 'N/A'}</span></div>
+                <div class="info-row"><label>Nombre Completo:</label> <span>${escapeHTML(perfil.nombre) || ''} ${escapeHTML(perfil.apellido_paterno) || ''} ${escapeHTML(perfil.apellido_materno) || ''}</span></div>
+                <div class="info-row"><label>RFC:</label> <span>${escapeHTML(perfil.rfc) || 'N/A'}</span></div>
+                <div class="info-row"><label>CURP:</label> <span>${escapeHTML(perfil.curp) || 'N/A'}</span></div>
+                <div class="info-row"><label>Teléfono:</label> <span>${escapeHTML(perfil.telefono) || 'N/A'}</span></div>
+                <div class="info-row"><label>Email:</label> <span>${escapeHTML(perfil.correo_electronico) || 'N/A'}</span></div>
+                <div class="info-row"><label>Actividad:</label> <span>${escapeHTML(perfil.actividad) || 'N/A'}</span></div>
+                <div class="info-row"><label>Municipio:</label> <span>${escapeHTML(perfil.municipio) || 'N/A'}</span></div>
             `;
         } else {
              perfilContainer.innerHTML = '<p>No hay datos de perfil para mostrar.</p>';
@@ -165,12 +179,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (data.integrantes && data.integrantes.length > 0) {
             data.integrantes.forEach(i => {
                 const row = integrantesTableBody.insertRow();
+                // [SEGURIDAD XSS] Escape de datos de la tabla
                 row.innerHTML = `
-                    <td>${i.nombre_completo || 'N/A'}</td>
-                    <td>${i.rfc || 'N/A'}</td>
-                    <td>${i.curp || 'N/A'}</td>
-                    <td>${i.telefono || 'N/A'}</td>
-                    <td>${i.actividad_desempeña || 'N/A'}</td>
+                    <td>${escapeHTML(i.nombre_completo) || 'N/A'}</td>
+                    <td>${escapeHTML(i.rfc) || 'N/A'}</td>
+                    <td>${escapeHTML(i.curp) || 'N/A'}</td>
+                    <td>${escapeHTML(i.telefono) || 'N/A'}</td>
+                    <td>${escapeHTML(i.actividad_desempeña) || 'N/A'}</td>
                 `;
             });
         } else {
@@ -181,12 +196,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (data.embarcaciones && data.embarcaciones.length > 0) {
             data.embarcaciones.forEach(e => {
                 const row = embarcacionesTableBody.insertRow();
+                // [SEGURIDAD XSS] Escape de datos de la tabla
                 row.innerHTML = `
-                    <td>${e.nombre_embarcacion || 'N/A'}</td>
-                    <td>${e.matricula || 'N/A'}</td>
-                    <td>${e.tonelaje_neto || 'N/A'}</td>
-                    <td>${e.marca || 'N/A'}</td>
-                    <td>${e.puerto_base || 'N/A'}</td>
+                    <td>${escapeHTML(e.nombre_embarcacion) || 'N/A'}</td>
+                    <td>${escapeHTML(e.matricula) || 'N/A'}</td>
+                    <td>${escapeHTML(e.tonelaje_neto) || 'N/A'}</td>
+                    <td>${escapeHTML(e.marca) || 'N/A'}</td>
+                    <td>${escapeHTML(e.puerto_base) || 'N/A'}</td>
                 `;
             });
         } else {
@@ -202,12 +218,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (data.anexo3) {
             const a3 = data.anexo3;
+            // [SEGURIDAD XSS] Escape de datos del Anexo 3
             anexo3Container.innerHTML = `
-                <div class="info-row"><label>Lugar de Captura:</label> <span>${a3.lugar || 'N/A'}</span></div>
-                <div class="info-row"><label>Sitio de Desembarque:</label> <span>${a3.sitio_desembarque || 'N/A'}</span></div>
-                <div class="info-row"><label>Tipo de Pesquería:</label> <span>${a3.tipo_pesqueria || 'N/A'}</span></div>
-                <div class="info-row"><label>Especies Objetivo:</label> <span>${a3.especies_objetivo || 'N/A'}</span></div>
-                <div class="info-row"><label>Nivel Producción Anual:</label> <span>${a3.nivel_produccion_anual || 'N/A'}</span></div>
+                <div class="info-row"><label>Lugar de Captura:</label> <span>${escapeHTML(a3.lugar) || 'N/A'}</span></div>
+                <div class="info-row"><label>Sitio de Desembarque:</label> <span>${escapeHTML(a3.sitio_desembarque) || 'N/A'}</span></div>
+                <div class="info-row"><label>Tipo de Pesquería:</label> <span>${escapeHTML(a3.tipo_pesqueria) || 'N/A'}</span></div>
+                <div class="info-row"><label>Especies Objetivo:</label> <span>${escapeHTML(a3.especies_objetivo) || 'N/A'}</span></div>
+                <div class="info-row"><label>Nivel Producción Anual:</label> <span>${escapeHTML(a3.nivel_produccion_anual) || 'N/A'}</span></div>
             `;
         } else {
             anexo3Container.innerHTML = '<p>Este solicitante no tiene datos registrados para el Anexo 3.</p>';
@@ -220,16 +237,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     const especiesObj = JSON.parse(a4.especies);
                     if (especiesObj.seleccionadas && especiesObj.seleccionadas.length > 0) {
-                        especiesTexto = especiesObj.seleccionadas.join(', ');
+                        // Unir y luego escapar el string resultante
+                        especiesTexto = escapeHTML(especiesObj.seleccionadas.join(', '));
                     }
                 } catch(e) { console.error("Error al procesar JSON de especies:", e); }
             }
 
+            // [SEGURIDAD XSS] Escape de datos del Anexo 4
             anexo4Container.innerHTML = `
-                <div class="info-row"><label>Tipo de Instalación:</label> <span>${a4.tipo_instalacion || 'N/A'}</span></div>
-                <div class="info-row"><label>Sistema de Producción:</label> <span>${a4.sistema_produccion || 'N/A'}</span></div>
+                <div class="info-row"><label>Tipo de Instalación:</label> <span>${escapeHTML(a4.tipo_instalacion) || 'N/A'}</span></div>
+                <div class="info-row"><label>Sistema de Producción:</label> <span>${escapeHTML(a4.sistema_produccion) || 'N/A'}</span></div>
                 <div class="info-row"><label>Especies:</label> <span>${especiesTexto}</span></div>
-                <div class="info-row"><label>Producción Anual:</label> <span>${a4.produccion_anual_valor || ''} ${a4.produccion_anual_unidad || ''}</span></div>
+                <div class="info-row"><label>Producción Anual:</label> <span>${escapeHTML(a4.produccion_anual_valor) || ''} ${escapeHTML(a4.produccion_anual_unidad) || ''}</span></div>
             `;
         } else {
             anexo4Container.innerHTML = '<p>Este solicitante no tiene datos registrados para el Anexo 4.</p>';
@@ -237,6 +256,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (error) {
         console.error("Error al cargar detalles:", error);
-        document.body.innerHTML = `<h1>Error: ${error.message}</h1><a href="admin.html">Volver a la lista</a>`;
+        document.body.innerHTML = `<h1>Error: ${escapeHTML(error.message)}</h1><a href="admin.html">Volver a la lista</a>`;
     }
 });

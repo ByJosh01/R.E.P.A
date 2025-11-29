@@ -65,7 +65,11 @@ router.post('/anexo3',
         body('sitio_desembarque').optional({ checkFalsy: true }).trim().escape(),
         body('localidad_desembarque').optional({ checkFalsy: true }).trim().escape(),
         body('municipio_desembarque').optional({ checkFalsy: true }).trim().escape(),
+        
+        // [SEGURIDAD XSS] Validación profunda de arrays
         body('pesqueria').optional().isArray().withMessage('Pesquería debe ser un arreglo'),
+        body('pesqueria.*').trim().escape(), // Limpia cada elemento del array
+
         body('tipo_pesqueria').optional({ checkFalsy: true }).trim().escape(),
         body('arte_pesca_string').optional({ checkFalsy: true }).trim().escape(),
         body('especies_objetivo_string').optional({ checkFalsy: true }).trim().escape(),
@@ -90,7 +94,11 @@ router.post('/acuacultura',
             .toInt(),
         body('dimensionesUnidad').optional({ checkFalsy: true }).trim().escape(),
         body('tipo').optional({ checkFalsy: true }).trim().escape(),
+        
+        // [SEGURIDAD XSS] Validación profunda de arrays
         body('especies').optional().isArray().withMessage('Especies debe ser un arreglo'),
+        body('especies.*').trim().escape(), // Limpia cada elemento del array
+
         body('especiesOtras').optional({ checkFalsy: true }).trim().escape(),
         body('tipoInstalacion').optional({ checkFalsy: true }).trim().escape(),
         body('sistemaProduccion').optional({ checkFalsy: true }).trim().escape(),
@@ -99,7 +107,11 @@ router.post('/acuacultura',
             .isFloat({ min: 0 })
             .toFloat(),
         body('produccionAnualUnidad').optional({ checkFalsy: true }).trim().escape(),
+        
+        // [SEGURIDAD XSS] Validación profunda de arrays
         body('certificados').optional().isArray().withMessage('Certificados debe ser un arreglo'),
+        body('certificados.*').trim().escape(), // Limpia cada elemento del array
+
         body('certificadoSanidadCual').optional({ checkFalsy: true }).trim().escape(),
         body('certificadoInocuidadCual').optional({ checkFalsy: true }).trim().escape(),
         body('certificadoBuenasPracticasCual').optional({ checkFalsy: true }).trim().escape(),
