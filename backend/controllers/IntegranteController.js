@@ -1,12 +1,10 @@
-// backend/controllers/integranteController.js
-
+// backend/controllers/IntegranteController.js
 const integranteModel = require('../models/integranteModel');
 const solicitanteModel = require('../models/solicitanteModel');
-const { validationResult } = require('express-validator'); // <-- IMPORTADO
+const { validationResult } = require('express-validator');
 
 // Obtener la lista de integrantes (del solicitante logueado)
 exports.getIntegrantes = async (req, res) => {
-    // No necesita validación, solo es un GET
     try {
         const solicitanteId = req.user.solicitante_id;
         if (!solicitanteId) {
@@ -22,12 +20,10 @@ exports.getIntegrantes = async (req, res) => {
 
 // Añadir un nuevo integrante
 exports.addIntegrante = async (req, res) => {
-    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ message: errors.array()[0].msg });
     }
-    // --- Fin del bloque ---
 
     try {
         const solicitanteId = req.user.solicitante_id;
@@ -51,16 +47,10 @@ exports.addIntegrante = async (req, res) => {
     }
 };
 
-/**
- * Obtener un integrante específico por su ID.
- */
+// [SEGURIDAD IDOR] Obtener un integrante específico por su ID
 exports.getIntegranteById = async (req, res) => {
-    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ message: errors.array()[0].msg });
-    }
-    // --- Fin del bloque ---
+    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
 
     try {
         const { id } = req.params;
@@ -69,6 +59,14 @@ exports.getIntegranteById = async (req, res) => {
         if (!integrante) {
             return res.status(404).json({ message: 'Integrante no encontrado.' });
         }
+
+        // --- CANDADO DE SEGURIDAD ---
+        // Si NO es admin Y el integrante NO pertenece al usuario actual -> BLOQUEAR
+        if (req.user.rol !== 'admin' && req.user.rol !== 'superadmin' && integrante.solicitante_id !== req.user.solicitante_id) {
+            console.warn(`ALERTA DE SEGURIDAD: Usuario ${req.user.id} intentó ver integrante ajeno ${id}`);
+            return res.status(403).json({ message: 'Acceso denegado. No tienes permiso para ver este registro.' });
+        }
+        // ----------------------------
         
         res.status(200).json(integrante);
     } catch (error) {
@@ -77,34 +75,34 @@ exports.getIntegranteById = async (req, res) => {
     }
 };
 
-// Actualizar un integrante existente
+// [SEGURIDAD IDOR] Actualizar un integrante
 exports.updateIntegrante = async (req, res) => {
-    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ message: errors.array()[0].msg });
-    }
-    // --- Fin del bloque ---
+    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
 
     try {
-        const { id } = req.params; // ID del integrante a actualizar
-
+        const { id } = req.params;
+        
+        // 1. Primero buscamos el integrante para ver de quién es
         const integrante = await integranteModel.getById(id);
         if (!integrante) {
             return res.status(404).json({ message: 'Integrante no encontrado.' });
         }
-        const solicitanteId = integrante.solicitante_id; 
+
+        // --- CANDADO DE SEGURIDAD ---
+        if (req.user.rol !== 'admin' && req.user.rol !== 'superadmin' && integrante.solicitante_id !== req.user.solicitante_id) {
+            console.warn(`ALERTA DE SEGURIDAD: Usuario ${req.user.id} intentó editar integrante ajeno ${id}`);
+            return res.status(403).json({ message: 'Acceso denegado. No puedes editar este registro.' });
+        }
+        // ----------------------------
 
         await integranteModel.updateById(id, req.body);
 
-        if (solicitanteId) { 
-            try {
-                await solicitanteModel.updateAnexoStatus(solicitanteId, 'anexo2_completo', true);
-            } catch (statusError) {
-                console.error("Error al actualizar estado anexo2_completo al editar:", statusError);
-            }
-        } else {
-             console.warn(`No se pudo obtener solicitanteId para el integrante ${id} al actualizar. Estado no actualizado.`);
+        // Actualizar estado del anexo (usamos el ID del dueño real del integrante)
+        try {
+            await solicitanteModel.updateAnexoStatus(integrante.solicitante_id, 'anexo2_completo', true);
+        } catch (statusError) {
+            console.error("Error actualizando estado:", statusError);
         }
 
         res.status(200).json({ message: 'Integrante actualizado con éxito.' });
@@ -116,17 +114,27 @@ exports.updateIntegrante = async (req, res) => {
     }
 };
 
-// Eliminar un integrante
+// [SEGURIDAD IDOR] Eliminar un integrante
 exports.deleteIntegrante = async (req, res) => {
-    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ message: errors.array()[0].msg });
-    }
-    // --- Fin del bloque ---
+    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
 
     try {
         const { id } = req.params;
+
+        // 1. IMPORTANTE: Buscar antes de borrar para verificar propiedad
+        const integrante = await integranteModel.getById(id);
+        if (!integrante) {
+            return res.status(404).json({ message: 'Integrante no encontrado o ya eliminado.' });
+        }
+
+        // --- CANDADO DE SEGURIDAD ---
+        if (req.user.rol !== 'admin' && req.user.rol !== 'superadmin' && integrante.solicitante_id !== req.user.solicitante_id) {
+            console.warn(`ALERTA DE SEGURIDAD: Usuario ${req.user.id} intentó eliminar integrante ajeno ${id}`);
+            return res.status(403).json({ message: 'Acceso denegado. No puedes eliminar este registro.' });
+        }
+        // ----------------------------
+
         await integranteModel.deleteById(id);
         res.status(200).json({ message: 'Integrante eliminado con éxito.' });
     } catch (error) {
