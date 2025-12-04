@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="css/admin.css" id="admin-theme-link">
     <link rel="stylesheet" href="css/panel-admin.css" id="panel-admin-theme-link">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body class="layout-app page-full-width">
     <main class="app-content">
@@ -45,10 +48,17 @@
                 <h1 class="content-title">Lista de Todas las Cuentas de Usuario</h1>
                 <p style="margin-bottom: 20px; color: #666;">Esta tabla muestra los registros de la tabla `usuarios` para inicio de sesión.</p>
                 
-                <div class="input-group" style="max-width: 500px; margin-bottom: 20px;">
-                    <label for="search-input" style="text-align: left;"><i class="fas fa-search"></i> Buscar Usuario:</label>
-                    <input type="text" id="search-input" class="modal-input" placeholder="Escriba un email o CURP para filtrar...">
-                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+    
+    <div class="input-group" style="flex: 1; min-width: 300px; margin-bottom: 0;">
+        <label for="search-input" style="text-align: left;"><i class="fas fa-search"></i> Buscar Usuario:</label>
+        <input type="text" id="search-input" class="modal-input" placeholder="Escriba un email o CURP para filtrar...">
+    </div>
+
+    <button id="export-pdf-usuarios-btn" class="btn btn-danger" style="display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-file-pdf"></i> Exportar Lista PDF
+    </button>
+</div>
                 
                 <div class="table-container">
                     <table class="admin-table">

@@ -149,6 +149,9 @@ router.put('/usuarios/:id',
     adminController.updateUsuario
 );
 
+// --- NUEVA RUTA PARA EL PDF DE USUARIOS ---
+router.get('/download-reporte-usuarios', protect, isSuperAdmin, adminController.downloadUsuariosReportPdf);
+
 // Gestión de Base de Datos
 router.post('/reset-database', protect, isSuperAdmin, adminController.resetDatabase);
 router.get('/backup-database', protect, isSuperAdmin, adminController.backupDatabase);

@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const adminGotoDashboardBtn = document.getElementById('admin-goto-dashboard-btn');
     const tableBody = document.getElementById('usuarios-table-body');
     const searchInput = document.getElementById('search-input');
+    const exportPdfUsuariosBtn = document.getElementById('export-pdf-usuarios-btn'); // Botón PDF
     let allUsuarios = []; 
 
     // Modales
@@ -344,6 +345,46 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (error) {
                 console.error("Error al actualizar usuario:", error);
                 showInfoModal('Error al Actualizar', error.message, false);
+            }
+        });
+    }
+
+    // ==========================================================
+    // ==== EXPORTAR LISTA DE USUARIOS (BACKEND PDFKIT) ====
+    // ==========================================================
+    if (exportPdfUsuariosBtn) {
+        exportPdfUsuariosBtn.addEventListener('click', async () => {
+            const originalText = exportPdfUsuariosBtn.innerHTML;
+            exportPdfUsuariosBtn.disabled = true;
+            exportPdfUsuariosBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+
+            try {
+                // LLAMADA AL BACKEND (Ruta que configuramos en los otros archivos)
+                const response = await fetch('/api/admin/download-reporte-usuarios', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) throw new Error('Error al generar el reporte.');
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `Reporte_Usuarios_${new Date().toISOString().split('T')[0]}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                
+                showInfoModal('Éxito', 'El reporte se ha descargado correctamente.', true);
+
+            } catch (error) {
+                console.error(error);
+                showInfoModal('Error', 'No se pudo generar el reporte PDF desde el servidor.', false);
+            } finally {
+                exportPdfUsuariosBtn.disabled = false;
+                exportPdfUsuariosBtn.innerHTML = originalText;
             }
         });
     }

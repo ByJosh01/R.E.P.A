@@ -6,7 +6,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const solicitanteModel = require('../models/solicitanteModel');
 const embarcacionMenorModel = require('../models/embarcacionMenorModel');
-const { generateRegistroPdf, generateGeneralReportPdf } = require('../services/pdfGenerator');
+const { generateRegistroPdf, generateGeneralReportPdf, generateUsuariosReportPdf } = require('../services/pdfGenerator');
 const { validationResult } = require('express-validator');
 
 // ==================================================
@@ -392,18 +392,6 @@ exports.resetDatabase = async (req, res) => {
     }
 };
 
-exports.downloadRegistroPdf = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).send("Error: ID de solicitante no válido.");
-    await generateRegistroPdf(req, res);
-};
-
-exports.downloadGeneralReportPdf = async (req, res) => {
-    await generateGeneralReportPdf(req, res); 
-};
-
-// backend/controllers/adminController.js
-
 exports.backupDatabase = async (req, res) => {
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
     const fileName = `repa_backup_${timestamp}.sql`;
@@ -465,4 +453,19 @@ exports.backupDatabase = async (req, res) => {
         console.error("Error crítico:", error);
         if (!res.headersSent) res.status(500).json({ message: 'Error interno.' });
     }
+};
+
+exports.downloadRegistroPdf = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).send("Error: ID de solicitante no válido.");
+    await generateRegistroPdf(req, res);
+};
+
+exports.downloadGeneralReportPdf = async (req, res) => {
+    await generateGeneralReportPdf(req, res); 
+};
+
+// --- NUEVA FUNCIÓN CONTROLADOR PARA PDF USUARIOS ---
+exports.downloadUsuariosReportPdf = async (req, res) => {
+    await generateUsuariosReportPdf(req, res);
 };

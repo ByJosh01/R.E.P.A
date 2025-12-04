@@ -552,9 +552,68 @@ const generateGeneralReportPdf = async (req, res) => {
     }
 };
 
+// --- NUEVA FUNCIÓN: REPORTE DE USUARIOS (ESTILO SEDARPA) ---
+const generateUsuariosReportPdf = async (req, res) => {
+    try {
+        const [usuarios] = await pool.query('SELECT id, curp, email, rol, creado_en FROM usuarios ORDER BY id DESC');
+        if (!usuarios || usuarios.length === 0) return res.status(404).json({ message: 'No se encontraron usuarios.' });
+
+        const doc = new PDFDocument({ margin: 50, size: 'LETTER', bufferPages: true });
+
+        // Fuentes y Estilos
+        try {
+            doc.registerFont('Roboto-Regular', path.join(__dirname, '..', 'assets', 'fonts', 'Roboto-Regular.ttf'));
+            doc.registerFont('Roboto-Bold', path.join(__dirname, '..', 'assets', 'fonts', 'Roboto-Bold.ttf'));
+            FONT_NORMAL = 'Roboto-Regular'; FONT_BOLD = 'Roboto-Bold';
+        } catch (e) { FONT_NORMAL = 'Helvetica'; FONT_BOLD = 'Helvetica-Bold'; }
+
+        const PRIMARY_RED = '#800020'; const TEXT_COLOR = '#333333'; const WHITE = '#FFFFFF';
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=Reporte_Usuarios_${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.pipe(res);
+
+        // Logo y Encabezado
+        try { doc.image(path.join(__dirname, '..', 'SEDARPA.png'), 50, 45, { width: 80 }); } catch (e) {}
+        doc.moveDown(1);
+        doc.font(FONT_BOLD).fontSize(16).fillColor(PRIMARY_RED).text('Reporte de Cuentas de Usuario - REPA', { align: 'center' });
+        doc.moveDown(0.5);
+        doc.font(FONT_NORMAL).fontSize(10).fillColor(TEXT_COLOR).text(`Fecha de Emisión: ${new Date().toLocaleDateString('es-MX')}`, { align: 'center' });
+        doc.text(`Total de Usuarios: ${usuarios.length}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // Tabla
+        const tableData = {
+            headers: ["ID", "Email", "CURP", "Rol", "Fecha Registro"],
+            rows: usuarios.map(u => [ u.id, u.email||'N/A', u.curp||'N/A', u.rol.toUpperCase(), new Date(u.creado_en).toLocaleDateString('es-MX') ])
+        };
+
+        await doc.table(tableData, {
+            prepareHeader: () => doc.font(FONT_BOLD).fontSize(9).fillColor(WHITE),
+            prepareRow: (row, indexColumn, indexRow, rectRow, rectCell) => {
+                doc.font(FONT_NORMAL).fontSize(8).fillColor(TEXT_COLOR);
+                if (indexRow % 2 !== 0) doc.addBackground(rectCell, '#f2f2f2', 0.5);
+            },
+            padding: 5, columnSpacing: 5, headerColor: PRIMARY_RED, headerOpacity: 1, width: 500, x: 55
+        });
+
+        // Paginación
+        const range = doc.bufferedPageRange();
+        for (let i = range.start; i < range.count; i++) {
+            doc.switchToPage(i);
+            doc.fontSize(8).fillColor('#999').text(`Página ${i + 1} de ${range.count} - Sistema REPA`, 50, doc.page.height - 30, { align: 'center', width: doc.page.width - 100 });
+        }
+        doc.end();
+
+    } catch (error) {
+        console.error("Error reporte usuarios:", error);
+        if (!res.headersSent) res.status(500).send("Error al generar PDF");
+    }
+};
 
 // Exportar ambas funciones
 module.exports = {
     generateRegistroPdf,
-    generateGeneralReportPdf 
+    generateGeneralReportPdf,
+    generateUsuariosReportPdf
 };
