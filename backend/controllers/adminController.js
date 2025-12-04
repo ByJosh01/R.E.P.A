@@ -4,7 +4,6 @@ const { exec } = require('child_process');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const solicitanteModel = require('../models/solicitanteModel');
-// IMPORTANTE: Importamos tu modelo de embarcaciones
 const embarcacionMenorModel = require('../models/embarcacionMenorModel');
 const { generateRegistroPdf, generateGeneralReportPdf } = require('../services/pdfGenerator');
 const { validationResult } = require('express-validator');
@@ -306,7 +305,6 @@ exports.getEmbarcacionById = async (req, res) => {
 
     try {
         const { id } = req.params;
-        // Usamos el modelo que ya tienes
         const embarcacion = await embarcacionMenorModel.getById(id);
         
         if (!embarcacion) return res.status(404).json({ message: 'Embarcación no encontrada.' });
@@ -318,49 +316,30 @@ exports.getEmbarcacionById = async (req, res) => {
     }
 };
 
-// ▼▼▼ FUNCIÓN CORREGIDA QUE USA TU MODELO ▼▼▼
 exports.updateEmbarcacionById = async (req, res) => {
-    // Ver si hay errores de validación de express-validator
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ message: errors.array()[0].msg });
-    }
+    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
 
     try {
         const { id } = req.params;
-        
-        // Limpieza de datos: Convertir strings vacíos a null para campos numéricos
-        // Esto evita errores de DB si el usuario borra un número
         const data = { ...req.body };
         if (data.tonelaje_neto === '') data.tonelaje_neto = null;
         if (data.potencia_hp === '') data.potencia_hp = null;
         
-        console.log(`Intentando actualizar embarcación ID: ${id}`);
-        console.log('Datos recibidos:', data);
-
-        // LLAMADA A TU MODELO (embarcacionMenorModel.js)
         const result = await embarcacionMenorModel.updateById(id, data);
 
         if (result.affectedRows === 0) {
-            // Puede ser que el ID no exista, o que los datos sean idénticos a los actuales
-            // Verificamos si existe primero
             const exists = await embarcacionMenorModel.getById(id);
-            if (!exists) {
-                return res.status(404).json({ message: 'Embarcación no encontrada.' });
-            }
-            // Si existe pero no se afectaron filas, es que los datos son iguales
-            return res.status(200).json({ message: 'No hubo cambios en los datos (son idénticos).' });
+            if (!exists) return res.status(404).json({ message: 'Embarcación no encontrada.' });
+            return res.status(200).json({ message: 'No hubo cambios en los datos.' });
         }
 
         res.status(200).json({ message: 'Embarcación actualizada con éxito.' });
-
     } catch (error) {
         console.error("Error en updateEmbarcacionById (Admin):", error);
         res.status(500).json({ message: 'Error en el servidor al actualizar la embarcación.' });
     }
 };
-// ▲▲▲ FIN FUNCIÓN CORREGIDA ▲▲▲
-
 
 // --- 5. DB MAINTENANCE & PDF ---
 
@@ -389,7 +368,7 @@ exports.resetDatabase = async (req, res) => {
         }
         await connection.query('SET FOREIGN_KEY_CHECKS = 1;');
         await connection.commit();
-        res.status(200).json({ message: '¡Reseteo completado! Todas las cuentas y datos han sido eliminados, excepto el superadmin.' });
+        res.status(200).json({ message: '¡Reseteo completado! Cuentas eliminadas excepto superadmin.' });
     } catch (error) {
         await connection.rollback();
         console.error("Error crítico al resetear la base de datos:", error);
@@ -402,22 +381,38 @@ exports.resetDatabase = async (req, res) => {
 exports.backupDatabase = async (req, res) => {
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
     const fileName = `repa_backup_${timestamp}.sql`;
-    const { MYSQL_DATABASE } = process.env;
-    const configFile = path.join(__dirname, '..', '.my.cnf');
-    const command = `mysqldump --defaults-extra-file="${configFile}" ${MYSQL_DATABASE}`;
+    
+    const { MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT } = process.env;
+    const certPath = path.join(__dirname, '../isrgrootx1.pem');
+
+    // COMANDO CORREGIDO
+    const command = `mysqldump -h ${MYSQL_HOST} -P ${MYSQL_PORT || 4000} -u ${MYSQL_USER} -p"${MYSQL_PASSWORD}" --ssl-mode=VERIFY_IDENTITY --ssl-ca="${certPath}" --column-statistics=0 --no-tablespaces --set-gtid-purged=OFF ${MYSQL_DATABASE}`;
+
     try {
+        console.log("Iniciando respaldo con comando seguro...");
         res.setHeader('Content-Type', 'application/sql');
         res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+
         const dumpProcess = exec(command);
         dumpProcess.stdout.pipe(res);
-        dumpProcess.stderr.on('data', (data) => console.error(`Error en mysqldump: ${data}`));
-        dumpProcess.on('close', (code) => {
-            if (code !== 0) console.log(`mysqldump terminó con código de error ${code}`);
-            else console.log('Respaldo generado y enviado exitosamente (modo seguro).');
+
+        dumpProcess.stderr.on('data', (data) => {
+            console.error(`[mysqldump log]: ${data}`);
         });
+
+        dumpProcess.on('close', (code) => {
+            if (code !== 0) {
+                console.error(`❌ Error: mysqldump terminó con código ${code}.`);
+            } else {
+                console.log('✅ Respaldo generado exitosamente.');
+            }
+        });
+
     } catch (error) {
-        console.error("Error al intentar crear el respaldo:", error);
-        res.status(500).json({ message: 'Error en el servidor al generar el respaldo.' });
+        console.error("Error crítico al iniciar el respaldo:", error);
+        if (!res.headersSent) {
+            res.status(500).json({ message: 'Error interno al generar el respaldo.' });
+        }
     }
 };
 

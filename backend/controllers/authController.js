@@ -6,54 +6,44 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const brevo = require('@getbrevo/brevo');
-const { validationResult } = require('express-validator');
+// Nota: Ya no necesitamos importar validationResult aquí
 
 // --- VALIDACIÓN PREVIA DE ENTORNO ---
 if (!process.env.JWT_SECRET || !process.env.RECAPTCHA_SECRET_KEY) {
     console.error("❌ ERROR FATAL: Faltan variables de entorno críticas (JWT o RECAPTCHA).");
-    // No detenemos el proceso para no crashear Render en loop, pero logueamos fuerte.
 }
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL; 
 const SENDER_NAME = "Sistema de Avisos REPA";
-const CLIENT_URL = process.env.CLIENT_URL || "https://proyecto-repa.onrender.com"; // Fallback por seguridad
+const CLIENT_URL = process.env.CLIENT_URL || "https://proyecto-repa.onrender.com"; 
 
 const generateToken = (userId) => {
     return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '1d' });
 };
 
 exports.registerUser = async (req, res) => {
-    // 1. Validación de formato (express-validator)
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ message: errors.array()[0].msg });
-    }
-
+    // ¡MIRA QUÉ LIMPIO! Sin validaciones de formato aquí.
     try {
         let { curp, email, password, recaptchaToken } = req.body;
         
-        // 2. Sanitización de entradas
+        // Sanitización extra por seguridad (aunque express-validator ya hizo gran parte)
         curp = curp ? curp.trim().toUpperCase() : '';
         email = email ? email.trim().toLowerCase() : '';
 
-        if (!curp || !email || !password) {
-             return res.status(400).json({ message: 'Todos los campos son obligatorios.' });
-        }
-
+        // Validación de lógica de negocio (captcha)
         if (!recaptchaToken) { 
             return res.status(400).json({ message: 'Validación de seguridad (Captcha) faltante.' });
         }
 
-        // 3. Verificación reCAPTCHA
         const verificationURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
         const verificationResponse = await axios.post(verificationURL);
         if (!verificationResponse.data.success) {
             return res.status(400).json({ message: 'Falló la verificación de seguridad (Captcha).' });
         }
 
-        // 4. Verificar duplicados (Paralelo para velocidad)
+        // Verificar duplicados
         const [existingCurp, existingEmail] = await Promise.all([
             userModel.findUserByCurp(curp),
             userModel.findUserByEmail(email)
@@ -63,10 +53,10 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: 'El CURP o correo electrónico ya están registrados.' });
         }
 
-        // 5. Crear Usuario
+        // Crear Usuario
         await userModel.createUser({ curp, email, password });
 
-        // 6. Enviar Correo (Asíncrono - No bloquea la respuesta)
+        // Enviar Correo
         sendWelcomeEmail(curp, email).catch(err => {
             console.error("⚠️ Advertencia: Usuario registrado pero falló el correo:", err.message);
         });
@@ -80,11 +70,6 @@ exports.registerUser = async (req, res) => {
 };
 
 exports.loginUser = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ message: errors.array()[0].msg });
-    }
-
     try {
         let { curp, password } = req.body;
         curp = curp ? curp.trim().toUpperCase() : '';
@@ -94,7 +79,6 @@ exports.loginUser = async (req, res) => {
         if (user && await bcrypt.compare(password, user.password)) {
             const token = generateToken(user.id);
             
-            // Evitamos enviar el password hash al frontend
             const userSafe = { 
                 curp: user.curp, 
                 email: user.email, 
@@ -116,17 +100,12 @@ exports.loginUser = async (req, res) => {
 };
 
 exports.forgotPassword = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-
     try {
         let { email } = req.body;
         email = email.trim().toLowerCase();
 
         const user = await userModel.findUserByEmail(email);
         
-        // Siempre respondemos OK por seguridad (User Enumeration Attack Prevention),
-        // a menos que quieras ser explícito con el usuario.
         if (user) {
             const token = crypto.randomBytes(32).toString('hex');
             const expires = Date.now() + 15 * 60 * 1000; // 15 min
@@ -137,6 +116,7 @@ exports.forgotPassword = async (req, res) => {
             sendRecoveryEmail(email, resetLink).catch(console.error);
         }
         
+        // Respondemos siempre OK por seguridad
         res.status(200).json({ message: 'Si el correo existe, recibirás instrucciones.' });
     } catch (error) {
         console.error("Error en forgotPassword:", error);
@@ -145,9 +125,6 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetPassword = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-
     try {
         const { token, newPassword } = req.body;
         const tokenData = await userModel.findTokenData(token);
@@ -169,7 +146,6 @@ exports.resetPassword = async (req, res) => {
 // --- FUNCIONES AUXILIARES DE CORREO ---
 async function sendWelcomeEmail(curp, email) {
     const homeLink = `${CLIENT_URL}/home.html`;
-    // Contenido HTML mejorado y seguro
     const htmlContent = `
         <div style="font-family: Arial, sans-serif; color: #333;">
             <h2 style="color: #dc3545ff;">Bienvenido al Sistema de Avisos REPA</h2>
@@ -179,7 +155,7 @@ async function sendWelcomeEmail(curp, email) {
                 <p><strong>Contraseña:</strong> (La que definió en su registro)</p>
             </div>
             <p>Por favor, no comparta sus credenciales.</p>
-            <a href="${homeLink}" style="display: inline-block; background: #ffffffff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Ingresar al Sistema</a>
+            <a href="${homeLink}" style="display: inline-block; background: #dc3545ff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Ingresar al Sistema</a>
         </div>
     `;
 
