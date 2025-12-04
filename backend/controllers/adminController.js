@@ -8,7 +8,9 @@ const embarcacionMenorModel = require('../models/embarcacionMenorModel');
 const { generateRegistroPdf, generateGeneralReportPdf } = require('../services/pdfGenerator');
 const { validationResult } = require('express-validator');
 
-// --- 1. GESTIÓN DE SOLICITANTES ---
+// ==================================================
+// 1. GESTIÓN DE SOLICITANTES
+// ==================================================
 
 exports.getAllSolicitantes = async (req, res) => {
     try {
@@ -190,7 +192,9 @@ exports.getSolicitanteDetails = async (req, res) => {
     }
 };
 
-// --- 2. GESTIÓN DE USUARIOS ---
+// ==================================================
+// 2. GESTIÓN DE USUARIOS
+// ==================================================
 
 exports.getAllUsuarios = async (req, res) => {
     try {
@@ -263,7 +267,9 @@ exports.updateUsuario = async (req, res) => {
     }
 };
 
-// --- 3. INTEGRANTES ---
+// ==================================================
+// 3. INTEGRANTES
+// ==================================================
 
 exports.getAllIntegrantes = async (req, res) => {
     try {
@@ -281,7 +287,9 @@ exports.getAllIntegrantes = async (req, res) => {
     }
 };
 
-// --- 4. EMBARCACIONES MENORES ---
+// ==================================================
+// 4. EMBARCACIONES MENORES
+// ==================================================
 
 exports.getAllEmbarcaciones = async (req, res) => {
     try {
@@ -316,9 +324,12 @@ exports.getEmbarcacionById = async (req, res) => {
     }
 };
 
+// [AQUÍ ESTABA EL PROBLEMA, ESTA FUNCIÓN ES CRÍTICA]
 exports.updateEmbarcacionById = async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ message: errors.array()[0].msg });
+    }
 
     try {
         const { id } = req.params;
@@ -341,7 +352,9 @@ exports.updateEmbarcacionById = async (req, res) => {
     }
 };
 
-// --- 5. DB MAINTENANCE & PDF ---
+// ==================================================
+// 5. DB MAINTENANCE & PDF
+// ==================================================
 
 exports.resetDatabase = async (req, res) => {
     const { masterPassword } = req.body;
@@ -378,44 +391,6 @@ exports.resetDatabase = async (req, res) => {
     }
 };
 
-exports.backupDatabase = async (req, res) => {
-    const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
-    const fileName = `repa_backup_${timestamp}.sql`;
-    
-    const { MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT } = process.env;
-    const certPath = path.join(__dirname, '../isrgrootx1.pem');
-
-    // COMANDO CORREGIDO
-    const command = `mysqldump -h ${MYSQL_HOST} -P ${MYSQL_PORT || 4000} -u ${MYSQL_USER} -p"${MYSQL_PASSWORD}" --ssl-mode=VERIFY_IDENTITY --ssl-ca="${certPath}" --column-statistics=0 --no-tablespaces --set-gtid-purged=OFF ${MYSQL_DATABASE}`;
-
-    try {
-        console.log("Iniciando respaldo con comando seguro...");
-        res.setHeader('Content-Type', 'application/sql');
-        res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
-
-        const dumpProcess = exec(command);
-        dumpProcess.stdout.pipe(res);
-
-        dumpProcess.stderr.on('data', (data) => {
-            console.error(`[mysqldump log]: ${data}`);
-        });
-
-        dumpProcess.on('close', (code) => {
-            if (code !== 0) {
-                console.error(`❌ Error: mysqldump terminó con código ${code}.`);
-            } else {
-                console.log('✅ Respaldo generado exitosamente.');
-            }
-        });
-
-    } catch (error) {
-        console.error("Error crítico al iniciar el respaldo:", error);
-        if (!res.headersSent) {
-            res.status(500).json({ message: 'Error interno al generar el respaldo.' });
-        }
-    }
-};
-
 exports.downloadRegistroPdf = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).send("Error: ID de solicitante no válido.");
@@ -426,50 +401,69 @@ exports.downloadGeneralReportPdf = async (req, res) => {
     await generateGeneralReportPdf(req, res); 
 };
 
+// backend/controllers/adminController.js (solo la función backupDatabase)
+const fs = require('fs'); // Necesario para verificar si existe el certificado
+
 exports.backupDatabase = async (req, res) => {
-    // 1. Generar nombre de archivo único
+    // 1. Generar nombre
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
     const fileName = `repa_backup_${timestamp}.sql`;
     
-    // 2. Obtener credenciales DIRECTAMENTE de las variables de entorno
-    const { MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT } = process.env;
-    
-    // 3. Ruta al certificado SSL
-    const certPath = path.join(__dirname, '../isrgrootx1.pem');
+    // 2. Mapeo Inteligente de Variables (Funciona con DB_... o MYSQL_...)
+    const host = process.env.DB_HOST || process.env.MYSQL_HOST;
+    const user = process.env.DB_USER || process.env.MYSQL_USER;
+    const password = process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD;
+    const database = process.env.DB_NAME || process.env.MYSQL_DATABASE;
+    const port = process.env.DB_PORT || process.env.MYSQL_PORT || 3306;
 
-    // 4. COMANDO CORREGIDO PARA TIDB EN LA NUBE
-    const command = `mysqldump -h ${MYSQL_HOST} -P ${MYSQL_PORT || 4000} -u ${MYSQL_USER} -p"${MYSQL_PASSWORD}" --ssl-mode=VERIFY_IDENTITY --ssl-ca="${certPath}" --column-statistics=0 --no-tablespaces --set-gtid-purged=OFF ${MYSQL_DATABASE}`;
+    // 3. Configuración de SSL (Solo si el archivo existe)
+    // Esto permite que funcione en Render (donde está el archivo) y Local (si no lo tienes, usa conexión normal)
+    const certPath = path.join(__dirname, '../isrgrootx1.pem');
+    let sslOptions = '';
+
+    // Solo usamos los flags estrictos de SSL si el certificado existe realmente
+    if (fs.existsSync(certPath)) {
+        console.log("🔒 Certificado SSL encontrado. Usando conexión segura.");
+        sslOptions = `--ssl-mode=VERIFY_IDENTITY --ssl-ca="${certPath}"`;
+    } else {
+        console.log("⚠️ No se encontró certificado SSL (o estás en local sin él). Intentando conexión estándar.");
+        // Si es TiDB en la nube, podría fallar sin SSL, pero es mejor intentar que fallar directo.
+        // Para local, esto es perfecto.
+        sslOptions = '--ssl-mode=PREFERRED'; 
+    }
+
+    // 4. Comando compatible con TiDB y MySQL 8
+    const command = `mysqldump -h ${host} -P ${port} -u ${user} -p"${password}" ${sslOptions} --column-statistics=0 --no-tablespaces --set-gtid-purged=OFF ${database}`;
 
     try {
-        console.log("Iniciando respaldo con comando seguro...");
-
-        // Configurar headers para descarga
+        console.log(`🚀 Iniciando respaldo de BD: ${database} en ${host}...`);
+        
         res.setHeader('Content-Type', 'application/sql');
         res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
 
-        // Ejecutar mysqldump
         const dumpProcess = exec(command);
 
-        // Redirigir la salida (stdout) directamente a la respuesta (res)
         dumpProcess.stdout.pipe(res);
 
-        // Capturar errores
         dumpProcess.stderr.on('data', (data) => {
-            console.error(`[mysqldump log]: ${data}`);
+            // Ignoramos warnings, solo mostramos errores reales
+            if (!data.includes('[Warning]')) {
+                console.error(`[mysqldump msg]: ${data}`);
+            }
         });
 
         dumpProcess.on('close', (code) => {
-            if (code !== 0) {
-                console.error(`❌ Error: mysqldump terminó con código ${code}.`);
+            if (code === 0) {
+                console.log('✅ Respaldo exitoso.');
+            } else if (code === 127) {
+                console.error('❌ ERROR CRÍTICO: mysqldump no está instalado en el sistema.');
             } else {
-                console.log('✅ Respaldo generado y enviado exitosamente.');
+                console.error(`❌ Error: mysqldump falló con código ${code}.`);
             }
         });
 
     } catch (error) {
-        console.error("Error crítico al iniciar el respaldo:", error);
-        if (!res.headersSent) {
-            res.status(500).json({ message: 'Error interno al generar el respaldo.' });
-        }
+        console.error("Error en el controlador:", error);
+        if (!res.headersSent) res.status(500).json({ message: 'Error interno.' });
     }
 };
