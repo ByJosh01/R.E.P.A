@@ -1,5 +1,6 @@
 // backend/controllers/adminController.js
 const pool = require('../db');
+const fs = require('fs');
 const { exec } = require('child_process');
 const path = require('path');
 const bcrypt = require('bcryptjs');
