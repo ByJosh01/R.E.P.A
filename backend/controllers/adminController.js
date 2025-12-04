@@ -403,68 +403,65 @@ exports.downloadGeneralReportPdf = async (req, res) => {
 
 // backend/controllers/adminController.js
 
-const fs = require('fs'); 
-
 exports.backupDatabase = async (req, res) => {
-    // 1. Generar nombre de archivo único
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
     const fileName = `repa_backup_${timestamp}.sql`;
     
-    // 2. Mapeo Inteligente de Variables
-    // Render suele usar DB_HOST, pero aceptamos ambos por si acaso
+    // Variables de entorno
     const host = process.env.DB_HOST || process.env.MYSQL_HOST || 'localhost';
     const user = process.env.DB_USER || process.env.MYSQL_USER || 'root';
     const password = process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || '';
     const database = process.env.DB_NAME || process.env.MYSQL_DATABASE || 'repa';
     const port = process.env.DB_PORT || process.env.MYSQL_PORT || 3306;
 
-    // 3. Configuración de SSL
     const certPath = path.join(__dirname, '../isrgrootx1.pem');
     let sslOptions = '';
 
-    // Lógica Híbrida: Si el certificado existe (Render/Nube), úsalo. Si no (Local), usa modo relajado.
+    // Lógica Híbrida Adaptada para MariaDB Client (Alpine)
     if (fs.existsSync(certPath)) {
-        console.log("🔒 Entorno Nube detectado (Certificado SSL encontrado).");
-        sslOptions = `--ssl-mode=VERIFY_IDENTITY --ssl-ca="${certPath}"`;
+        console.log("🔒 Nube detectada: Usando flags SSL compatibles con MariaDB/Alpine.");
+        // MariaDB usa --ssl y --ssl-ca en lugar de --ssl-mode
+        sslOptions = `--ssl --ssl-ca="${certPath}" --ssl-verify-server-cert`;
     } else {
-        console.log("⚠️ Entorno Local detectado (Sin certificado). Usando conexión estándar.");
-        sslOptions = '--ssl-mode=PREFERRED'; 
+        console.log("⚠️ Local detectado: Sin SSL.");
+        // En local sin SSL, no ponemos flags extra
+        sslOptions = ''; 
     }
 
-    // 4. COMANDO CORREGIDO (Quitamos --column-statistics=0)
-    // Al quitar esa opción, el cliente de Alpine (MariaDB) dejará de dar error 7.
-    // Mantenemos --no-tablespaces y --set-gtid-purged=OFF que son importantes para la nube.
-    const command = `mysqldump -h ${host} -P ${port} -u ${user} -p"${password}" ${sslOptions} --no-tablespaces --set-gtid-purged=OFF ${database}`;
+    // COMANDO FINAL LIMPIO
+    // 1. Quitamos --ssl-mode (Incompatible con MariaDB)
+    // 2. Quitamos --set-gtid-purged (Incompatible con MariaDB)
+    // 3. Quitamos --column-statistics (Incompatible con MariaDB)
+    // 4. Mantenemos --no-tablespaces (Necesario para TiDB y compatible con ambos)
+    const command = `mysqldump -h ${host} -P ${port} -u ${user} -p"${password}" ${sslOptions} --no-tablespaces ${database}`;
 
     try {
-        console.log(`🚀 Iniciando respaldo de BD: ${database} en ${host}:${port}...`);
+        console.log(`🚀 Iniciando respaldo...`);
         
         res.setHeader('Content-Type', 'application/sql');
         res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
 
         const dumpProcess = exec(command);
 
-        // Conectamos la salida del comando a la descarga del navegador
         dumpProcess.stdout.pipe(res);
 
         dumpProcess.stderr.on('data', (data) => {
-            // Filtramos advertencias que no son errores
-            if (!data.includes('[Warning]')) {
-                console.error(`[mysqldump msg]: ${data}`);
+            // Filtramos el mensaje de "Deprecated program name" que es solo ruido
+            if (!data.includes('Deprecated') && !data.includes('Warning')) {
+                console.error(`[dump error]: ${data}`);
             }
         });
 
         dumpProcess.on('close', (code) => {
             if (code === 0) {
-                console.log('✅ Respaldo completado exitosamente.');
+                console.log('✅ Respaldo exitoso.');
             } else {
-                console.error(`❌ Error: mysqldump falló con código ${code}.`);
-                // Código 7 = Opción desconocida (ya corregido al quitar column-statistics)
+                console.error(`❌ Falló con código ${code}.`);
             }
         });
 
     } catch (error) {
-        console.error("Error crítico en el controlador:", error);
-        if (!res.headersSent) res.status(500).json({ message: 'Error interno al generar respaldo.' });
+        console.error("Error crítico:", error);
+        if (!res.headersSent) res.status(500).json({ message: 'Error interno.' });
     }
 };
