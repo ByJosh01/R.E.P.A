@@ -401,52 +401,54 @@ exports.downloadGeneralReportPdf = async (req, res) => {
     await generateGeneralReportPdf(req, res); 
 };
 
-// backend/controllers/adminController.js (solo la función backupDatabase)
-const fs = require('fs'); // Necesario para verificar si existe el certificado
+// backend/controllers/adminController.js
+
+const fs = require('fs'); 
 
 exports.backupDatabase = async (req, res) => {
-    // 1. Generar nombre
+    // 1. Generar nombre de archivo único
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
     const fileName = `repa_backup_${timestamp}.sql`;
     
-    // 2. Mapeo Inteligente de Variables (Funciona con DB_... o MYSQL_...)
-    const host = process.env.DB_HOST || process.env.MYSQL_HOST;
-    const user = process.env.DB_USER || process.env.MYSQL_USER;
-    const password = process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD;
-    const database = process.env.DB_NAME || process.env.MYSQL_DATABASE;
+    // 2. Mapeo Inteligente de Variables
+    // Render suele usar DB_HOST, pero aceptamos ambos por si acaso
+    const host = process.env.DB_HOST || process.env.MYSQL_HOST || 'localhost';
+    const user = process.env.DB_USER || process.env.MYSQL_USER || 'root';
+    const password = process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || '';
+    const database = process.env.DB_NAME || process.env.MYSQL_DATABASE || 'repa';
     const port = process.env.DB_PORT || process.env.MYSQL_PORT || 3306;
 
-    // 3. Configuración de SSL (Solo si el archivo existe)
-    // Esto permite que funcione en Render (donde está el archivo) y Local (si no lo tienes, usa conexión normal)
+    // 3. Configuración de SSL
     const certPath = path.join(__dirname, '../isrgrootx1.pem');
     let sslOptions = '';
 
-    // Solo usamos los flags estrictos de SSL si el certificado existe realmente
+    // Lógica Híbrida: Si el certificado existe (Render/Nube), úsalo. Si no (Local), usa modo relajado.
     if (fs.existsSync(certPath)) {
-        console.log("🔒 Certificado SSL encontrado. Usando conexión segura.");
+        console.log("🔒 Entorno Nube detectado (Certificado SSL encontrado).");
         sslOptions = `--ssl-mode=VERIFY_IDENTITY --ssl-ca="${certPath}"`;
     } else {
-        console.log("⚠️ No se encontró certificado SSL (o estás en local sin él). Intentando conexión estándar.");
-        // Si es TiDB en la nube, podría fallar sin SSL, pero es mejor intentar que fallar directo.
-        // Para local, esto es perfecto.
+        console.log("⚠️ Entorno Local detectado (Sin certificado). Usando conexión estándar.");
         sslOptions = '--ssl-mode=PREFERRED'; 
     }
 
-    // 4. Comando compatible con TiDB y MySQL 8
-    const command = `mysqldump -h ${host} -P ${port} -u ${user} -p"${password}" ${sslOptions} --column-statistics=0 --no-tablespaces --set-gtid-purged=OFF ${database}`;
+    // 4. COMANDO CORREGIDO (Quitamos --column-statistics=0)
+    // Al quitar esa opción, el cliente de Alpine (MariaDB) dejará de dar error 7.
+    // Mantenemos --no-tablespaces y --set-gtid-purged=OFF que son importantes para la nube.
+    const command = `mysqldump -h ${host} -P ${port} -u ${user} -p"${password}" ${sslOptions} --no-tablespaces --set-gtid-purged=OFF ${database}`;
 
     try {
-        console.log(`🚀 Iniciando respaldo de BD: ${database} en ${host}...`);
+        console.log(`🚀 Iniciando respaldo de BD: ${database} en ${host}:${port}...`);
         
         res.setHeader('Content-Type', 'application/sql');
         res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
 
         const dumpProcess = exec(command);
 
+        // Conectamos la salida del comando a la descarga del navegador
         dumpProcess.stdout.pipe(res);
 
         dumpProcess.stderr.on('data', (data) => {
-            // Ignoramos warnings, solo mostramos errores reales
+            // Filtramos advertencias que no son errores
             if (!data.includes('[Warning]')) {
                 console.error(`[mysqldump msg]: ${data}`);
             }
@@ -454,16 +456,15 @@ exports.backupDatabase = async (req, res) => {
 
         dumpProcess.on('close', (code) => {
             if (code === 0) {
-                console.log('✅ Respaldo exitoso.');
-            } else if (code === 127) {
-                console.error('❌ ERROR CRÍTICO: mysqldump no está instalado en el sistema.');
+                console.log('✅ Respaldo completado exitosamente.');
             } else {
                 console.error(`❌ Error: mysqldump falló con código ${code}.`);
+                // Código 7 = Opción desconocida (ya corregido al quitar column-statistics)
             }
         });
 
     } catch (error) {
-        console.error("Error en el controlador:", error);
-        if (!res.headersSent) res.status(500).json({ message: 'Error interno.' });
+        console.error("Error crítico en el controlador:", error);
+        if (!res.headersSent) res.status(500).json({ message: 'Error interno al generar respaldo.' });
     }
 };
