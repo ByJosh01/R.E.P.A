@@ -425,3 +425,51 @@ exports.downloadRegistroPdf = async (req, res) => {
 exports.downloadGeneralReportPdf = async (req, res) => {
     await generateGeneralReportPdf(req, res); 
 };
+
+exports.backupDatabase = async (req, res) => {
+    // 1. Generar nombre de archivo único
+    const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+    const fileName = `repa_backup_${timestamp}.sql`;
+    
+    // 2. Obtener credenciales DIRECTAMENTE de las variables de entorno
+    const { MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT } = process.env;
+    
+    // 3. Ruta al certificado SSL
+    const certPath = path.join(__dirname, '../isrgrootx1.pem');
+
+    // 4. COMANDO CORREGIDO PARA TIDB EN LA NUBE
+    const command = `mysqldump -h ${MYSQL_HOST} -P ${MYSQL_PORT || 4000} -u ${MYSQL_USER} -p"${MYSQL_PASSWORD}" --ssl-mode=VERIFY_IDENTITY --ssl-ca="${certPath}" --column-statistics=0 --no-tablespaces --set-gtid-purged=OFF ${MYSQL_DATABASE}`;
+
+    try {
+        console.log("Iniciando respaldo con comando seguro...");
+
+        // Configurar headers para descarga
+        res.setHeader('Content-Type', 'application/sql');
+        res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+
+        // Ejecutar mysqldump
+        const dumpProcess = exec(command);
+
+        // Redirigir la salida (stdout) directamente a la respuesta (res)
+        dumpProcess.stdout.pipe(res);
+
+        // Capturar errores
+        dumpProcess.stderr.on('data', (data) => {
+            console.error(`[mysqldump log]: ${data}`);
+        });
+
+        dumpProcess.on('close', (code) => {
+            if (code !== 0) {
+                console.error(`❌ Error: mysqldump terminó con código ${code}.`);
+            } else {
+                console.log('✅ Respaldo generado y enviado exitosamente.');
+            }
+        });
+
+    } catch (error) {
+        console.error("Error crítico al iniciar el respaldo:", error);
+        if (!res.headersSent) {
+            res.status(500).json({ message: 'Error interno al generar el respaldo.' });
+        }
+    }
+};
