@@ -14,6 +14,7 @@ const sistemasConservacionModel = require('../models/sistemasConservacionModel')
 const equiposTransporteModel = require('../models/equiposTransporteModel');
 const embarcacionesAcuaculturaModel = require('../models/embarcacionesAcuaculturaModel');
 const instalacionesHidraulicasModel = require('../models/instalacionesHidraulicasModel');
+const fs = require('fs');
 
 // --- CONSTANTES GLOBALES DE FUENTE (para compartir) ---
 let FONT_NORMAL = 'Helvetica'; // Fuente por defecto
@@ -730,11 +731,213 @@ const generateEmbarcacionesListPDF = async (embarcaciones, res) => {
     doc.end();
 };
 
+// --- NUEVA FUNCIÓN: PDF INDIVIDUAL DE USUARIO (FICHA DE CUENTA) ---
+const generateUsuarioIndividualPdf = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        // Obtenemos solo datos de la cuenta de usuario
+        const [rows] = await pool.query('SELECT id, email, curp, rol, creado_en FROM usuarios WHERE id = ?', [userId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Usuario no encontrado.' });
+        }
+        const usuario = rows[0];
+
+        const doc = new PDFDocument({ margin: 50, size: 'LETTER', bufferPages: true });
+
+        // --- Configuración de Fuentes y Estilos (Igual que tus otros reportes) ---
+        let FONT_NORMAL = 'Helvetica';
+        let FONT_BOLD = 'Helvetica-Bold';
+        try {
+            const fontPathRegular = path.join(__dirname, '..', 'assets', 'fonts', 'Roboto-Regular.ttf');
+            const fontPathBold = path.join(__dirname, '..', 'assets', 'fonts', 'Roboto-Bold.ttf');
+            doc.registerFont('Roboto-Regular', fontPathRegular);
+            doc.registerFont('Roboto-Bold', fontPathBold);
+            FONT_NORMAL = 'Roboto-Regular';
+            FONT_BOLD = 'Roboto-Bold';
+        } catch (e) { console.warn("Usando fuentes estándar."); }
+
+        const PRIMARY_RED = '#800020';
+        const TEXT_COLOR = '#333333';
+
+        // --- Headers de Respuesta ---
+        const filename = `Ficha_Usuario_${usuario.curp || userId}.pdf`;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+        doc.pipe(res);
+
+        // --- 1. LOGO Y ENCABEZADO ---
+        const logoPath = path.join(__dirname, '..', 'SEDARPA.png');
+        try {
+            if (fs.existsSync(logoPath)) {
+                doc.image(logoPath, 50, 40, { width: 80 });
+            }
+        } catch (e) {}
+
+        doc.moveDown(1);
+        doc.fontSize(16).font(FONT_BOLD).fillColor(PRIMARY_RED).text('Sistema R.E.P.A.', { align: 'center' });
+        doc.fontSize(14).text('Ficha Técnica de Cuenta de Usuario', { align: 'center' });
+        doc.moveDown(0.5);
+        doc.fontSize(10).font(FONT_NORMAL).fillColor(TEXT_COLOR).text(`Fecha de Emisión: ${new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // --- 2. CAJA DE INFORMACIÓN DEL USUARIO ---
+        // Dibujamos un recuadro o simplemente los datos con estilo limpio
+        
+        const startX = 70;
+        let currentY = doc.y;
+
+        // Función helper para líneas de datos
+        const addDataRow = (label, value) => {
+            doc.fontSize(10).font(FONT_BOLD).fillColor(PRIMARY_RED).text(label + ':', startX, currentY);
+            doc.font(FONT_NORMAL).fillColor(TEXT_COLOR).text(value || 'N/A', startX + 120, currentY);
+            currentY += 25; // Espacio entre líneas
+        };
+
+        // Sección: Datos de Identificación
+        doc.fontSize(12).font(FONT_BOLD).fillColor(TEXT_COLOR).text('Detalles de la Cuenta', 50, currentY);
+        doc.moveTo(50, currentY + 15).lineTo(550, currentY + 15).strokeColor(PRIMARY_RED).stroke(); // Línea separadora
+        currentY += 30;
+
+        addDataRow('ID de Sistema', usuario.id);
+        addDataRow('Correo Electrónico', usuario.email);
+        addDataRow('CURP Registrada', usuario.curp);
+        
+        // Formatear Rol bonito
+        const rolFormateado = usuario.rol.charAt(0).toUpperCase() + usuario.rol.slice(1);
+        addDataRow('Nivel de Acceso', rolFormateado);
+
+        // Formatear Fecha
+        const fechaCreacion = new Date(usuario.creado_en).toLocaleString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        addDataRow('Fecha de Registro', fechaCreacion);
+
+        // --- 3. PIE DE PÁGINA ---
+        const range = doc.bufferedPageRange();
+        for (let i = range.start; i < range.count; i++) {
+            doc.switchToPage(i);
+            doc.fontSize(8).fillColor('#999').text('Documento generado automáticamente por el sistema REPA - SEDARPA', 50, doc.page.height - 50, { align: 'center' });
+        }
+
+        doc.end();
+
+    } catch (error) {
+        console.error("Error generando PDF individual de usuario:", error);
+        if (!res.headersSent) res.status(500).send("Error al generar PDF");
+    }
+};
+
+
+// --- NUEVA FUNCIÓN: PDF INDIVIDUAL DE INTEGRANTE (FICHA TÉCNICA) ---
+const generateIntegranteIndividualPdf = async (req, res) => {
+    try {
+        const integranteId = req.params.id;
+        
+        // Obtenemos datos del integrante y datos básicos de su solicitante (patrón)
+        const query = `
+            SELECT i.*, s.nombre as sol_nombre, s.apellido_paterno as sol_paterno, s.apellido_materno as sol_materno 
+            FROM integrantes i 
+            JOIN solicitantes s ON i.solicitante_id = s.solicitante_id 
+            WHERE i.id = ?
+        `;
+        const [rows] = await pool.query(query, [integranteId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Integrante no encontrado.' });
+        }
+        const integrante = rows[0];
+        const nombreSolicitante = [integrante.sol_nombre, integrante.sol_paterno, integrante.sol_materno].filter(Boolean).join(' ');
+
+        const doc = new PDFDocument({ margin: 50, size: 'LETTER', bufferPages: true });
+
+        // Fuentes y Estilos
+        let FONT_NORMAL = 'Helvetica';
+        let FONT_BOLD = 'Helvetica-Bold';
+        try {
+            const fontPathRegular = path.join(__dirname, '..', 'assets', 'fonts', 'Roboto-Regular.ttf');
+            const fontPathBold = path.join(__dirname, '..', 'assets', 'fonts', 'Roboto-Bold.ttf');
+            doc.registerFont('Roboto-Regular', fontPathRegular);
+            doc.registerFont('Roboto-Bold', fontPathBold);
+            FONT_NORMAL = 'Roboto-Regular';
+            FONT_BOLD = 'Roboto-Bold';
+        } catch (e) {}
+
+        const PRIMARY_RED = '#800020';
+        const TEXT_COLOR = '#333333';
+
+        const filename = `Ficha_Integrante_${integrante.curp || integranteId}.pdf`;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+        doc.pipe(res);
+
+        // Encabezado con Logo
+        const logoPath = path.join(__dirname, '..', 'SEDARPA.png');
+        if (fs.existsSync(logoPath)) {
+            doc.image(logoPath, 50, 40, { width: 80 });
+        }
+
+        doc.moveDown(1);
+        doc.fontSize(16).font(FONT_BOLD).fillColor(PRIMARY_RED).text('Sistema R.E.P.A.', { align: 'center' });
+        doc.fontSize(14).text('Ficha Técnica de Integrante', { align: 'center' });
+        doc.fontSize(10).font(FONT_NORMAL).fillColor(TEXT_COLOR).text(`Fecha de Emisión: ${new Date().toLocaleDateString('es-MX')}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // --- DATOS DEL INTEGRANTE ---
+        let currentY = doc.y;
+        const startX = 70;
+        
+        const addDataRow = (label, value) => {
+            doc.fontSize(10).font(FONT_BOLD).fillColor(PRIMARY_RED).text(label + ':', startX, currentY);
+            doc.font(FONT_NORMAL).fillColor(TEXT_COLOR).text(value || 'N/A', startX + 130, currentY);
+            currentY += 20;
+        };
+
+        doc.fontSize(12).font(FONT_BOLD).text('Información Personal', 50, currentY);
+        doc.moveTo(50, currentY + 15).lineTo(550, currentY + 15).strokeColor(PRIMARY_RED).stroke();
+        currentY += 30;
+
+        addDataRow('Nombre Completo', integrante.nombre_completo);
+        addDataRow('CURP', integrante.curp);
+        addDataRow('RFC', integrante.rfc);
+        addDataRow('Sexo', integrante.sexo === 1 ? 'Hombre' : (integrante.sexo === 0 ? 'Mujer' : 'N/A'));
+        addDataRow('Teléfono', integrante.telefono);
+        addDataRow('Correo Electrónico', integrante.email);
+        addDataRow('Fecha Nacimiento', integrante.fecha_nacimiento ? new Date(integrante.fecha_nacimiento).toLocaleDateString('es-MX') : 'N/A');
+
+        currentY += 15;
+        doc.fontSize(12).font(FONT_BOLD).text('Ubicación y Actividad', 50, currentY);
+        doc.moveTo(50, currentY + 15).lineTo(550, currentY + 15).strokeColor(PRIMARY_RED).stroke();
+        currentY += 30;
+
+        addDataRow('Estado', integrante.estado);
+        addDataRow('Municipio', integrante.municipio);
+        addDataRow('Localidad', integrante.localidad);
+        addDataRow('Puesto/Actividad', integrante.actividad_desempeña);
+        addDataRow('Solicitante Asociado', nombreSolicitante);
+
+        // Pie de página
+        const range = doc.bufferedPageRange();
+        for (let i = range.start; i < range.count; i++) {
+            doc.switchToPage(i);
+            doc.fontSize(8).fillColor('#999').text('Documento generado por el sistema REPA - SEDARPA', 50, doc.page.height - 40, { align: 'center' });
+        }
+
+        doc.end();
+
+    } catch (error) {
+        console.error("Error generando PDF integrante:", error);
+        if (!res.headersSent) res.status(500).send("Error al generar PDF");
+    }
+};
+
+
 // Exportar ambas funciones
 module.exports = {
     generateRegistroPdf,
     generateGeneralReportPdf,
     generateUsuariosReportPdf,
     generateIntegrantesListPDF,
-    generateEmbarcacionesListPDF
+    generateEmbarcacionesListPDF,
+    generateUsuarioIndividualPdf,
+    generateIntegranteIndividualPdf,
 };
+

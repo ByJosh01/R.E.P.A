@@ -5,9 +5,11 @@ const adminController = require('../controllers/adminController');
 const { protect, isAdminOrSuperAdmin, isSuperAdmin } = require('../middleware/authMiddleware');
 const { body, param } = require('express-validator');
 
-// --- Rutas compartidas (Admin y Superadmin) ---
+// ==========================================
+// RUTAS COMPARTIDAS (Admin y Superadmin)
+// ==========================================
 
-// 1. Solicitantes
+// --- 1. GESTIÓN DE SOLICITANTES ---
 router.get('/solicitantes', protect, isAdminOrSuperAdmin, adminController.getAllSolicitantes);
 
 router.delete('/solicitantes/:id', 
@@ -34,7 +36,7 @@ router.put('/solicitantes/:id',
     [
         param('id', 'El ID del solicitante no es válido').isInt({ min: 1 }),
         
-        // Validaciones opcionales pero saneadas
+        // Validaciones (Opcionales para permitir actualización parcial)
         body('nombre').optional({ checkFalsy: true }).trim().escape(),
         body('apellidoPaterno').optional({ checkFalsy: true }).trim().escape(),
         body('apellidoMaterno').optional({ checkFalsy: true }).trim().escape(),
@@ -66,10 +68,21 @@ router.get('/solicitante-detalles/:id',
     adminController.getSolicitanteDetails
 );
 
-// 2. Integrantes
+// --- 2. GESTIÓN DE INTEGRANTES ---
 router.get('/integrantes', protect, isAdminOrSuperAdmin, adminController.getAllIntegrantes);
 
-// 3. Embarcaciones
+// NUEVA RUTA: Descargar PDF Individual de Integrante
+router.get('/integrante-pdf/:id', 
+    protect, 
+    isAdminOrSuperAdmin, 
+    [
+        param('id', 'El ID del integrante no es válido').isInt({ min: 1 })
+    ],
+    adminController.downloadIntegranteIndividualPdf
+);
+
+
+// --- 3. GESTIÓN DE EMBARCACIONES ---
 router.get('/embarcaciones', protect, isAdminOrSuperAdmin, adminController.getAllEmbarcaciones);
 
 router.get('/embarcaciones/:id', 
@@ -81,7 +94,6 @@ router.get('/embarcaciones/:id',
     adminController.getEmbarcacionById
 );
 
-// EDITAR EMBARCACIÓN (Aquí conecta tu Modal)
 router.put('/embarcaciones/:id', 
     protect, 
     isAdminOrSuperAdmin, 
@@ -99,7 +111,7 @@ router.put('/embarcaciones/:id',
     adminController.updateEmbarcacionById
 );
 
-// 4. Reportes PDF
+// --- 4. REPORTES PDF GENERALES (Solicitantes) ---
 router.get('/download-pdf/:solicitanteId', 
     protect, 
     isAdminOrSuperAdmin, 
@@ -111,7 +123,12 @@ router.get('/download-pdf/:solicitanteId',
 
 router.get('/download-reporte-general', protect, isAdminOrSuperAdmin, adminController.downloadGeneralReportPdf);
 
-// --- Rutas Exclusivas de SUPERADMIN ---
+
+// ==========================================
+// RUTAS EXCLUSIVAS DE SUPERADMIN
+// ==========================================
+
+// --- GESTIÓN DE USUARIOS (CUENTAS) ---
 router.get('/usuarios', protect, isSuperAdmin, adminController.getAllUsuarios);
 
 router.get('/usuarios/:id', 
@@ -123,36 +140,33 @@ router.get('/usuarios/:id',
     adminController.getUsuarioById
 );
 
-// Actualizar Usuario
 router.put('/usuarios/:id', 
     protect, 
     isSuperAdmin, 
     [
         param('id', 'El ID de usuario no es válido').isInt({ min: 1 }),
         
-        body('email', 'El email no es válido')
-            .not().isEmpty()
-            .isEmail()
-            .normalizeEmail(),
-        body('curp', 'El CURP debe tener 18 caracteres')
-            .not().isEmpty()
-            .isLength({ min: 18, max: 18 })
-            .trim()
-            .escape(),
-            
-        body('rol', 'El rol no es válido')
-            .not().isEmpty()
-            .isIn(['solicitante', 'admin', 'superadmin']) 
-            .trim()
-            .escape(),
+        body('email', 'El email no es válido').not().isEmpty().isEmail().normalizeEmail(),
+        body('curp', 'El CURP debe tener 18 caracteres').not().isEmpty().isLength({ min: 18, max: 18 }).trim().escape(),
+        body('rol', 'El rol no es válido').not().isEmpty().isIn(['solicitante', 'admin', 'superadmin']).trim().escape(),
     ], 
     adminController.updateUsuario
 );
 
-// --- NUEVA RUTA PARA EL PDF DE USUARIOS ---
+// Reporte General de Usuarios (Lista Completa)
 router.get('/download-reporte-usuarios', protect, isSuperAdmin, adminController.downloadUsuariosReportPdf);
 
-// Gestión de Base de Datos
+// NUEVA RUTA: Descargar PDF Individual de Usuario (Ficha)
+router.get('/usuario-pdf/:id', 
+    protect, 
+    isSuperAdmin, 
+    [
+        param('id', 'El ID de usuario no es válido').isInt({ min: 1 })
+    ],
+    adminController.downloadUsuarioIndividualPdf
+);
+
+// --- GESTIÓN DE BASE DE DATOS ---
 router.post('/reset-database', protect, isSuperAdmin, adminController.resetDatabase);
 router.get('/backup-database', protect, isSuperAdmin, adminController.backupDatabase);
 

@@ -176,7 +176,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const renderTabla = (usuarios) => {
         if(!tableBody) return;
         tableBody.innerHTML = '';
-        if (usuarios.length === 0) { tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No se encontraron usuarios.</td></tr>`; return; }
+        // Ajustamos el colspan a 7 porque agregamos la columna de Descargar
+        if (usuarios.length === 0) { tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">No se encontraron usuarios.</td></tr>`; return; }
 
         usuarios.forEach(user => {
             const row = tableBody.insertRow();
@@ -191,13 +192,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (user.rol === 'superadmin') roleBadgeStyle = 'background-color: #6f42c1; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;';
             if (user.rol === 'admin') roleBadgeStyle = 'background-color: #0d6efd; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;';
 
+            // HTML para el botón de PDF Individual
+            const pdfButtonHtml = `
+                <button class="btn-icon btn-download-user-pdf" data-id="${user.id}" title="Descargar Ficha de Usuario">
+                    <i class="fas fa-file-pdf"></i>
+                </button>
+            `;
+
             row.innerHTML = `
                 <td><strong>${user.id}</strong></td>
                 <td>${user.email || 'N/A'}</td>
                 <td>${user.curp || 'N/A'}</td>
                 <td><span style="${roleBadgeStyle}">${user.rol || 'N/A'}</span></td>
                 <td>${formatFecha(user.creado_en)}</td>
-                <td>
+                <td style="text-align: center;">${pdfButtonHtml}</td> <td>
                     <button class="btn-icon btn-edit-usuario" title="Editar" data-id="${user.id}" ${editButtonDisabled}>
                         <i class="fas fa-pencil-alt"></i>
                     </button>
@@ -215,7 +223,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderTabla(allUsuarios);
         } catch (error) {
             console.error("Error al cargar usuarios:", error);
-            if(tableBody) tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">${error.message}</td></tr>`;
+            // Ajuste de colspan a 7 en caso de error
+            if(tableBody) tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">${error.message}</td></tr>`;
         }
     };
 
@@ -262,7 +271,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEditFormValidation();
 
 
-    // --- ACCIONES DE TABLA ---
+    // --- ACCIONES DE TABLA (EDICIÓN Y DESCARGA) ---
     const closeEditModal = () => { if (editModal) editModal.classList.remove('visible'); 
         editForm.querySelectorAll('.valid, .invalid').forEach(el => el.classList.remove('valid', 'invalid'));
         editForm.querySelectorAll('.feedback-message').forEach(el => el.textContent = '');
@@ -273,6 +282,59 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (tableBody) {
         tableBody.addEventListener('click', async (e) => {
+            
+            // --- NUEVA LÓGICA: DESCARGAR PDF INDIVIDUAL DE USUARIO ---
+            const pdfButton = e.target.closest('button.btn-download-user-pdf');
+            if (pdfButton) {
+                if (pdfButton.disabled) return;
+
+                const userId = pdfButton.dataset.id;
+                const originalContent = pdfButton.innerHTML;
+                
+                // Feedback visual de carga
+                pdfButton.disabled = true;
+                pdfButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                try {
+                    // Llamamos a la ruta específica para la ficha de usuario
+                    const response = await fetch(`/api/admin/usuario-pdf/${userId}`, {
+                        method: 'GET',
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+
+                    if (!response.ok) throw new Error('Error al descargar la ficha.');
+
+                    // Manejo del Blob para descargar
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    
+                    // Nombre del archivo desde el header o por defecto
+                    let filename = `Usuario_${userId}.pdf`;
+                    const disposition = response.headers.get('content-disposition');
+                    if (disposition && disposition.includes('filename=')) {
+                        filename = disposition.split('filename=')[1].replace(/['"]/g, '');
+                    }
+                    a.download = filename;
+                    
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+
+                } catch (error) {
+                    console.error(error);
+                    showInfoModal('Error', 'No se pudo generar el PDF del usuario.', false);
+                } finally {
+                    pdfButton.disabled = false;
+                    pdfButton.innerHTML = originalContent;
+                }
+                return; // Importante detener aquí para no activar otras lógicas de la fila
+            }
+            // --- FIN LÓGICA PDF ---
+
             const button = e.target.closest('button.btn-edit-usuario');
             if (!button || button.disabled) return;
 
@@ -359,7 +421,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             exportPdfUsuariosBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
 
             try {
-                // LLAMADA AL BACKEND (Ruta que configuramos en los otros archivos)
+                // LLAMADA AL BACKEND
                 const response = await fetch('/api/admin/download-reporte-usuarios', {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${authToken}` }

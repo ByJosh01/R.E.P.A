@@ -469,3 +469,18 @@ exports.downloadGeneralReportPdf = async (req, res) => {
 exports.downloadUsuariosReportPdf = async (req, res) => {
     await generateUsuariosReportPdf(req, res);
 };
+
+// -- Método para recibir la petición y llamar al generador.
+
+exports.downloadUsuarioIndividualPdf = async (req, res) => {
+    // Reutilizamos la función que acabamos de crear
+    const { generateUsuarioIndividualPdf } = require('../services/pdfGenerator');
+    await generateUsuarioIndividualPdf(req, res);
+};
+
+// --- NUEVA FUNCIÓN CONTROLADOR PARA PDF INTEGRANTE INDIVIDUAL ---
+exports.downloadIntegranteIndividualPdf = async (req, res) => {
+    // Importamos la función específica del servicio (que crearemos en el siguiente paso)
+    const { generateIntegranteIndividualPdf } = require('../services/pdfGenerator');
+    await generateIntegranteIndividualPdf(req, res);
+};
