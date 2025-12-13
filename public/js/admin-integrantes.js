@@ -52,7 +52,6 @@ window.addEventListener('pageshow', (event) => {
 });
 
 
-
 document.addEventListener('DOMContentLoaded', async () => {
     const authToken = localStorage.getItem('authToken');
     let currentUser = null;
@@ -224,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const cargarDatosIniciales = async () => {
         try {
-            const response = await fetch('/api/admin/integrantes', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const response = await fetch('/api/integrantes', { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!response.ok) throw new Error('Failed to load data.');
             allIntegrantes = await response.json();
             renderTabla(allIntegrantes);
@@ -296,7 +295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
     };
-    setupFormValidation(editForm);
+    if (editForm) setupFormValidation(editForm);
 
     // --- LÓGICA DE EDICIÓN Y ENVÍO ---
     const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
@@ -394,7 +393,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- LÓGICA DEL MENÚ DE USUARIO (Omitida por brevedad) ---
+    // --- LÓGICA DEL MENÚ DE USUARIO ---
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
     const userMenuTrigger = document.getElementById('user-menu-trigger');
     const userDropdown = document.getElementById('user-dropdown');
@@ -436,6 +435,50 @@ document.addEventListener('DOMContentLoaded', async () => {
         adminGotoDashboardBtn.addEventListener('click', (e) => {
             e.preventDefault();
             window.location.href = 'dashboard.html';
+        });
+    }
+
+    // ==========================================================
+    // ==== NUEVA LÓGICA: BOTÓN EXPORTAR PDF ====
+    // ==========================================================
+    const btnExportarPdf = document.getElementById('btn-exportar-pdf');
+    if (btnExportarPdf) {
+        btnExportarPdf.addEventListener('click', async () => {
+            try {
+                // Feedback visual: deshabilitar botón y cambiar icono
+                const originalContent = btnExportarPdf.innerHTML;
+                btnExportarPdf.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+                btnExportarPdf.disabled = true;
+
+                const response = await fetch('/api/integrantes/exportar-pdf', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Lista_Integrantes_${new Date().toISOString().slice(0,10)}.pdf`;
+                    document.body.appendChild(a); // Necesario para compatibilidad Firefox
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    const errorData = await response.json();
+                    showInfoModal('Error', 'Error al descargar PDF: ' + (errorData.message || 'Error desconocido'), false);
+                }
+            } catch (error) {
+                console.error('Error exportando PDF:', error);
+                showInfoModal('Error', 'Ocurrió un error al intentar exportar la lista.', false);
+            } finally {
+                // Restaurar botón
+                btnExportarPdf.innerHTML = '<i class="fas fa-file-pdf"></i> Exportar Lista PDF';
+                btnExportarPdf.disabled = false;
+            }
         });
     }
 });

@@ -8,17 +8,19 @@ const { body, param } = require('express-validator');
 // GET /api/embarcaciones -> Obtiene todas las embarcaciones del usuario
 router.get('/', protect, embarcacionMenorController.getEmbarcaciones);
 
+// Ruta para exportar PDF (IMPORTANTE: Va antes de las rutas con :id)
+router.get('/exportar-pdf', protect, embarcacionMenorController.exportarPdf);
+
 // POST /api/embarcaciones -> Añade una nueva embarcación
 router.post('/', 
     protect, 
     [
-        // Reglas de validación basadas en embarcacionMenorModel.js
         body('nombre_embarcacion', 'El nombre de la embarcación es obligatorio').not().isEmpty().trim().escape(),
         body('matricula', 'La matrícula es obligatoria').not().isEmpty().trim().escape(),
         body('tonelaje_neto', 'El tonelaje debe ser un número positivo')
             .optional({ checkFalsy: true })
-            .isFloat({ min: 0 }) // Acepta decimales
-            .toFloat(), // Convierte a número
+            .isFloat({ min: 0 }) 
+            .toFloat(), 
         body('marca', 'La marca no es válida').optional({ checkFalsy: true }).trim().escape(),
         body('numero_serie', 'El número de serie no es válido').optional({ checkFalsy: true }).trim().escape(),
         body('potencia_hp', 'La potencia (HP) debe ser un número positivo')
@@ -30,13 +32,23 @@ router.post('/',
     embarcacionMenorController.addEmbarcacion
 );
 
+// ▼▼▼ RUTA NUEVA (FALTABA ESTA) ▼▼▼
+// GET /api/embarcaciones/:id -> Obtiene una embarcación para editar
+router.get('/:id', 
+    protect, 
+    [
+        param('id', 'El ID de la embarcación no es válido').isInt({ min: 1 })
+    ], 
+    embarcacionMenorController.getEmbarcacionById
+);
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
 // PUT /api/embarcaciones/:id -> Actualiza una embarcación por su ID
 router.put('/:id', 
     protect, 
     [
         param('id', 'El ID de la embarcación no es válido').isInt({ min: 1 }),
         
-        // Mismas reglas que el POST
         body('nombre_embarcacion', 'El nombre de la embarcación es obligatorio').not().isEmpty().trim().escape(),
         body('matricula', 'La matrícula es obligatoria').not().isEmpty().trim().escape(),
         body('tonelaje_neto', 'El tonelaje debe ser un número positivo')

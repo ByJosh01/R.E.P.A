@@ -1,15 +1,24 @@
 // backend/controllers/embarcacionMenorController.js
 const embarcacionMenorModel = require('../models/embarcacionMenorModel');
 const solicitanteModel = require('../models/solicitanteModel');
+const pdfService = require('../services/pdfGenerator'); // Importar servicio PDF
 const { validationResult } = require('express-validator');
 
+// Obtener lista de embarcaciones (Usuario o SuperAdmin)
 exports.getEmbarcaciones = async (req, res) => {
     try {
-        const solicitanteId = req.user.solicitante_id;
-        if (!solicitanteId) {
-            return res.status(400).json({ message: 'ID de solicitante no encontrado.' });
+        let embarcaciones = [];
+        // Si es SuperAdmin, trae TODAS
+        if (req.user.rol === 'superadmin') {
+            embarcaciones = await embarcacionMenorModel.getAll();
+        } else {
+            // Si es usuario normal, trae solo las suyas
+            const solicitanteId = req.user.solicitante_id;
+            if (!solicitanteId) {
+                return res.status(400).json({ message: 'ID de solicitante no encontrado.' });
+            }
+            embarcaciones = await embarcacionMenorModel.getBySolicitanteId(solicitanteId);
         }
-        const embarcaciones = await embarcacionMenorModel.getBySolicitanteId(solicitanteId);
         res.status(200).json(embarcaciones);
     } catch (error) {
         console.error("Error en getEmbarcaciones:", error);
@@ -17,6 +26,32 @@ exports.getEmbarcaciones = async (req, res) => {
     }
 };
 
+// ▼▼▼ FUNCIÓN QUE FALTABA (Para editar) ▼▼▼
+exports.getEmbarcacionById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const embarcacion = await embarcacionMenorModel.getById(id);
+
+        if (!embarcacion) {
+            return res.status(404).json({ message: 'Embarcación no encontrada.' });
+        }
+
+        // Seguridad: Verificar que pertenezca al usuario (si no es admin)
+        if (req.user.rol !== 'superadmin' && req.user.rol !== 'admin') {
+            if (embarcacion.solicitante_id !== req.user.solicitante_id) {
+                return res.status(403).json({ message: 'No tienes permiso para ver esta embarcación.' });
+            }
+        }
+
+        res.status(200).json(embarcacion);
+    } catch (error) {
+        console.error("Error en getEmbarcacionById:", error);
+        res.status(500).json({ message: 'Error al obtener la embarcación.' });
+    }
+};
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+// Añadir nueva embarcación
 exports.addEmbarcacion = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
@@ -26,76 +61,75 @@ exports.addEmbarcacion = async (req, res) => {
         if (!solicitanteId) {
             return res.status(400).json({ message: 'ID de solicitante no encontrado.' });
         }
-        const nuevaEmbarcacion = await embarcacionMenorModel.add(req.body, solicitanteId);
-        try {
-            await solicitanteModel.updateAnexoStatus(solicitanteId, 'anexo5_completo', true);
-        } catch (statusError) {
-            console.error("Error al actualizar estado anexo5_completo:", statusError);
-        }
-        res.status(201).json({ message: 'Embarcación añadida con éxito.', embarcacion: nuevaEmbarcacion });
+        const nueva = await embarcacionMenorModel.add(req.body, solicitanteId);
+        res.status(201).json(nueva);
     } catch (error) {
         console.error("Error en addEmbarcacion:", error);
-        if (!res.headersSent) res.status(500).json({ message: 'Error en el servidor.' });
+        res.status(500).json({ message: 'Error al registrar la embarcación.' });
     }
 };
 
-// [SEGURIDAD IDOR] Actualizar embarcación
+// Actualizar embarcación
 exports.updateEmbarcacion = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
 
     try {
         const { id } = req.params;
-
-        // 1. Buscar para verificar propiedad
+        
+        // Verificar existencia y propiedad
         const embarcacion = await embarcacionMenorModel.getById(id);
-        if (!embarcacion) {
-            return res.status(404).json({ message: 'Embarcación no encontrada.' });
-        }
+        if (!embarcacion) return res.status(404).json({ message: 'Embarcación no encontrada.' });
 
-        // --- CANDADO DE SEGURIDAD ---
         if (req.user.rol !== 'admin' && req.user.rol !== 'superadmin' && embarcacion.solicitante_id !== req.user.solicitante_id) {
-            return res.status(403).json({ message: 'Acceso denegado. No puedes editar esta embarcación.' });
+            return res.status(403).json({ message: 'Acceso denegado.' });
         }
-        // ----------------------------
 
         await embarcacionMenorModel.updateById(id, req.body);
-
-        try {
-            await solicitanteModel.updateAnexoStatus(embarcacion.solicitante_id, 'anexo5_completo', true);
-        } catch (e) { console.error(e); }
-
         res.status(200).json({ message: 'Embarcación actualizada con éxito.' });
     } catch (error) {
         console.error("Error en updateEmbarcacion:", error);
-        if (!res.headersSent) res.status(500).json({ message: 'Error en el servidor.' });
+        res.status(500).json({ message: 'Error en el servidor.' });
     }
 };
 
-// [SEGURIDAD IDOR] Eliminar embarcación
+// Eliminar embarcación
 exports.deleteEmbarcacion = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-
     try {
         const { id } = req.params;
-
-        // 1. Buscar antes de borrar
         const embarcacion = await embarcacionMenorModel.getById(id);
-        if (!embarcacion) {
-            return res.status(404).json({ message: 'Embarcación no encontrada.' });
-        }
+        if (!embarcacion) return res.status(404).json({ message: 'Embarcación no encontrada.' });
 
-        // --- CANDADO DE SEGURIDAD ---
         if (req.user.rol !== 'admin' && req.user.rol !== 'superadmin' && embarcacion.solicitante_id !== req.user.solicitante_id) {
-            return res.status(403).json({ message: 'Acceso denegado. No puedes eliminar esta embarcación.' });
+            return res.status(403).json({ message: 'Acceso denegado.' });
         }
-        // ----------------------------
 
         await embarcacionMenorModel.deleteById(id);
-        res.status(200).json({ message: 'Embarcación eliminada con éxito.' });
+        res.status(200).json({ message: 'Embarcación eliminada.' });
     } catch (error) {
         console.error("Error en deleteEmbarcacion:", error);
-        if (!res.headersSent) res.status(500).json({ message: 'Error en el servidor.' });
+        res.status(500).json({ message: 'Error al eliminar.' });
+    }
+};
+
+// Exportar PDF
+exports.exportarPdf = async (req, res) => {
+    try {
+        let embarcaciones = [];
+        if (req.user.rol === 'superadmin') {
+            embarcaciones = await embarcacionMenorModel.getAll();
+        } else {
+            const solicitanteId = req.user.solicitante_id;
+            if (!solicitanteId) return res.status(404).json({ message: 'Solicitante no encontrado.' });
+            embarcaciones = await embarcacionMenorModel.getBySolicitanteId(solicitanteId);
+        }
+
+        if (!embarcaciones || embarcaciones.length === 0) {
+            return res.status(404).json({ message: 'No hay embarcaciones para exportar.' });
+        }
+        await pdfService.generateEmbarcacionesListPDF(embarcaciones, res);
+    } catch (error) {
+        console.error("Error exportando PDF embarcaciones:", error);
+        res.status(500).json({ message: 'Error al generar el PDF.' });
     }
 };

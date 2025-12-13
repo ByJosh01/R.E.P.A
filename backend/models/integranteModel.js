@@ -9,6 +9,14 @@ integranteModel.getBySolicitanteId = async (solicitanteId) => {
     return rows;
 };
 
+// ▼▼▼ AGREGAR ESTA FUNCIÓN NUEVA (Para el SuperAdmin) ▼▼▼
+// Obtiene TODOS los integrantes registrados en el sistema
+integranteModel.getAll = async () => {
+    const [rows] = await pool.query('SELECT * FROM integrantes');
+    return rows;
+};
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
 // Añade un nuevo integrante
 integranteModel.add = async (data, solicitanteId) => {
     const dataToInsert = {
@@ -19,7 +27,7 @@ integranteModel.add = async (data, solicitanteId) => {
         telefono: data.telefono,
         sexo: data.sexo,
         ultimo_grado_estudio: data.ultimo_grado_estudio,
-        actividad_desempeña: data.actividad_desempena, // Corregido 'desempeña'
+        actividad_desempeña: data.actividad_desempena, 
         localidad: data.localidad,
         municipio: data.municipio
     };
@@ -36,7 +44,7 @@ integranteModel.updateById = async (id, data) => {
         telefono: data.telefono,
         sexo: data.sexo,
         ultimo_grado_estudio: data.ultimo_grado_estudio,
-        actividad_desempeña: data.actividad_desempena, // Corregido 'desempeña'
+        actividad_desempeña: data.actividad_desempena,
         localidad: data.localidad,
         municipio: data.municipio
     };
@@ -50,16 +58,10 @@ integranteModel.deleteById = async (id) => {
     return result;
 };
 
-// ▼▼▼ NUEVA FUNCIÓN ▼▼▼
-/**
- * Obtiene un integrante específico por su ID.
- * @param {number} id - El ID del integrante.
- * @returns {object|null} El integrante encontrado o null si no existe.
- */
+// Obtiene un integrante específico por su ID
 integranteModel.getById = async (id) => {
     const [rows] = await pool.query('SELECT * FROM integrantes WHERE id = ?', [id]);
-    return rows[0] || null; // Devuelve el primer resultado o null
+    return rows[0] || null; 
 };
-// ▲▲▲ FIN NUEVA FUNCIÓN ▲▲▲
 
 module.exports = integranteModel;

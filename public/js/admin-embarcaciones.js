@@ -160,7 +160,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const cargarDatosIniciales = async () => {
         try {
-            const response = await fetch('/api/admin/embarcaciones', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            // Se asume que el backend usa '/api/embarcaciones' como prefijo para estas rutas
+            const response = await fetch('/api/embarcaciones', { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!response.ok) throw new Error('No se pudieron cargar los datos.');
             allEmbarcaciones = await response.json(); 
             renderTabla(allEmbarcaciones); 
@@ -171,14 +172,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     cargarDatosIniciales();
 
     // ============================================================
-    // === LÓGICA DEL MODAL DE EDICIÓN (CORREGIDA) ===
+    // === LÓGICA DEL MODAL DE EDICIÓN ===
     // ============================================================
     
     const editModal = document.getElementById('edit-embarcacion-modal');
     const editForm = document.getElementById('edit-embarcacion-form');
     const editIdField = document.getElementById('edit-embarcacion-id');
     const editErrorMsg = document.getElementById('edit-error-msg');
-    // IMPORTANTE: Definir el botón de cerrar aquí, antes de usarlo
     const closeEditModalBtn = document.getElementById('close-edit-modal-btn'); 
     
     const fields = [
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 2. VALIDACIÓN
+    // 2. VALIDACIÓN (Tu lógica original)
     const setupFormValidation = (form) => {
         const matriculaRegex = /^6ª\s[A-Z]{2}-\d{1}-\d{1,4}-\d{2}$/;
         const fieldRules = {
@@ -278,7 +278,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         editForm.querySelectorAll('.feedback-message').forEach(el => el.textContent = '');
 
         try {
-            const res = await fetch(`/api/admin/embarcaciones/${id}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            // Aseguramos la ruta correcta con el ID
+            const res = await fetch(`/api/embarcaciones/${id}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!res.ok) throw new Error('No se pudo cargar la información.');
             const embarcacion = await res.json();
             
@@ -301,7 +302,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (editButton) openEditModal(editButton.dataset.id);
     });
 
-    // 4. CERRAR MODAL (Aquí estaba el error antes)
+    // 4. CERRAR MODAL
     if (closeEditModalBtn) {
         closeEditModalBtn.addEventListener('click', () => {
             editModal.classList.remove('visible');
@@ -317,7 +318,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 5. GUARDAR CAMBIOS
     if (editForm) {
         editForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); // <--- ESTO ES CRUCIAL PARA EVITAR LA RECARGA
+            e.preventDefault(); 
             
             editForm.querySelectorAll('input').forEach(input => input.dispatchEvent(new Event('input', { bubbles: true })));
             
@@ -342,7 +343,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             fields.forEach(f => data[f] = editFormFields[f].value);
 
             try {
-                const res = await fetch(`/api/admin/embarcaciones/${id}`, {
+                const res = await fetch(`/api/embarcaciones/${id}`, {
                     method: 'PUT', 
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                     body: JSON.stringify(data)
@@ -422,6 +423,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         adminGotoDashboardBtn.addEventListener('click', (e) => {
             e.preventDefault();
             window.location.href = 'dashboard.html';
+        });
+    }
+
+    // ==========================================================
+    // ==== LÓGICA: BOTÓN EXPORTAR PDF (AGREGADA AL FINAL) ====
+    // ==========================================================
+    const btnExportarPdf = document.getElementById('btn-exportar-pdf');
+    if (btnExportarPdf) {
+        btnExportarPdf.addEventListener('click', async () => {
+            try {
+                const originalContent = btnExportarPdf.innerHTML;
+                btnExportarPdf.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+                btnExportarPdf.disabled = true;
+
+                // URL limpia usando el prefijo '/api/embarcaciones' definido en server.js
+                const response = await fetch('/api/embarcaciones/exportar-pdf', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Lista_Embarcaciones_${new Date().toISOString().slice(0,10)}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    const errorData = await response.json();
+                    showInfoModal('Error', 'Error al descargar PDF: ' + (errorData.message || 'Error desconocido'), false);
+                }
+            } catch (error) {
+                console.error('Error exportando PDF:', error);
+                showInfoModal('Error', 'Ocurrió un error de red al intentar exportar.', false);
+            } finally {
+                btnExportarPdf.innerHTML = '<i class="fas fa-file-pdf"></i> Exportar Lista PDF';
+                btnExportarPdf.disabled = false;
+            }
         });
     }
 });

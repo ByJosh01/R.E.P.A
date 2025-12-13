@@ -66,7 +66,7 @@
             <div>
                 <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
             </div>
-            <div class="user-menu">
+             <div class="user-menu">
                 <div class="user-menu-trigger" id="user-menu-trigger">
                     <span id="admin-email-placeholder">Cargando...</span>
                     <i class="fas fa-chevron-down"></i>
@@ -91,10 +91,17 @@
                 <h1 class="content-title">Lista de Todas las Embarcaciones Menores</h1>
                 <p style="margin-bottom: 20px; color: #666;">Esta tabla muestra todas las embarcaciones registradas por todos los solicitantes.</p>
 
-                <div class="input-group" style="max-width: 500px; margin-bottom: 20px;">
-                    <label for="search-input" style="text-align: left;"><i class="fas fa-search"></i> Buscar Embarcación:</label>
-                    <input type="text" id="search-input" class="modal-input" placeholder="Escriba un Nombre o Matrícula para filtrar...">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                    <div class="input-group" style="flex: 1; max-width: 500px; margin-bottom: 0;">
+                        <label for="search-input" style="text-align: left;"><i class="fas fa-search"></i> Buscar Embarcación:</label>
+                        <input type="text" id="search-input" class="modal-input" placeholder="Escriba un Nombre o Matrícula para filtrar...">
+                    </div>
+
+                    <button id="btn-exportar-pdf" class="btn btn-danger" style="display: flex; align-items: center; gap: 8px; height: fit-content;">
+                        <i class="fas fa-file-pdf"></i> Exportar Lista PDF
+                    </button>
                 </div>
+
                 <div class="table-container">
                     <table class="admin-table">
                         <thead>
@@ -207,6 +214,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/admin-embarcaciones.js"></script>
+    <script src="js/admin-embarcaciones.js"></script>
 </body>
 </html>

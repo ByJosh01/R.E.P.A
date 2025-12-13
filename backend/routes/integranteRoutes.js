@@ -7,6 +7,8 @@ const { body, param } = require('express-validator');
 
 // GET /api/integrantes -> Obtiene todos los integrantes (del solicitante logueado)
 router.get('/integrantes', protect, integranteController.getIntegrantes);
+// Ruta para exportar PDF
+router.get('/integrantes/exportar-pdf', protect, integranteController.exportarIntegrantesPDF);
 
 // POST /api/integrantes -> Añade un nuevo integrante
 router.post('/integrantes', 

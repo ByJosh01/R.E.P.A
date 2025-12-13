@@ -611,9 +611,130 @@ const generateUsuariosReportPdf = async (req, res) => {
     }
 };
 
+// --- FUNCIÓN PARA GENERAR PDF DE LISTA DE INTEGRANTES ---
+const generateIntegrantesListPDF = async (integrantes, res) => {
+    const doc = new PDFDocument({ margin: 30, size: 'A4' });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=lista_integrantes.pdf');
+
+    doc.pipe(res);
+
+    // Encabezado
+    const logoPath = path.join(__dirname, '../SEDARPA.png'); // Ajusta si la ruta es distinta
+    if (require('fs').existsSync(logoPath)) {
+        doc.image(logoPath, 50, 30, { width: 60 });
+    }
+    
+    doc.font(FONT_BOLD).fontSize(14).text('SISTEMA R.E.P.A.', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(12).text('LISTADO DE INTEGRANTES REGISTRADOS', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(10).font(FONT_NORMAL).text(`Fecha de emisión: ${new Date().toLocaleDateString('es-MX')}`, { align: 'center' });
+    doc.moveDown(2);
+
+    // Tabla de Datos
+    const tableData = {
+        headers: ["Nombre Completo", "CURP", "RFC", "Teléfono", "Municipio"],
+        rows: integrantes.map(i => [
+            i.nombre_completo || `${i.nombre} ${i.apellido_paterno} ${i.apellido_materno || ''}`.trim(),
+            i.curp || 'N/A',
+            i.rfc || 'N/A',
+            i.telefono || 'N/A',
+            i.municipio || 'N/A'
+        ])
+    };
+
+    await doc.table(tableData, {
+        prepareHeader: () => doc.font(FONT_BOLD).fontSize(9).fillColor('#FFFFFF'),
+        prepareRow: (row, indexColumn, indexRow, rectRow, rectCell) => {
+            doc.font(FONT_NORMAL).fontSize(8).fillColor('#333333');
+            // Alternar color de fondo filas
+            if (indexRow % 2 !== 0) doc.addBackground(rectCell, '#f2f2f2', 0.5);
+        },
+        padding: 5,
+        columnSpacing: 5,
+        headerColor: '#8E1724', // Color rojo tipo SEDARPA
+        headerOpacity: 1,
+        width: 530, // Ancho total tabla
+        x: 30 // Margen izquierdo
+    });
+
+    // Pie de página
+    const range = doc.bufferedPageRange();
+    for (let i = range.start; i < range.count; i++) {
+        doc.switchToPage(i);
+        doc.fontSize(8).fillColor('#999').text(`Página ${i + 1} de ${range.count}`, 50, doc.page.height - 30, { align: 'center', width: 500 });
+    }
+
+    doc.end();
+};
+
+// --- FUNCIÓN PARA GENERAR PDF DE LISTA DE EMBARCACIONES MENORES ---
+const generateEmbarcacionesListPDF = async (embarcaciones, res) => {
+    const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' }); // Landscape para tener más espacio
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=lista_embarcaciones.pdf');
+
+    doc.pipe(res);
+
+    // Encabezado
+    const logoPath = path.join(__dirname, '../SEDARPA.png'); 
+    if (require('fs').existsSync(logoPath)) {
+        doc.image(logoPath, 50, 30, { width: 60 });
+    }
+    
+    doc.font(FONT_BOLD).fontSize(14).text('SISTEMA R.E.P.A.', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(12).text('LISTADO DE EMBARCACIONES MENORES REGISTRADAS', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(10).font(FONT_NORMAL).text(`Fecha de emisión: ${new Date().toLocaleDateString('es-MX')}`, { align: 'center' });
+    doc.moveDown(2);
+
+    // Tabla de Datos
+    const tableData = {
+        headers: ["Nombre Embarcación", "Matrícula", "Marca", "No. Serie", "Potencia (HP)", "Puerto Base", "Tonelaje"],
+        rows: embarcaciones.map(e => [
+            e.nombre_embarcacion || 'N/A',
+            e.matricula || 'N/A',
+            e.marca || 'N/A',
+            e.numero_serie || 'N/A',
+            e.potencia_hp || 'N/A',
+            e.puerto_base || 'N/A',
+            e.tonelaje_neto || 'N/A'
+        ])
+    };
+
+    await doc.table(tableData, {
+        prepareHeader: () => doc.font(FONT_BOLD).fontSize(9).fillColor('#FFFFFF'),
+        prepareRow: (row, indexColumn, indexRow, rectRow, rectCell) => {
+            doc.font(FONT_NORMAL).fontSize(8).fillColor('#333333');
+            if (indexRow % 2 !== 0) doc.addBackground(rectCell, '#f2f2f2', 0.5);
+        },
+        padding: 5,
+        columnSpacing: 5,
+        headerColor: '#8E1724',
+        headerOpacity: 1,
+        width: 770, // Ancho para hoja horizontal
+        x: 30
+    });
+
+    // Pie de página
+    const range = doc.bufferedPageRange();
+    for (let i = range.start; i < range.count; i++) {
+        doc.switchToPage(i);
+        doc.fontSize(8).fillColor('#999').text(`Página ${i + 1} de ${range.count}`, 50, doc.page.height - 30, { align: 'center', width: 700 });
+    }
+
+    doc.end();
+};
+
 // Exportar ambas funciones
 module.exports = {
     generateRegistroPdf,
     generateGeneralReportPdf,
-    generateUsuariosReportPdf
+    generateUsuariosReportPdf,
+    generateIntegrantesListPDF,
+    generateEmbarcacionesListPDF
 };

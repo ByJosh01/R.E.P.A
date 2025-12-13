@@ -4,11 +4,19 @@ const pool = require('../db');
 
 const embarcacionMenorModel = {};
 
-// Obtiene todas las embarcaciones de un solicitante
+// Obtiene todas las embarcaciones de un solicitante (Usuario normal)
 embarcacionMenorModel.getBySolicitanteId = async (solicitanteId) => {
     const [rows] = await pool.query('SELECT * FROM embarcaciones_menores WHERE solicitante_id = ?', [solicitanteId]);
     return rows;
 };
+
+// ▼▼▼ FUNCIÓN FALTANTE (AGREGADA) ▼▼▼
+// Obtiene TODAS las embarcaciones registradas (para SuperAdmin)
+embarcacionMenorModel.getAll = async () => {
+    const [rows] = await pool.query('SELECT * FROM embarcaciones_menores');
+    return rows;
+};
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 // Añade una nueva embarcación
 embarcacionMenorModel.add = async (data, solicitanteId) => {
@@ -26,7 +34,6 @@ embarcacionMenorModel.add = async (data, solicitanteId) => {
     return { id: result.insertId, ...dataToInsert };
 };
 
-// ▼▼▼ FUNCIÓN MODIFICADA (MÁS SEGURA) ▼▼▼
 // Actualiza una embarcación por su ID
 embarcacionMenorModel.updateById = async (id, data) => {
     
@@ -52,7 +59,6 @@ embarcacionMenorModel.updateById = async (id, data) => {
     const [result] = await pool.query('UPDATE embarcaciones_menores SET ? WHERE id = ?', [dataToUpdate, id]);
     return result;
 };
-// ▲▲▲ FIN FUNCIÓN MODIFICADA ▲▲▲
 
 // Elimina una embarcación por su ID
 embarcacionMenorModel.deleteById = async (id) => {
@@ -60,7 +66,7 @@ embarcacionMenorModel.deleteById = async (id) => {
     return result;
 };
 
-// Obtiene una embarcación específica por su ID. (Ya estaba correcta)
+// Obtiene una embarcación específica por su ID
 embarcacionMenorModel.getById = async (id) => {
     const [rows] = await pool.query('SELECT * FROM embarcaciones_menores WHERE id = ?', [id]);
     return rows[0] || null; // Devuelve el primer resultado o null

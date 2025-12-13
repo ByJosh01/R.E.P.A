@@ -2,16 +2,29 @@
 const integranteModel = require('../models/integranteModel');
 const solicitanteModel = require('../models/solicitanteModel');
 const { validationResult } = require('express-validator');
+const pdfService = require('../services/pdfGenerator');
 
 // Obtener la lista de integrantes (del solicitante logueado)
+// Obtener la lista de integrantes
 exports.getIntegrantes = async (req, res) => {
     try {
-        const solicitanteId = req.user.solicitante_id;
-        if (!solicitanteId) {
-            return res.status(404).json({ message: 'Perfil de solicitante no encontrado para este usuario.' });
+        let integrantes = [];
+
+        // LÓGICA CORREGIDA: Validar rol para SuperAdmin
+        if (req.user.rol === 'superadmin') {
+            // Si es SuperAdmin, traemos TODOS usando la nueva función del modelo
+            integrantes = await integranteModel.getAll();
+        } else {
+            // Si es usuario normal, traemos solo los suyos
+            const solicitanteId = req.user.solicitante_id;
+            if (!solicitanteId) {
+                return res.status(404).json({ message: 'Perfil de solicitante no encontrado para este usuario.' });
+            }
+            integrantes = await integranteModel.getBySolicitanteId(solicitanteId);
         }
-        const integrantes = await integranteModel.getBySolicitanteId(solicitanteId);
+
         res.status(200).json(integrantes);
+
     } catch (error) {
         console.error("Error en getIntegrantes:", error);
         res.status(500).json({ message: 'Error en el servidor al obtener integrantes.' });
@@ -142,5 +155,37 @@ exports.deleteIntegrante = async (req, res) => {
          if (!res.headersSent) {
             res.status(500).json({ message: 'Error en el servidor al eliminar integrante.' });
         }
+    }
+};
+
+
+// Exportar lista de integrantes a PDF
+exports.exportarIntegrantesPDF = async (req, res) => {
+    try {
+        // Reusamos la lógica de obtención según rol (ajusta si usas lógica diferente para SuperAdmin)
+        let integrantes = [];
+        
+        // Si tienes lógica de SuperAdmin para ver todo, úsala aquí. 
+        // Por defecto usaremos la del solicitante logueado como en 'getIntegrantes'
+        const solicitanteId = req.user.solicitante_id;
+        
+        if (req.user.rol === 'superadmin') {
+             // Si el superadmin debe ver TODOS los de la base de datos:
+             integrantes = await integranteModel.getAll(); // Asegúrate que este método exista en tu modelo, si no, usa el de abajo
+        } else {
+             if (!solicitanteId) return res.status(404).json({ message: 'Solicitante no encontrado.' });
+             integrantes = await integranteModel.getBySolicitanteId(solicitanteId);
+        }
+
+        if (!integrantes || integrantes.length === 0) {
+            return res.status(404).json({ message: 'No hay integrantes para exportar.' });
+        }
+
+        // Llamar al servicio de PDF
+        await pdfService.generateIntegrantesListPDF(integrantes, res);
+
+    } catch (error) {
+        console.error("Error exportando integrantes PDF:", error);
+        res.status(500).json({ message: 'Error al generar el PDF.' });
     }
 };
