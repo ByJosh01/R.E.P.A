@@ -5,17 +5,20 @@ const pdfService = require('../services/pdfGenerator'); // Importar servicio PDF
 const { validationResult } = require('express-validator');
 
 // Obtener lista de embarcaciones (Usuario o SuperAdmin)
+// backend/controllers/embarcacionMenorController.js
+
 exports.getEmbarcaciones = async (req, res) => {
     try {
         let embarcaciones = [];
-        // Si es SuperAdmin, trae TODAS
-        if (req.user.rol === 'superadmin') {
+        // MODIFICACIÓN: Permitir que 'admin' también vea todas las embarcaciones
+        if (req.user.rol === 'superadmin' || req.user.rol === 'admin') { 
             embarcaciones = await embarcacionMenorModel.getAll();
         } else {
-            // Si es usuario normal, trae solo las suyas
+            // Lógica para usuario 'solicitante' normal
             const solicitanteId = req.user.solicitante_id;
             if (!solicitanteId) {
-                return res.status(400).json({ message: 'ID de solicitante no encontrado.' });
+                // Si es un usuario nuevo sin perfil de solicitante aún
+                return res.status(200).json([]); 
             }
             embarcaciones = await embarcacionMenorModel.getBySolicitanteId(solicitanteId);
         }
