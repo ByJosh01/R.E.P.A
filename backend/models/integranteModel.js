@@ -3,21 +3,65 @@ const pool = require('../db');
 
 const integranteModel = {};
 
-// Obtiene todos los integrantes de un solicitante
-integranteModel.getBySolicitanteId = async (solicitanteId) => {
-    const [rows] = await pool.query('SELECT * FROM integrantes WHERE solicitante_id = ?', [solicitanteId]);
+// 1. Obtiene integrantes de un usuario específico (CON FILTROS)
+integranteModel.getBySolicitanteId = async (solicitanteId, search, startDate, endDate) => {
+    // Iniciamos la query base
+    let query = 'SELECT * FROM integrantes WHERE solicitante_id = ?';
+    const params = [solicitanteId];
+
+    // Aplicar Filtro de Texto (si existe)
+    if (search) {
+        query += ' AND (nombre_completo LIKE ? OR rfc LIKE ? OR curp LIKE ? OR municipio LIKE ?)';
+        const term = `%${search}%`;
+        params.push(term, term, term, term);
+    }
+
+    // Aplicar Filtro de Fecha Inicio (si existe)
+    if (startDate) {
+        query += ' AND DATE(fecha_actualizacion) >= ?';
+        params.push(startDate);
+    }
+
+    // Aplicar Filtro de Fecha Fin (si existe)
+    if (endDate) {
+        query += ' AND DATE(fecha_actualizacion) <= ?';
+        params.push(endDate);
+    }
+
+    query += ' ORDER BY fecha_actualizacion DESC';
+
+    const [rows] = await pool.query(query, params);
     return rows;
 };
 
-// ▼▼▼ AGREGAR ESTA FUNCIÓN NUEVA (Para el SuperAdmin) ▼▼▼
-// Obtiene TODOS los integrantes registrados en el sistema
-integranteModel.getAll = async () => {
-    const [rows] = await pool.query('SELECT * FROM integrantes');
+// 2. Obtiene TODOS los integrantes (Admin) (CON FILTROS)
+integranteModel.getAll = async (search, startDate, endDate) => {
+    let query = 'SELECT * FROM integrantes WHERE 1=1'; // Truco para concatenar ANDs fácilmente
+    const params = [];
+
+    if (search) {
+        query += ' AND (nombre_completo LIKE ? OR rfc LIKE ? OR curp LIKE ? OR municipio LIKE ?)';
+        const term = `%${search}%`;
+        params.push(term, term, term, term);
+    }
+
+    if (startDate) {
+        query += ' AND DATE(fecha_actualizacion) >= ?';
+        params.push(startDate);
+    }
+
+    if (endDate) {
+        query += ' AND DATE(fecha_actualizacion) <= ?';
+        params.push(endDate);
+    }
+
+    query += ' ORDER BY fecha_actualizacion DESC';
+
+    const [rows] = await pool.query(query, params);
     return rows;
 };
-// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-// Añade un nuevo integrante
+// Añadir
 integranteModel.add = async (data, solicitanteId) => {
     const dataToInsert = {
         solicitante_id: solicitanteId,
@@ -29,13 +73,14 @@ integranteModel.add = async (data, solicitanteId) => {
         ultimo_grado_estudio: data.ultimo_grado_estudio,
         actividad_desempeña: data.actividad_desempena, 
         localidad: data.localidad,
-        municipio: data.municipio
+        municipio: data.municipio,
+        // MySQL pondrá fecha_actualizacion automático si está configurado como DEFAULT CURRENT_TIMESTAMP
     };
     const [result] = await pool.query('INSERT INTO integrantes SET ?', [dataToInsert]);
     return { id: result.insertId, ...dataToInsert };
 };
 
-// Actualiza un integrante existente por su ID
+// Actualizar
 integranteModel.updateById = async (id, data) => {
     const dataToUpdate = {
         nombre_completo: data.nombre_completo,
@@ -46,19 +91,20 @@ integranteModel.updateById = async (id, data) => {
         ultimo_grado_estudio: data.ultimo_grado_estudio,
         actividad_desempeña: data.actividad_desempena,
         localidad: data.localidad,
-        municipio: data.municipio
+        municipio: data.municipio,
+        fecha_actualizacion: new Date() // ¡IMPORTANTE! Actualizamos la fecha para que el filtro "Hoy" funcione al editar
     };
     const [result] = await pool.query('UPDATE integrantes SET ? WHERE id = ?', [dataToUpdate, id]);
     return result;
 };
 
-// Elimina un integrante por su ID
+// Eliminar
 integranteModel.deleteById = async (id) => {
     const [result] = await pool.query('DELETE FROM integrantes WHERE id = ?', [id]);
     return result;
 };
 
-// Obtiene un integrante específico por su ID
+// Get By ID
 integranteModel.getById = async (id) => {
     const [rows] = await pool.query('SELECT * FROM integrantes WHERE id = ?', [id]);
     return rows[0] || null; 
