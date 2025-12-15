@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authToken = localStorage.getItem('authToken');
     const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
     
-    // Si no hay sesión, usamos replace para evitar volver con "Atrás"
     if (!authToken || !currentUser || (currentUser.rol !== 'admin' && currentUser.rol !== 'superadmin')) {
         window.location.replace('home.html');
         return;
@@ -36,6 +35,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     manageStylesByRole(currentUser.rol);
 
+    // --- UTILIDADES DE FECHA ---
+    const formatDateISO = (date) => date.toISOString().split('T')[0];
+    const getTodayDate = () => formatDateISO(new Date());
+    const getDaysAgoDate = (days) => {
+        const date = new Date();
+        date.setDate(date.getDate() - days);
+        return formatDateISO(date);
+    };
+    const getFirstDayOfMonth = () => {
+        const date = new Date();
+        date.setDate(1);
+        return formatDateISO(date);
+    };
 
     // ==========================================================
     // ==== LÓGICA DE VALIDACIÓN ====
@@ -76,8 +88,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const adminGotoDashboardBtn = document.getElementById('admin-goto-dashboard-btn');
     const tableBody = document.getElementById('usuarios-table-body');
     const searchInput = document.getElementById('search-input');
-    const exportPdfUsuariosBtn = document.getElementById('export-pdf-usuarios-btn'); // Botón PDF
+    const exportPdfUsuariosBtn = document.getElementById('export-pdf-usuarios-btn'); 
     let allUsuarios = []; 
+
+    // Filtros de fecha
+    const dateStartInput = document.getElementById('filter-date-start');
+    const dateEndInput = document.getElementById('filter-date-end');
+    const btnFilterDate = document.getElementById('btn-filter-date');
+    const btnClearDate = document.getElementById('btn-clear-date');
+    const quickFilterButtons = document.querySelectorAll('.btn-chip');
 
     // Modales
     const infoModal = document.getElementById('admin-info-modal');
@@ -156,12 +175,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(confirmLogoutBtn) confirmLogoutBtn.addEventListener('click', () => {
             sessionStorage.removeItem('currentUser');
             localStorage.removeItem('authToken');
-            // Redirección segura
             window.location.replace('home.html');
         });
     }
 
-    // --- LÓGICA DE TABLA (CORREGIDA) ---
+    // --- LÓGICA DE TABLA ---
     const formatFecha = (dateString) => {
         if (!dateString) return 'N/A';
         try {
@@ -176,8 +194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const renderTabla = (usuarios) => {
         if(!tableBody) return;
         tableBody.innerHTML = '';
-        // Ajustamos el colspan a 7 porque agregamos la columna de Descargar
-        if (usuarios.length === 0) { tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">No se encontraron usuarios.</td></tr>`; return; }
+        if (usuarios.length === 0) { tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">No se encontraron usuarios para el criterio seleccionado.</td></tr>`; return; }
 
         usuarios.forEach(user => {
             const row = tableBody.insertRow();
@@ -187,12 +204,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (user.id === currentUser.id) { editButtonDisabled = 'disabled'; }
             if (currentUser.rol === 'admin' && user.rol === 'superadmin') { editButtonDisabled = 'disabled'; }
 
-            // Estilo para el badge de rol
             let roleBadgeStyle = 'background-color: #6c757d; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;';
             if (user.rol === 'superadmin') roleBadgeStyle = 'background-color: #6f42c1; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;';
             if (user.rol === 'admin') roleBadgeStyle = 'background-color: #0d6efd; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;';
 
-            // HTML para el botón de PDF Individual
             const pdfButtonHtml = `
                 <button class="btn-icon btn-download-user-pdf" data-id="${user.id}" title="Descargar Ficha de Usuario">
                     <i class="fas fa-file-pdf"></i>
@@ -214,16 +229,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    const cargarUsuarios = async () => {
+    const cargarUsuarios = async (startDate = '', endDate = '') => {
+        tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Cargando datos...</td></tr>`;
         try {
-            const response = await fetch('/api/admin/usuarios', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            // URL con filtros
+            let url = '/api/admin/usuarios';
+            const params = new URLSearchParams();
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+            
+            if (startDate || endDate) {
+                url += `?${params.toString()}`;
+            }
+
+            const response = await fetch(url, { headers: { 'Authorization': `Bearer ${authToken}` } });
              if (response.status === 403) { showInfoModal('Acceso Denegado', 'No tienes permisos para ver esta sección.', false, () => window.location.replace('admin.html')); return; }
             if (!response.ok) { throw new Error('No se pudieron cargar los usuarios.'); }
+            
             allUsuarios = await response.json();
             renderTabla(allUsuarios);
+
+            // Reaplicar filtro de texto si existe
+            if (searchInput && searchInput.value.trim() !== '') {
+                searchInput.dispatchEvent(new Event('input'));
+            }
+
         } catch (error) {
             console.error("Error al cargar usuarios:", error);
-            // Ajuste de colspan a 7 en caso de error
             if(tableBody) tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">${error.message}</td></tr>`;
         }
     };
@@ -239,6 +271,46 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderTabla(filteredUsuarios);
         });
     }
+
+    // --- LÓGICA DE FILTROS ---
+    if (btnFilterDate) {
+        btnFilterDate.addEventListener('click', () => {
+            quickFilterButtons.forEach(btn => btn.classList.remove('active'));
+            const start = dateStartInput.value;
+            const end = dateEndInput.value;
+            cargarUsuarios(start, end);
+        });
+    }
+
+    if (btnClearDate) {
+        btnClearDate.addEventListener('click', () => {
+            dateStartInput.value = '';
+            dateEndInput.value = '';
+            quickFilterButtons.forEach(btn => btn.classList.remove('active'));
+            cargarUsuarios();
+        });
+    }
+
+    quickFilterButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            quickFilterButtons.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+
+            const rangeType = e.target.dataset.range;
+            const today = getTodayDate();
+            let start = '';
+            let end = today; 
+
+            if (rangeType === 'today') start = today;
+            else if (rangeType === 'week') start = getDaysAgoDate(7);
+            else if (rangeType === 'month') start = getFirstDayOfMonth();
+
+            dateStartInput.value = start;
+            dateEndInput.value = end;
+            cargarUsuarios(start, end);
+        });
+    });
+
 
     // --- VALIDACIÓN DE EDICIÓN ---
     const setupEditFormValidation = () => {
@@ -283,47 +355,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (tableBody) {
         tableBody.addEventListener('click', async (e) => {
             
-            // --- NUEVA LÓGICA: DESCARGAR PDF INDIVIDUAL DE USUARIO ---
+            // DESCARGAR PDF INDIVIDUAL
             const pdfButton = e.target.closest('button.btn-download-user-pdf');
             if (pdfButton) {
                 if (pdfButton.disabled) return;
-
                 const userId = pdfButton.dataset.id;
                 const originalContent = pdfButton.innerHTML;
-                
-                // Feedback visual de carga
                 pdfButton.disabled = true;
                 pdfButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
                 try {
-                    // Llamamos a la ruta específica para la ficha de usuario
                     const response = await fetch(`/api/admin/usuario-pdf/${userId}`, {
                         method: 'GET',
                         headers: { 'Authorization': `Bearer ${authToken}` }
                     });
-
                     if (!response.ok) throw new Error('Error al descargar la ficha.');
-
-                    // Manejo del Blob para descargar
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.style.display = 'none';
                     a.href = url;
-                    
-                    // Nombre del archivo desde el header o por defecto
-                    let filename = `Usuario_${userId}.pdf`;
-                    const disposition = response.headers.get('content-disposition');
-                    if (disposition && disposition.includes('filename=')) {
-                        filename = disposition.split('filename=')[1].replace(/['"]/g, '');
-                    }
-                    a.download = filename;
-                    
+                    a.download = `Usuario_${userId}.pdf`;
                     document.body.appendChild(a);
                     a.click();
                     window.URL.revokeObjectURL(url);
                     a.remove();
-
                 } catch (error) {
                     console.error(error);
                     showInfoModal('Error', 'No se pudo generar el PDF del usuario.', false);
@@ -331,15 +387,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     pdfButton.disabled = false;
                     pdfButton.innerHTML = originalContent;
                 }
-                return; // Importante detener aquí para no activar otras lógicas de la fila
+                return;
             }
-            // --- FIN LÓGICA PDF ---
 
             const button = e.target.closest('button.btn-edit-usuario');
             if (!button || button.disabled) return;
 
             const usuarioId = button.dataset.id;
-            
             try {
                 const response = await fetch(`/api/admin/usuarios/${usuarioId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
                 if (!response.ok) throw new Error('No se pudieron obtener los datos del usuario.');
@@ -368,7 +422,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (editForm && editUsuarioId) {
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault(); 
-            
             editForm.querySelectorAll('input').forEach(input => input.dispatchEvent(new Event('input', { bubbles: true })));
             
             const firstInvalidElement = editForm.querySelector('.invalid');
@@ -421,8 +474,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             exportPdfUsuariosBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
 
             try {
-                // LLAMADA AL BACKEND
-                const response = await fetch('/api/admin/download-reporte-usuarios', {
+                // Capturar filtros actuales
+                const start = dateStartInput.value;
+                const end = dateEndInput.value;
+                
+                let url = '/api/admin/download-reporte-usuarios';
+                const params = new URLSearchParams();
+                if (start) params.append('startDate', start);
+                if (end) params.append('endDate', end);
+                if (start || end) url += `?${params.toString()}`;
+
+                const response = await fetch(url, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
@@ -430,14 +492,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!response.ok) throw new Error('Error al generar el reporte.');
 
                 const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
+                const urlBlob = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.style.display = 'none';
-                a.href = url;
+                a.href = urlBlob;
                 a.download = `Reporte_Usuarios_${new Date().toISOString().split('T')[0]}.pdf`;
                 document.body.appendChild(a);
                 a.click();
-                window.URL.revokeObjectURL(url);
+                window.URL.revokeObjectURL(urlBlob);
+                a.remove();
                 
                 showInfoModal('Éxito', 'El reporte se ha descargado correctamente.', true);
 

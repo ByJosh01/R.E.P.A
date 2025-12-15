@@ -3,9 +3,57 @@ const pool = require('../db');
 
 const solicitanteModel = {};
 
+// --- NUEVA FUNCIÓN: OBTENER TODOS CON FILTROS ---
+solicitanteModel.getAll = async (userRole, search, startDate, endDate) => {
+    let query = `
+        SELECT s.solicitante_id, s.nombre, s.apellido_paterno, s.apellido_materno, 
+               s.rfc, s.curp, s.actividad, u.rol, s.fecha_actualizacion
+        FROM solicitantes s 
+        LEFT JOIN usuarios u ON s.usuario_id = u.id
+        WHERE 1=1
+    `;
+    const params = [];
+
+    // Filtro por Rol (Si es admin normal, solo ve solicitantes)
+    if (userRole === 'admin') {
+        query += " AND u.rol = 'solicitante'";
+    }
+
+    // Filtro de Búsqueda (Texto)
+    if (search) {
+        query += ` AND (
+            s.nombre LIKE ? OR 
+            s.apellido_paterno LIKE ? OR 
+            s.apellido_materno LIKE ? OR 
+            s.rfc LIKE ? OR 
+            s.curp LIKE ?
+        )`;
+        const term = `%${search}%`;
+        params.push(term, term, term, term, term);
+    }
+
+    // Filtro de Fecha Inicio (Usando fecha_actualizacion de solicitantes)
+    if (startDate) {
+        query += ' AND DATE(s.fecha_actualizacion) >= ?';
+        params.push(startDate);
+    }
+
+    // Filtro de Fecha Fin
+    if (endDate) {
+        query += ' AND DATE(s.fecha_actualizacion) <= ?';
+        params.push(endDate);
+    }
+
+    query += ' ORDER BY s.solicitante_id DESC';
+
+    const [rows] = await pool.query(query, params);
+    return rows;
+};
+
+// ... (Resto de funciones updateAnexo1, getProfileDataByUserId, etc. sin cambios)
+
 /**
- * Actualiza los datos del Anexo 1 para un usuario específico.
- * Marca anexo1_completo como true.
+ * Actualiza los datos del Anexo 1...
  */
 solicitanteModel.updateAnexo1 = async (usuarioId, anexoData) => {
     // 1. Obtenemos el solicitante_id a partir del usuario_id
@@ -44,83 +92,43 @@ solicitanteModel.updateAnexo1 = async (usuarioId, anexoData) => {
     return result;
 };
 
-/**
- * Obtiene los datos del perfil del solicitante por su usuario_id, incluyendo los estados de completado de todos los anexos.
- */
 solicitanteModel.getProfileDataByUserId = async (userId) => {
-    const [rows] = await pool.query(`
-        SELECT
-            s.* FROM solicitantes s
-        WHERE s.usuario_id = ?
-    `, [userId]);
-
+    const [rows] = await pool.query(`SELECT s.* FROM solicitantes s WHERE s.usuario_id = ?`, [userId]);
     const perfil = rows[0];
-
-    if (!perfil) {
-        return null;
-    }
-
+    if (!perfil) return null;
     if (perfil.fecha_actualizacion) {
         const fecha = new Date(perfil.fecha_actualizacion);
         perfil.fecha_actualizacion_formateada = fecha.toISOString().split('T')[0];
     }
-
     perfil.anexo1_completo = !!perfil.anexo1_completo;
     perfil.anexo2_completo = !!perfil.anexo2_completo;
     perfil.anexo3_completo = !!perfil.anexo3_completo;
     perfil.anexo4_completo = !!perfil.anexo4_completo;
     perfil.anexo5_completo = !!perfil.anexo5_completo;
-
     return perfil;
 };
 
-/**
- * Obtiene los datos del perfil del solicitante por su solicitante_id.
- * Incluye los estados de completado de todos los anexos.
- */
 solicitanteModel.getProfileDataBySolicitanteId = async (solicitanteId) => {
-    const [rows] = await pool.query(`
-        SELECT
-            s.* FROM solicitantes s
-        WHERE s.solicitante_id = ?
-    `, [solicitanteId]);
-
+    const [rows] = await pool.query(`SELECT s.* FROM solicitantes s WHERE s.solicitante_id = ?`, [solicitanteId]);
     const perfil = rows[0];
-
-    if (!perfil) {
-        return null;
-    }
-
+    if (!perfil) return null;
     if (perfil.fecha_actualizacion) {
         const fecha = new Date(perfil.fecha_actualizacion);
         perfil.fecha_actualizacion_formateada = fecha.toISOString().split('T')[0];
     }
-
     perfil.anexo1_completo = !!perfil.anexo1_completo;
     perfil.anexo2_completo = !!perfil.anexo2_completo;
     perfil.anexo3_completo = !!perfil.anexo3_completo;
     perfil.anexo4_completo = !!perfil.anexo4_completo;
     perfil.anexo5_completo = !!perfil.anexo5_completo;
-
     return perfil;
 };
 
-
-/**
- * Actualiza el estado de completado de un anexo específico para un solicitante.
- */
 solicitanteModel.updateAnexoStatus = async (solicitanteId, anexoField, status, connection = pool) => {
     const validFields = ['anexo1_completo', 'anexo2_completo', 'anexo3_completo', 'anexo4_completo', 'anexo5_completo'];
-    if (!validFields.includes(anexoField)) {
-        throw new Error(`Campo de estado de anexo inválido: ${anexoField}`);
-    }
-
-    const [result] = await connection.query(
-        `UPDATE solicitantes SET ${anexoField} = ? WHERE solicitante_id = ?`,
-        [status, solicitanteId]
-    );
+    if (!validFields.includes(anexoField)) throw new Error(`Campo de estado de anexo inválido: ${anexoField}`);
+    const [result] = await connection.query(`UPDATE solicitantes SET ${anexoField} = ? WHERE solicitante_id = ?`, [status, solicitanteId]);
     return result;
 };
-
 
 module.exports = solicitanteModel;

@@ -2,13 +2,43 @@
 const pool = require('../db');
 const bcrypt = require('bcryptjs');
 
+// --- NUEVA FUNCIÓN PARA FILTROS ---
+const getAllUsuarios = async (search, startDate, endDate) => {
+    let query = 'SELECT * FROM usuarios WHERE 1=1';
+    const params = [];
+
+    // 1. Buscador (Email o CURP)
+    if (search) {
+        query += ' AND (email LIKE ? OR curp LIKE ?)';
+        const term = `%${search}%`;
+        params.push(term, term);
+    }
+
+    // 2. Filtro Fecha Inicio (creado_en)
+    if (startDate) {
+        query += ' AND DATE(creado_en) >= ?';
+        params.push(startDate);
+    }
+
+    // 3. Filtro Fecha Fin
+    if (endDate) {
+        query += ' AND DATE(creado_en) <= ?';
+        params.push(endDate);
+    }
+
+    query += ' ORDER BY creado_en DESC';
+
+    const [rows] = await pool.query(query, params);
+    return rows;
+};
+// ----------------------------------
+
 const findUserByEmail = async (email) => {
     const [rows] = await pool.query('SELECT * FROM usuarios WHERE email = ?', [email]);
     return rows[0] || null;
 };
 
 const findUserByCurp = async (curp) => {
-    // Aseguramos mayúsculas consistentes
     const [rows] = await pool.query('SELECT * FROM usuarios WHERE curp = ?', [curp.toUpperCase()]);
     return rows[0] || null;
 };
@@ -16,39 +46,26 @@ const findUserByCurp = async (curp) => {
 const createUser = async (userData) => {
     const { curp, email, password } = userData;
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Obtenemos una conexión dedicada del pool para la transacción
     const connection = await pool.getConnection();
     
     try {
         await connection.beginTransaction();
-        
-        // 1. Insertar en tabla usuarios
         const [userResult] = await connection.query(
             'INSERT INTO usuarios (curp, email, password) VALUES (?, ?, ?)',
             [curp.toUpperCase(), email, hashedPassword]
         );
         const newUserId = userResult.insertId;
-
-        // 2. Insertar perfil en tabla solicitantes
-        // Importante: Usamos la misma conexión 'connection' para mantener la transacción
         await connection.query(
             'INSERT INTO solicitantes (usuario_id, curp, correo_electronico) VALUES (?, ?, ?)',
             [newUserId, curp.toUpperCase(), email]
         );
-        
-        // Si todo salió bien, guardamos los cambios
         await connection.commit();
-        
         return { id: newUserId, curp, email };
-
     } catch (error) {
-        // Si algo falla, revertimos todo
         await connection.rollback();
         console.error("❌ Error en transacción createUser:", error);
-        throw error; // Re-lanzamos el error para que el controlador lo vea
+        throw error;
     } finally {
-        // SIEMPRE liberamos la conexión, pase lo que pase
         connection.release();
     }
 };
@@ -59,7 +76,6 @@ const updateUserPassword = async (email, newPassword) => {
 };
 
 const saveResetToken = async (email, token, expires) => {
-    // Eliminamos tokens viejos del mismo usuario para mantener limpieza
     await pool.query('DELETE FROM password_reset_tokens WHERE email = ?', [email]);
     await pool.query(
         'INSERT INTO password_reset_tokens (email, token, expires) VALUES (?, ?, ?)',
@@ -77,6 +93,7 @@ const deleteResetToken = async (token) => {
 };
 
 module.exports = {
+    getAllUsuarios, // <--- No olvides exportar la nueva función
     findUserByEmail,
     findUserByCurp,
     createUser,

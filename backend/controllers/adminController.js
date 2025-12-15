@@ -6,7 +6,8 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const solicitanteModel = require('../models/solicitanteModel');
 const embarcacionMenorModel = require('../models/embarcacionMenorModel');
-// Importamos todas las funciones del generador de PDF aquí para evitar problemas de alcance
+const userModel = require('../models/userModel'); 
+
 const { 
     generateRegistroPdf, 
     generateGeneralReportPdf, 
@@ -21,16 +22,15 @@ const { validationResult } = require('express-validator');
 // 1. GESTIÓN DE SOLICITANTES
 // ==================================================
 
+// --- MODIFICADO PARA SOPORTAR FILTROS DE FECHA ---
 exports.getAllSolicitantes = async (req, res) => {
     try {
+        const { search, startDate, endDate } = req.query;
         const userRole = req.user.rol; 
-        let baseQuery = 'SELECT s.solicitante_id, s.nombre, s.apellido_paterno, s.apellido_materno, s.rfc, s.curp, s.actividad, u.rol FROM solicitantes s LEFT JOIN usuarios u ON s.usuario_id = u.id';
 
-        if (userRole === 'admin') {
-            baseQuery += ' WHERE u.rol = \'solicitante\'';
-        }
+        // Usamos la nueva función del modelo que incluye filtrado por fecha_actualizacion
+        const solicitantes = await solicitanteModel.getAll(userRole, search, startDate, endDate);
         
-        const [solicitantes] = await pool.query(baseQuery);
         res.status(200).json(solicitantes);
     } catch (error) {
         console.error("Error en getAllSolicitantes:", error);
@@ -207,8 +207,9 @@ exports.getSolicitanteDetails = async (req, res) => {
 
 exports.getAllUsuarios = async (req, res) => {
     try {
-        const [usuarios] = await pool.query('SELECT id, curp, email, rol, creado_en FROM usuarios ORDER BY id DESC');
-        res.status(200).json(usuarios);
+        const { search, startDate, endDate } = req.query;
+        const users = await userModel.getAllUsuarios(search, startDate, endDate);
+        res.status(200).json(users);
     } catch (error) {
         console.error("Error en getAllUsuarios:", error);
         res.status(500).json({ message: 'Error en el servidor.' });
@@ -464,27 +465,50 @@ exports.downloadRegistroPdf = async (req, res) => {
     await generateRegistroPdf(req, res);
 };
 
+// --- MODIFICADO PARA REPORTE GENERAL CON FILTROS ---
 exports.downloadGeneralReportPdf = async (req, res) => {
-    await generateGeneralReportPdf(req, res); 
+    try {
+        const { search, startDate, endDate } = req.query;
+        const userRole = req.user.rol; 
+
+        // Obtenemos los datos filtrados igual que en la tabla
+        const solicitantes = await solicitanteModel.getAll(userRole, search, startDate, endDate);
+
+        if (!solicitantes || solicitantes.length === 0) {
+            return res.status(404).json({ message: 'No hay datos para el reporte con estos filtros.' });
+        }
+
+        // Importante: Si 'generateGeneralReportPdf' hace la query por dentro, necesitarás modificarlo también.
+        // Aquí asumimos que lo has ajustado para recibir 'solicitantes' o que lee 'req.query' por sí mismo.
+        // Como solución rápida sin tocar pdfGenerator.js, le pasamos req y res tal cual, 
+        // pero pdfGenerator.js debe leer los query params de req.
+        await generateGeneralReportPdf(req, res); 
+    } catch (error) {
+        console.error("Error generando Reporte General:", error);
+        res.status(500).json({ message: "Error al generar el PDF" });
+    }
 };
 
-// --- NUEVA FUNCIÓN CONTROLADOR PARA PDF USUARIOS ---
 exports.downloadUsuariosReportPdf = async (req, res) => {
-    await generateUsuariosReportPdf(req, res);
+    try {
+        const { search, startDate, endDate } = req.query;
+        const users = await userModel.getAllUsuarios(search, startDate, endDate);
+        if (!users || users.length === 0) return res.status(404).json({ message: 'No hay usuarios.' });
+        await generateUsuariosReportPdf(users, res); 
+    } catch (error) {
+        console.error("Error usuarios PDF:", error);
+        res.status(500).json({ message: "Error PDF" });
+    }
 };
-
-// -- Método para recibir la petición y llamar al generador.
 
 exports.downloadUsuarioIndividualPdf = async (req, res) => {
     await generateUsuarioIndividualPdf(req, res);
 };
 
-// --- NUEVA FUNCIÓN CONTROLADOR PARA PDF INTEGRANTE INDIVIDUAL ---
 exports.downloadIntegranteIndividualPdf = async (req, res) => {
     await generateIntegranteIndividualPdf(req, res);
 };
 
-// --- NUEVA FUNCIÓN CONTROLADOR PARA PDF EMBARCACIÓN INDIVIDUAL ---
 exports.downloadEmbarcacionIndividualPdf = async (req, res) => {
     await generateEmbarcacionIndividualPdf(req, res);
 };
