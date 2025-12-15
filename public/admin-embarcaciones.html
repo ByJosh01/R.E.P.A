@@ -15,44 +15,130 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
     <style>
-        /* Estilos específicos para los botones dentro de los inputs (como en Anexo 5) */
-        .input-wrapper {
+        /* --- ESTILOS MEJORADOS PARA LA BARRA DE HERRAMIENTAS --- */
+        .toolbar-container {
+            background-color: #f8f9fa; /* Fondo gris claro suave */
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: flex-end;
+            justify-content: space-between;
+        }
+
+        .toolbar-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+            flex: 1;
+        }
+
+        /* Buscador */
+        .search-group {
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+        }
+        .search-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+        .search-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 0.95rem;
+        }
+
+        /* Grupo de Fechas */
+        .date-filter-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .quick-filters {
             display: flex;
             gap: 5px;
-            align-items: center;
-            position: relative;
         }
-        .btn-mini {
-            padding: 0 12px;
-            background-color: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+        
+        /* Botones de Filtro Rápido (Chips) */
+        .btn-chip {
+            background-color: #e2e6ea;
+            border: none;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #495057;
             cursor: pointer;
-            font-weight: bold;
-            color: #333;
-            height: 38px; /* Altura para igualar al input */
+            transition: all 0.2s;
+        }
+        .btn-chip:hover {
+            background-color: #dbe2e8;
+            transform: translateY(-1px);
+        }
+        .btn-chip.active {
+            background-color: #007bff;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,123,255,0.3);
+        }
+
+        .date-inputs-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        .date-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .date-item label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 2px;
+        }
+        .date-item input {
+            padding: 6px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        .btn-action {
+            height: 35px;
+            width: 35px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background-color 0.2s;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
         }
-        .btn-mini:hover {
-            background-color: #e0e0e0;
-        }
-        .btn-help {
-            color: #007bff;
-            border-color: #007bff;
-            background-color: white;
-        }
-        .btn-help:hover {
-            background-color: #f0f8ff;
-        }
-        /* Ajuste para validación visual */
-        .feedback-message {
-            font-size: 0.85em;
-            margin-top: 4px;
-            min-height: 1.2em;
-        }
+        .btn-filter-go { background-color: #007bff; color: white; }
+        .btn-filter-go:hover { background-color: #0056b3; }
+        .btn-filter-clear { background-color: #6c757d; color: white; }
+        .btn-filter-clear:hover { background-color: #545b62; }
+
+
+        /* Estilos originales del modal */
+        .input-wrapper { display: flex; gap: 5px; align-items: center; position: relative; }
+        .btn-mini { padding: 0 12px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-weight: bold; color: #333; height: 38px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
+        .btn-mini:hover { background-color: #e0e0e0; }
+        .btn-help { color: #007bff; border-color: #007bff; background-color: white; }
+        .btn-help:hover { background-color: #f0f8ff; }
+        .feedback-message { font-size: 0.85em; margin-top: 4px; min-height: 1.2em; }
         .feedback-message.valid { color: green; }
         .feedback-message.invalid { color: red; }
         input.invalid { border-color: red; }
@@ -91,13 +177,41 @@
                 <h1 class="content-title">Lista de Todas las Embarcaciones Menores</h1>
                 <p style="margin-bottom: 20px; color: #666;">Esta tabla muestra todas las embarcaciones registradas por todos los solicitantes.</p>
 
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-                    <div class="input-group" style="flex: 1; max-width: 500px; margin-bottom: 0;">
-                        <label for="search-input" style="text-align: left;"><i class="fas fa-search"></i> Buscar Embarcación:</label>
-                        <input type="text" id="search-input" class="modal-input" placeholder="Escriba un Nombre o Matrícula para filtrar...">
+                <div class="toolbar-container">
+                    
+                    <div class="toolbar-section">
+                        <div class="search-group">
+                            <label for="search-input"><i class="fas fa-search"></i> Buscar Embarcación:</label>
+                            <input type="text" id="search-input" placeholder="Nombre, Matrícula, Puerto...">
+                        </div>
+
+                        <div class="date-filter-container">
+                            <div class="quick-filters">
+                                <button type="button" class="btn-chip" data-range="today">Hoy</button>
+                                <button type="button" class="btn-chip" data-range="week">7 Días</button>
+                                <button type="button" class="btn-chip" data-range="month">Este Mes</button>
+                            </div>
+                            
+                            <div class="date-inputs-row">
+                                <div class="date-item">
+                                    <label for="filter-date-start">Desde:</label>
+                                    <input type="date" id="filter-date-start">
+                                </div>
+                                <div class="date-item">
+                                    <label for="filter-date-end">Hasta:</label>
+                                    <input type="date" id="filter-date-end">
+                                </div>
+                                <button id="btn-filter-date" class="btn-action btn-filter-go" title="Aplicar Filtro">
+                                    <i class="fas fa-filter"></i>
+                                </button>
+                                <button id="btn-clear-date" class="btn-action btn-filter-clear" title="Borrar Filtros">
+                                    <i class="fas fa-eraser"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <button id="btn-exportar-pdf" class="btn btn-danger" style="display: flex; align-items: center; gap: 8px; height: fit-content;">
+                    <button id="btn-exportar-pdf" class="btn btn-danger" style="height: 40px; display: flex; align-items: center; gap: 8px;">
                         <i class="fas fa-file-pdf"></i> Exportar Lista PDF
                     </button>
                 </div>
@@ -112,7 +226,7 @@
                                 <th>Marca Motor</th>
                                 <th>Potencia (HP)</th>
                                 <th>Puerto Base</th>
-                                <th style="text-align: center;">Ficha</th>
+                                <th style="text-align: center;">Descargar</th>
                                 <th>Acciones</th> 
                             </tr>
                         </thead>

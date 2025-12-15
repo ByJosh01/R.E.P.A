@@ -5,14 +5,16 @@ const pdfService = require('../services/pdfGenerator'); // Importar servicio PDF
 const { validationResult } = require('express-validator');
 
 // Obtener lista de embarcaciones (Usuario o SuperAdmin)
-// backend/controllers/embarcacionMenorController.js
-
 exports.getEmbarcaciones = async (req, res) => {
     try {
         let embarcaciones = [];
+        // Capturamos los filtros que vienen del Frontend
+        const { search, startDate, endDate } = req.query;
+
         // MODIFICACIÓN: Permitir que 'admin' también vea todas las embarcaciones
         if (req.user.rol === 'superadmin' || req.user.rol === 'admin') { 
-            embarcaciones = await embarcacionMenorModel.getAll();
+            // Pasamos los filtros de fecha y búsqueda al modelo
+            embarcaciones = await embarcacionMenorModel.getAll(search, startDate, endDate);
         } else {
             // Lógica para usuario 'solicitante' normal
             const solicitanteId = req.user.solicitante_id;
@@ -20,6 +22,7 @@ exports.getEmbarcaciones = async (req, res) => {
                 // Si es un usuario nuevo sin perfil de solicitante aún
                 return res.status(200).json([]); 
             }
+            // Los usuarios normales ven solo sus registros
             embarcaciones = await embarcacionMenorModel.getBySolicitanteId(solicitanteId);
         }
         res.status(200).json(embarcaciones);
@@ -119,8 +122,12 @@ exports.deleteEmbarcacion = async (req, res) => {
 exports.exportarPdf = async (req, res) => {
     try {
         let embarcaciones = [];
-        if (req.user.rol === 'superadmin') {
-            embarcaciones = await embarcacionMenorModel.getAll();
+        // Capturar filtros también para el PDF
+        const { search, startDate, endDate } = req.query;
+
+        if (req.user.rol === 'superadmin' || req.user.rol === 'admin') {
+            // Generar PDF con los filtros aplicados
+            embarcaciones = await embarcacionMenorModel.getAll(search, startDate, endDate);
         } else {
             const solicitanteId = req.user.solicitante_id;
             if (!solicitanteId) return res.status(404).json({ message: 'Solicitante no encontrado.' });
@@ -128,7 +135,7 @@ exports.exportarPdf = async (req, res) => {
         }
 
         if (!embarcaciones || embarcaciones.length === 0) {
-            return res.status(404).json({ message: 'No hay embarcaciones para exportar.' });
+            return res.status(404).json({ message: 'No hay embarcaciones para exportar con los filtros seleccionados.' });
         }
         await pdfService.generateEmbarcacionesListPDF(embarcaciones, res);
     } catch (error) {

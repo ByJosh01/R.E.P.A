@@ -10,10 +10,34 @@ embarcacionMenorModel.getBySolicitanteId = async (solicitanteId) => {
     return rows;
 };
 
-// ▼▼▼ FUNCIÓN FALTANTE (AGREGADA) ▼▼▼
-// Obtiene TODAS las embarcaciones registradas (para SuperAdmin)
-embarcacionMenorModel.getAll = async () => {
-    const [rows] = await pool.query('SELECT * FROM embarcaciones_menores');
+// ▼▼▼ FUNCIÓN MODIFICADA PARA FILTROS ▼▼▼
+// Obtiene TODAS las embarcaciones registradas (para Admin/SuperAdmin)
+// Soporta búsqueda y rangos de fecha sobre 'fecha_actualizacion'
+embarcacionMenorModel.getAll = async (search, startDate, endDate) => {
+    let query = 'SELECT * FROM embarcaciones_menores WHERE 1=1';
+    const params = [];
+
+    // 1. Filtro por Texto (Nombre o Matrícula)
+    if (search) {
+        query += ' AND (nombre_embarcacion LIKE ? OR matricula LIKE ?)';
+        params.push(`%${search}%`, `%${search}%`);
+    }
+
+    // 2. Filtro por Fecha Inicio
+    if (startDate) {
+        query += ' AND DATE(fecha_actualizacion) >= ?';
+        params.push(startDate);
+    }
+
+    // 3. Filtro por Fecha Fin
+    if (endDate) {
+        query += ' AND DATE(fecha_actualizacion) <= ?';
+        params.push(endDate);
+    }
+
+    query += ' ORDER BY fecha_actualizacion DESC';
+
+    const [rows] = await pool.query(query, params);
     return rows;
 };
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
@@ -55,6 +79,9 @@ embarcacionMenorModel.updateById = async (id, data) => {
     if (Object.keys(dataToUpdate).length === 0) {
         return { affectedRows: 0 };
     }
+
+    // Actualizamos también la fecha de actualización
+    dataToUpdate.fecha_actualizacion = new Date();
 
     const [result] = await pool.query('UPDATE embarcaciones_menores SET ? WHERE id = ?', [dataToUpdate, id]);
     return result;

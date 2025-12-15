@@ -73,6 +73,25 @@ function ajustarUIporRol() {
     }
 }
 
+// --- UTILIDADES DE FECHA PARA EL FILTRO AMIGABLE ---
+const formatDateISO = (date) => {
+    return date.toISOString().split('T')[0];
+};
+
+const getTodayDate = () => formatDateISO(new Date());
+
+const getDaysAgoDate = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return formatDateISO(date);
+};
+
+const getFirstDayOfMonth = () => {
+    const date = new Date();
+    date.setDate(1);
+    return formatDateISO(date);
+};
+
 window.addEventListener('pageshow', (event) => {
     if (event.persisted) ajustarUIporRol();
 });
@@ -119,21 +138,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeInfoModalBtn.addEventListener('click', confirmHandler, { once: true });
     };
 
-    // --- TABLA Y BÚSQUEDA ---
+    // --- REFERENCIAS DE FILTROS ---
     const tableBody = document.getElementById('embarcaciones-table-body');
     const searchInput = document.getElementById('search-input'); 
+    
+    // Controles de fecha
+    const dateStartInput = document.getElementById('filter-date-start');
+    const dateEndInput = document.getElementById('filter-date-end');
+    const btnFilterDate = document.getElementById('btn-filter-date');
+    const btnClearDate = document.getElementById('btn-clear-date');
+    
+    // Botones rápidos (Chips)
+    const quickFilterButtons = document.querySelectorAll('.btn-chip');
 
+    // --- RENDERIZADO DE TABLA ---
     const renderTabla = (embarcaciones) => { 
         tableBody.innerHTML = '';
         if (embarcaciones.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No se encontraron embarcaciones.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No se encontraron embarcaciones para el criterio seleccionado.</td></tr>';
             return;
         }
 
         embarcaciones.forEach(e => {
             const row = tableBody.insertRow();
             
-            // Botón PDF Individual (NUEVO)
+            // Botón PDF Individual
             const pdfButtonHtml = `
                 <button class="btn-icon btn-download-emb-pdf" data-id="${e.id}" title="Descargar Ficha Técnica">
                     <i class="fas fa-file-pdf"></i>
@@ -157,30 +186,108 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
+    // --- BUSCADOR EN TIEMPO REAL ---
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             const searchTerm = searchInput.value.toLowerCase().trim();
             const filteredEmbarcaciones = allEmbarcaciones.filter(e => {
                 const nombre = (e.nombre_embarcacion || '').toLowerCase();
                 const matricula = (e.matricula || '').toLowerCase();
-                return nombre.includes(searchTerm) || matricula.includes(searchTerm);
+                const puerto = (e.puerto_base || '').toLowerCase();
+                return nombre.includes(searchTerm) || matricula.includes(searchTerm) || puerto.includes(searchTerm);
             });
             renderTabla(filteredEmbarcaciones);
         });
     }
 
-    const cargarDatosIniciales = async () => {
+    // --- CARGA DE DATOS ---
+    const cargarDatosIniciales = async (startDate = '', endDate = '') => {
+        tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Cargando datos...</td></tr>';
+        
         try {
-            // Se asume que el backend usa '/api/embarcaciones' como prefijo para estas rutas
-            const response = await fetch('/api/embarcaciones', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            let url = '/api/embarcaciones';
+            const params = new URLSearchParams();
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+            
+            if (startDate || endDate) {
+                url += `?${params.toString()}`;
+            }
+
+            const response = await fetch(url, { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!response.ok) throw new Error('No se pudieron cargar los datos.');
+            
             allEmbarcaciones = await response.json(); 
             renderTabla(allEmbarcaciones); 
+            
+            // Reaplicar filtro de texto si existe
+            if (searchInput && searchInput.value.trim() !== '') {
+                searchInput.dispatchEvent(new Event('input'));
+            }
+
         } catch (error) {
             if(tableBody) tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: red;">${error.message}</td></tr>`;
         }
     };
+
+    // Carga inicial
     cargarDatosIniciales();
+
+    // --- LÓGICA DE FILTROS ---
+
+    // 1. Botón "Aplicar Filtro" (icono filtro)
+    if (btnFilterDate) {
+        btnFilterDate.addEventListener('click', () => {
+            // Quitar selección visual de chips
+            quickFilterButtons.forEach(btn => btn.classList.remove('active'));
+            
+            const start = dateStartInput.value;
+            const end = dateEndInput.value;
+            cargarDatosIniciales(start, end);
+        });
+    }
+
+    // 2. Botón "Limpiar" (icono goma)
+    const clearFilters = () => {
+        dateStartInput.value = '';
+        dateEndInput.value = '';
+        quickFilterButtons.forEach(btn => btn.classList.remove('active'));
+        cargarDatosIniciales();
+    };
+
+    if (btnClearDate) {
+        btnClearDate.addEventListener('click', clearFilters);
+    }
+
+    // 3. Botones Rápidos (Chips)
+    quickFilterButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // Manejo visual (clase active)
+            quickFilterButtons.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+
+            const rangeType = e.target.dataset.range;
+            const today = getTodayDate();
+            let start = '';
+            let end = today; // El fin siempre es hoy por defecto
+
+            if (rangeType === 'today') {
+                start = today;
+            } else if (rangeType === 'week') {
+                start = getDaysAgoDate(7);
+            } else if (rangeType === 'month') {
+                start = getFirstDayOfMonth();
+            }
+
+            // Llenar inputs visualmente
+            dateStartInput.value = start;
+            dateEndInput.value = end;
+
+            // Ejecutar filtro automáticamente
+            cargarDatosIniciales(start, end);
+        });
+    });
+
 
     // ============================================================
     // === LÓGICA DEL MODAL DE EDICIÓN ===
@@ -200,7 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const editFormFields = {};
     fields.forEach(f => editFormFields[f] = document.getElementById(`edit-${f}`));
 
-    // 1. BOTONES DE AYUDA Y MATRÍCULA
+    // BOTONES DE AYUDA Y MATRÍCULA (Edición)
     const btnEditOrdinal = document.getElementById('btn-insert-ordinal-edit');
     const btnHelpEdit = document.getElementById('btn-help-matricula-edit');
     const matriculaHelpModal = document.getElementById('matricula-help-modal');
@@ -228,7 +335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 2. VALIDACIÓN (Tu lógica original)
+    // VALIDACIÓN (Tu lógica original)
     const setupFormValidation = (form) => {
         const matriculaRegex = /^6ª\s[A-Z]{2}-\d{1}-\d{1,4}-\d{2}$/;
         const fieldRules = {
@@ -281,7 +388,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     if (editForm) setupFormValidation(editForm);
 
-    // 3. ABRIR MODAL
+    // ABRIR MODAL
     const openEditModal = async (id) => {
         editErrorMsg.style.display = 'none';
         editForm.reset(); 
@@ -289,7 +396,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         editForm.querySelectorAll('.feedback-message').forEach(el => el.textContent = '');
 
         try {
-            // Aseguramos la ruta correcta con el ID
             const res = await fetch(`/api/embarcaciones/${id}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!res.ok) throw new Error('No se pudo cargar la información.');
             const embarcacion = await res.json();
@@ -308,7 +414,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // --- EVENT LISTENER UNIFICADO DE TABLA (Edición y PDF) ---
+    // EVENT LISTENER UNIFICADO DE TABLA (Edición y PDF)
     tableBody.addEventListener('click', async (e) => {
         
         // 1. PDF Individual
@@ -320,7 +426,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
             try {
-                // Ruta hacia el controlador ADMIN que gestiona este PDF
                 const res = await fetch(`/api/admin/embarcacion-pdf/${id}`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
@@ -338,7 +443,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 pdfBtn.disabled = false;
                 pdfBtn.innerHTML = original;
             }
-            return; // Importante para no activar otras acciones
+            return;
         }
 
         // 2. Editar
@@ -346,7 +451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (editButton) openEditModal(editButton.dataset.id);
     });
 
-    // 4. CERRAR MODAL
+    // CERRAR MODAL
     if (closeEditModalBtn) {
         closeEditModalBtn.addEventListener('click', () => {
             editModal.classList.remove('visible');
@@ -359,7 +464,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 5. GUARDAR CAMBIOS
+    // GUARDAR CAMBIOS
     if (editForm) {
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault(); 
@@ -400,7 +505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (index !== -1) {
                     allEmbarcaciones[index] = { ...allEmbarcaciones[index], ...data };
                 }
-                searchInput.dispatchEvent(new Event('input')); 
+                if (searchInput) searchInput.dispatchEvent(new Event('input')); 
 
                 editModal.classList.remove('visible');
                 showInfoModal('Éxito', resData.message, true); 
@@ -417,7 +522,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- MENÚ DE USUARIO ---
+    // MENÚ DE USUARIO
     const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
     const userMenuTrigger = document.getElementById('user-menu-trigger');
     const userDropdown = document.getElementById('user-dropdown');
@@ -470,35 +575,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // ==========================================================
-    // ==== LÓGICA: BOTÓN EXPORTAR PDF (LISTA GENERAL) ====
-    // ==========================================================
+    // BOTÓN EXPORTAR PDF
     const btnExportarPdf = document.getElementById('btn-exportar-pdf');
     if (btnExportarPdf) {
         btnExportarPdf.addEventListener('click', async () => {
             try {
-                const originalContent = btnExportarPdf.innerHTML;
+                const start = dateStartInput.value;
+                const end = dateEndInput.value;
+
                 btnExportarPdf.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
                 btnExportarPdf.disabled = true;
 
-                // URL limpia usando el prefijo '/api/embarcaciones'
-                const response = await fetch('/api/embarcaciones/exportar-pdf', {
+                let url = '/api/embarcaciones/exportar-pdf';
+                const params = new URLSearchParams();
+                if (start) params.append('startDate', start);
+                if (end) params.append('endDate', end);
+                if (start || end) url += `?${params.toString()}`;
+
+                const response = await fetch(url, {
                     method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
 
                 if (response.ok) {
                     const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
+                    const urlBlob = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
-                    a.href = url;
+                    a.href = urlBlob;
                     a.download = `Lista_Embarcaciones_${new Date().toISOString().slice(0,10)}.pdf`;
                     document.body.appendChild(a);
                     a.click();
                     a.remove();
-                    window.URL.revokeObjectURL(url);
+                    window.URL.revokeObjectURL(urlBlob);
                 } else {
                     const errorData = await response.json();
                     showInfoModal('Error', 'Error al descargar PDF: ' + (errorData.message || 'Error desconocido'), false);
