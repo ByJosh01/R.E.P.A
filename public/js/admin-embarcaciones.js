@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         infoModalTitle.textContent = title;
         infoModalContent.innerHTML = content.startsWith('<div') ? content : `<p style="text-align: center;">${content}</p>`;
         infoModalIcon.className = 'modal-icon fas';
-        infoModalIcon.classList.remove('fa-check-circle', 'fa-times-circle', 'success', 'error'); // Limpiar clases previas
+        infoModalIcon.classList.remove('fa-check-circle', 'fa-times-circle', 'success', 'error'); 
         infoModalIcon.classList.add(isSuccess ? 'fa-check-circle' : 'fa-times-circle', isSuccess ? 'success' : 'error');
         infoModal.classList.add('visible');
         
@@ -126,12 +126,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const renderTabla = (embarcaciones) => { 
         tableBody.innerHTML = '';
         if (embarcaciones.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No se encontraron embarcaciones.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No se encontraron embarcaciones.</td></tr>';
             return;
         }
 
         embarcaciones.forEach(e => {
             const row = tableBody.insertRow();
+            
+            // Botón PDF Individual (NUEVO)
+            const pdfButtonHtml = `
+                <button class="btn-icon btn-download-emb-pdf" data-id="${e.id}" title="Descargar Ficha Técnica">
+                    <i class="fas fa-file-pdf"></i>
+                </button>
+            `;
+
             row.innerHTML = `
                 <td>${e.nombre_embarcacion || 'N/A'}</td>
                 <td>${e.matricula || 'N/A'}</td>
@@ -139,6 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${e.marca || 'N/A'}</td>
                 <td>${e.potencia_hp || 'N/A'}</td>
                 <td>${e.puerto_base || 'N/A'}</td>
+                <td style="text-align: center;">${pdfButtonHtml}</td>
                 <td class="actions-cell">
                     <button class="btn-icon btn-edit" data-id="${e.id}" title="Editar">
                         <i class="fas fa-pencil-alt"></i> 
@@ -148,15 +157,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    searchInput.addEventListener('input', () => {
-        const searchTerm = searchInput.value.toLowerCase().trim();
-        const filteredEmbarcaciones = allEmbarcaciones.filter(e => {
-            const nombre = (e.nombre_embarcacion || '').toLowerCase();
-            const matricula = (e.matricula || '').toLowerCase();
-            return nombre.includes(searchTerm) || matricula.includes(searchTerm);
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const filteredEmbarcaciones = allEmbarcaciones.filter(e => {
+                const nombre = (e.nombre_embarcacion || '').toLowerCase();
+                const matricula = (e.matricula || '').toLowerCase();
+                return nombre.includes(searchTerm) || matricula.includes(searchTerm);
+            });
+            renderTabla(filteredEmbarcaciones);
         });
-        renderTabla(filteredEmbarcaciones);
-    });
+    }
 
     const cargarDatosIniciales = async () => {
         try {
@@ -166,7 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             allEmbarcaciones = await response.json(); 
             renderTabla(allEmbarcaciones); 
         } catch (error) {
-            tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">${error.message}</td></tr>`;
+            if(tableBody) tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: red;">${error.message}</td></tr>`;
         }
     };
     cargarDatosIniciales();
@@ -297,7 +308,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    tableBody.addEventListener('click', (e) => {
+    // --- EVENT LISTENER UNIFICADO DE TABLA (Edición y PDF) ---
+    tableBody.addEventListener('click', async (e) => {
+        
+        // 1. PDF Individual
+        const pdfBtn = e.target.closest('.btn-download-emb-pdf');
+        if (pdfBtn && !pdfBtn.disabled) {
+            const id = pdfBtn.dataset.id;
+            const original = pdfBtn.innerHTML;
+            pdfBtn.disabled = true;
+            pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            try {
+                // Ruta hacia el controlador ADMIN que gestiona este PDF
+                const res = await fetch(`/api/admin/embarcacion-pdf/${id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if(!res.ok) throw new Error('Error al descargar');
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Embarcacion_${id}.pdf`;
+                document.body.appendChild(a); a.click(); a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                showInfoModal('Error', 'No se pudo descargar la ficha técnica.', false);
+            } finally {
+                pdfBtn.disabled = false;
+                pdfBtn.innerHTML = original;
+            }
+            return; // Importante para no activar otras acciones
+        }
+
+        // 2. Editar
         const editButton = e.target.closest('.btn-edit');
         if (editButton) openEditModal(editButton.dataset.id);
     });
@@ -427,7 +471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ==========================================================
-    // ==== LÓGICA: BOTÓN EXPORTAR PDF (AGREGADA AL FINAL) ====
+    // ==== LÓGICA: BOTÓN EXPORTAR PDF (LISTA GENERAL) ====
     // ==========================================================
     const btnExportarPdf = document.getElementById('btn-exportar-pdf');
     if (btnExportarPdf) {
@@ -437,7 +481,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btnExportarPdf.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
                 btnExportarPdf.disabled = true;
 
-                // URL limpia usando el prefijo '/api/embarcaciones' definido en server.js
+                // URL limpia usando el prefijo '/api/embarcaciones'
                 const response = await fetch('/api/embarcaciones/exportar-pdf', {
                     method: 'GET',
                     headers: {

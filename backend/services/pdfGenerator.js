@@ -930,7 +930,111 @@ const generateIntegranteIndividualPdf = async (req, res) => {
 };
 
 
-// Exportar ambas funciones
+
+// --- NUEVA FUNCIÓN: PDF INDIVIDUAL DE EMBARCACIÓN MENOR (FICHA TÉCNICA) ---
+const generateEmbarcacionIndividualPdf = async (req, res) => {
+    try {
+        const embarcacionId = req.params.id;
+        
+        // 1. Obtener datos de la embarcación y el nombre del dueño para referencia
+        const query = `
+            SELECT e.*, s.nombre, s.apellido_paterno, s.apellido_materno
+            FROM embarcaciones_menores e 
+            JOIN solicitantes s ON e.solicitante_id = s.solicitante_id 
+            WHERE e.id = ?
+        `;
+        const [rows] = await pool.query(query, [embarcacionId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Embarcación no encontrada.' });
+        }
+        const emb = rows[0];
+        const nombrePropietario = [emb.nombre, emb.apellido_paterno, emb.apellido_materno].filter(Boolean).join(' ');
+
+        const doc = new PDFDocument({ margin: 50, size: 'LETTER', bufferPages: true });
+
+        // Fuentes y Estilos
+        let FONT_NORMAL = 'Helvetica';
+        let FONT_BOLD = 'Helvetica-Bold';
+        try {
+            const fontPathRegular = path.join(__dirname, '..', 'assets', 'fonts', 'Roboto-Regular.ttf');
+            const fontPathBold = path.join(__dirname, '..', 'assets', 'fonts', 'Roboto-Bold.ttf');
+            doc.registerFont('Roboto-Regular', fontPathRegular);
+            doc.registerFont('Roboto-Bold', fontPathBold);
+            FONT_NORMAL = 'Roboto-Regular';
+            FONT_BOLD = 'Roboto-Bold';
+        } catch (e) {}
+
+        const PRIMARY_RED = '#800020';
+        const TEXT_COLOR = '#333333';
+
+        // Nombre de archivo seguro
+        const matriculaSafe = (emb.matricula || emb.id).toString().replace(/[^a-zA-Z0-9]/g, '_');
+        const filename = `Ficha_Embarcacion_${matriculaSafe}.pdf`;
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+        doc.pipe(res);
+
+        // Encabezado
+        const logoPath = path.join(__dirname, '..', 'SEDARPA.png');
+        if (fs.existsSync(logoPath)) {
+            doc.image(logoPath, 50, 40, { width: 80 });
+        }
+
+        doc.moveDown(1);
+        doc.fontSize(16).font(FONT_BOLD).fillColor(PRIMARY_RED).text('Sistema R.E.P.A.', { align: 'center' });
+        doc.fontSize(14).text('Ficha Técnica de Embarcación Menor', { align: 'center' });
+        doc.fontSize(10).font(FONT_NORMAL).fillColor(TEXT_COLOR).text(`Fecha de Emisión: ${new Date().toLocaleDateString('es-MX')}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // --- DATOS ESPECÍFICOS DE LA EMBARCACIÓN ---
+        let currentY = doc.y;
+        const startX = 70;
+        
+        const addDataRow = (label, value) => {
+            doc.fontSize(10).font(FONT_BOLD).fillColor(PRIMARY_RED).text(label + ':', startX, currentY);
+            doc.font(FONT_NORMAL).fillColor(TEXT_COLOR).text(value || 'N/A', startX + 130, currentY);
+            currentY += 20;
+        };
+
+        // Sección 1: Identificación y Propiedad
+        doc.fontSize(12).font(FONT_BOLD).text('Datos de Identificación', 50, currentY);
+        doc.moveTo(50, currentY + 15).lineTo(550, currentY + 15).strokeColor(PRIMARY_RED).stroke();
+        currentY += 30;
+
+        addDataRow('Nombre Embarcación', emb.nombre_embarcacion);
+        addDataRow('Matrícula', emb.matricula);
+        addDataRow('Puerto Base', emb.puerto_base);
+        addDataRow('Propietario', nombrePropietario);
+
+        // Sección 2: Especificaciones Técnicas
+        currentY += 15;
+        doc.fontSize(12).font(FONT_BOLD).text('Especificaciones Técnicas y Motor', 50, currentY);
+        doc.moveTo(50, currentY + 15).lineTo(550, currentY + 15).strokeColor(PRIMARY_RED).stroke();
+        currentY += 30;
+
+        addDataRow('Tonelaje Neto', `${emb.tonelaje_neto || '0'} Ton.`);
+        addDataRow('Marca Motor', emb.marca);
+        addDataRow('No. Serie Motor', emb.numero_serie);
+        addDataRow('Potencia', `${emb.potencia_hp || '0'} HP`);
+
+        // Pie de página
+        const range = doc.bufferedPageRange();
+        for (let i = range.start; i < range.count; i++) {
+            doc.switchToPage(i);
+            doc.fontSize(8).fillColor('#999').text('Documento generado por el sistema REPA - SEDARPA', 50, doc.page.height - 40, { align: 'center' });
+        }
+
+        doc.end();
+
+    } catch (error) {
+        console.error("Error generando PDF embarcación:", error);
+        if (!res.headersSent) res.status(500).send("Error al generar PDF");
+    }
+};
+
+// ... NO OLVIDES AGREGARLO AL EXPORT ...
 module.exports = {
     generateRegistroPdf,
     generateGeneralReportPdf,
@@ -939,5 +1043,9 @@ module.exports = {
     generateEmbarcacionesListPDF,
     generateUsuarioIndividualPdf,
     generateIntegranteIndividualPdf,
+    generateEmbarcacionIndividualPdf // <--- NUEVA FUNCIÓN AGREGADA
 };
+
+
+
 

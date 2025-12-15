@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <script src="/js/auth-guard.js"></script>
+    <script src="js/auth-guard.js"></script>
     <title>Admin - Todas las Embarcaciones</title>
     
     <link rel="stylesheet" href="css/style.css">
@@ -64,7 +64,7 @@
         
         <header class="content-header">
             <div>
-                <i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración
+                <i class="fas fa-ship" style="margin-right: 10px;"></i> Panel de Administración
             </div>
              <div class="user-menu">
                 <div class="user-menu-trigger" id="user-menu-trigger">
@@ -112,11 +112,12 @@
                                 <th>Marca Motor</th>
                                 <th>Potencia (HP)</th>
                                 <th>Puerto Base</th>
+                                <th style="text-align: center;">Ficha</th>
                                 <th>Acciones</th> 
                             </tr>
                         </thead>
                         <tbody id="embarcaciones-table-body">
-                            <tr><td colspan="7" style="text-align: center;">Cargando datos...</td></tr>
+                            <tr><td colspan="8" style="text-align: center;">Cargando datos...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -214,6 +215,6 @@
         </div>
     </div>
 
-    <script src="js/admin-embarcaciones.js"></script>
+    <script type="module" src="js/admin-embarcaciones.js"></script>
 </body>
 </html>

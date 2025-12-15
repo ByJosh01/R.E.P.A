@@ -35,8 +35,7 @@ router.put('/solicitantes/:id',
     isAdminOrSuperAdmin, 
     [
         param('id', 'El ID del solicitante no es válido').isInt({ min: 1 }),
-        
-        // Validaciones (Opcionales para permitir actualización parcial)
+        // Validaciones opcionales
         body('nombre').optional({ checkFalsy: true }).trim().escape(),
         body('apellidoPaterno').optional({ checkFalsy: true }).trim().escape(),
         body('apellidoMaterno').optional({ checkFalsy: true }).trim().escape(),
@@ -71,7 +70,6 @@ router.get('/solicitante-detalles/:id',
 // --- 2. GESTIÓN DE INTEGRANTES ---
 router.get('/integrantes', protect, isAdminOrSuperAdmin, adminController.getAllIntegrantes);
 
-// NUEVA RUTA: Descargar PDF Individual de Integrante
 router.get('/integrante-pdf/:id', 
     protect, 
     isAdminOrSuperAdmin, 
@@ -80,7 +78,6 @@ router.get('/integrante-pdf/:id',
     ],
     adminController.downloadIntegranteIndividualPdf
 );
-
 
 // --- 3. GESTIÓN DE EMBARCACIONES ---
 router.get('/embarcaciones', protect, isAdminOrSuperAdmin, adminController.getAllEmbarcaciones);
@@ -99,7 +96,6 @@ router.put('/embarcaciones/:id',
     isAdminOrSuperAdmin, 
     [
         param('id', 'El ID de la embarcación no es válido').isInt({ min: 1 }),
-        
         body('nombre_embarcacion', 'El nombre de la embarcación es obligatorio').not().isEmpty().trim().escape(),
         body('matricula', 'La matrícula es obligatoria').not().isEmpty().trim().escape(),
         body('tonelaje_neto', 'El tonelaje debe ser un número positivo').optional({ checkFalsy: true }).isFloat({ min: 0 }).toFloat(),
@@ -111,7 +107,17 @@ router.put('/embarcaciones/:id',
     adminController.updateEmbarcacionById
 );
 
-// --- 4. REPORTES PDF GENERALES (Solicitantes) ---
+// --- NUEVA RUTA: Descargar PDF Individual de Embarcación ---
+router.get('/embarcacion-pdf/:id', 
+    protect, 
+    isAdminOrSuperAdmin, 
+    [
+        param('id', 'El ID de la embarcación no es válido').isInt({ min: 1 })
+    ],
+    adminController.downloadEmbarcacionIndividualPdf
+);
+
+// --- 4. REPORTES PDF GENERALES ---
 router.get('/download-pdf/:solicitanteId', 
     protect, 
     isAdminOrSuperAdmin, 
@@ -145,7 +151,6 @@ router.put('/usuarios/:id',
     isSuperAdmin, 
     [
         param('id', 'El ID de usuario no es válido').isInt({ min: 1 }),
-        
         body('email', 'El email no es válido').not().isEmpty().isEmail().normalizeEmail(),
         body('curp', 'El CURP debe tener 18 caracteres').not().isEmpty().isLength({ min: 18, max: 18 }).trim().escape(),
         body('rol', 'El rol no es válido').not().isEmpty().isIn(['solicitante', 'admin', 'superadmin']).trim().escape(),
@@ -153,10 +158,8 @@ router.put('/usuarios/:id',
     adminController.updateUsuario
 );
 
-// Reporte General de Usuarios (Lista Completa)
 router.get('/download-reporte-usuarios', protect, isSuperAdmin, adminController.downloadUsuariosReportPdf);
 
-// NUEVA RUTA: Descargar PDF Individual de Usuario (Ficha)
 router.get('/usuario-pdf/:id', 
     protect, 
     isSuperAdmin, 

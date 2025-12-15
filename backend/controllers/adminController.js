@@ -6,7 +6,15 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const solicitanteModel = require('../models/solicitanteModel');
 const embarcacionMenorModel = require('../models/embarcacionMenorModel');
-const { generateRegistroPdf, generateGeneralReportPdf, generateUsuariosReportPdf } = require('../services/pdfGenerator');
+// Importamos todas las funciones del generador de PDF aquí para evitar problemas de alcance
+const { 
+    generateRegistroPdf, 
+    generateGeneralReportPdf, 
+    generateUsuariosReportPdf,
+    generateUsuarioIndividualPdf,
+    generateIntegranteIndividualPdf,
+    generateEmbarcacionIndividualPdf 
+} = require('../services/pdfGenerator');
 const { validationResult } = require('express-validator');
 
 // ==================================================
@@ -325,7 +333,6 @@ exports.getEmbarcacionById = async (req, res) => {
     }
 };
 
-// [AQUÍ ESTABA EL PROBLEMA, ESTA FUNCIÓN ES CRÍTICA]
 exports.updateEmbarcacionById = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -418,10 +425,6 @@ exports.backupDatabase = async (req, res) => {
     }
 
     // COMANDO FINAL LIMPIO
-    // 1. Quitamos --ssl-mode (Incompatible con MariaDB)
-    // 2. Quitamos --set-gtid-purged (Incompatible con MariaDB)
-    // 3. Quitamos --column-statistics (Incompatible con MariaDB)
-    // 4. Mantenemos --no-tablespaces (Necesario para TiDB y compatible con ambos)
     const command = `mysqldump -h ${host} -P ${port} -u ${user} -p"${password}" ${sslOptions} --no-tablespaces ${database}`;
 
     try {
@@ -473,14 +476,15 @@ exports.downloadUsuariosReportPdf = async (req, res) => {
 // -- Método para recibir la petición y llamar al generador.
 
 exports.downloadUsuarioIndividualPdf = async (req, res) => {
-    // Reutilizamos la función que acabamos de crear
-    const { generateUsuarioIndividualPdf } = require('../services/pdfGenerator');
     await generateUsuarioIndividualPdf(req, res);
 };
 
 // --- NUEVA FUNCIÓN CONTROLADOR PARA PDF INTEGRANTE INDIVIDUAL ---
 exports.downloadIntegranteIndividualPdf = async (req, res) => {
-    // Importamos la función específica del servicio (que crearemos en el siguiente paso)
-    const { generateIntegranteIndividualPdf } = require('../services/pdfGenerator');
     await generateIntegranteIndividualPdf(req, res);
+};
+
+// --- NUEVA FUNCIÓN CONTROLADOR PARA PDF EMBARCACIÓN INDIVIDUAL ---
+exports.downloadEmbarcacionIndividualPdf = async (req, res) => {
+    await generateEmbarcacionIndividualPdf(req, res);
 };
