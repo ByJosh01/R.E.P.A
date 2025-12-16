@@ -147,21 +147,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     window.addEventListener('click', () => { if (userDropdown && userDropdown.classList.contains('active')) { userDropdown.classList.remove('active'); } });
 
-    // --- INFO ADMIN ---
+    // ▼▼▼ AQUÍ ESTÁ LA LÓGICA DINÁMICA DE INFORMACIÓN ▼▼▼
     if (viewAdminInfoBtn) {
         viewAdminInfoBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             try {
+                // Fetch de datos frescos
                 const r = await fetch('/api/perfil', { headers: { 'Authorization': `Bearer ${authToken}` } });
                 if (!r.ok) throw new Error('No se pudo obtener la info.');
                 const p = await r.json();
-                const infoHtml = `<div class="info-row"><label>Nombre:</label> <span>${p.nombre||'N/A'}</span></div><div class="info-row"><label>CURP:</label> <span>${p.curp}</span></div><div class="info-row"><label>RFC:</label> <span>${p.rfc||'N/A'}</span></div><div class="info-row"><label>Email:</label> <span>${p.correo_electronico}</span></div><div class="info-row"><label>Municipio:</label> <span>${p.municipio||'N/A'}</span></div>`;
+
+                // Construcción del Nombre Completo (concatena si hay datos, o 'N/A')
+                const nombreCompleto = [p.nombre, p.apellido_paterno, p.apellido_materno]
+                    .filter(part => part && part.trim() !== '')
+                    .join(' ') || 'N/A';
+
+                const infoHtml = `
+                    <div class="info-row"><label>Nombre:</label> <span>${nombreCompleto}</span></div>
+                    <div class="info-row"><label>CURP:</label> <span>${p.curp || 'N/A'}</span></div>
+                    <div class="info-row"><label>RFC:</label> <span>${p.rfc || 'N/A'}</span></div>
+                    <div class="info-row"><label>Email:</label> <span>${p.correo_electronico}</span></div>
+                    <div class="info-row"><label>Municipio:</label> <span>${p.municipio || 'N/A'}</span></div>
+                `;
+
                 showInfoModal('Información del Administrador', infoHtml, true);
             } catch (err) {
                 showInfoModal('Error', err.message, false);
             }
         });
     }
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
     if (infoModal) infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.remove('visible'); });
 
     // --- LOGOUT ADMIN ---

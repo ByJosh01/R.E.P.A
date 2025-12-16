@@ -14,9 +14,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
-        /* --- ESTILOS MEJORADOS PARA LA BARRA DE HERRAMIENTAS --- */
+        /* Estilos de la barra de herramientas */
         .toolbar-container {
-            background-color: #f8f9fa; /* Fondo gris claro suave */
+            background-color: #f8f9fa;
             border: 1px solid #e9ecef;
             border-radius: 8px;
             padding: 15px;
@@ -27,7 +27,6 @@
             align-items: flex-end;
             justify-content: space-between;
         }
-
         .toolbar-section {
             display: flex;
             flex-wrap: wrap;
@@ -35,8 +34,6 @@
             align-items: flex-end;
             flex: 1;
         }
-
-        /* Buscador */
         .search-group {
             flex: 1;
             min-width: 250px;
@@ -56,20 +53,15 @@
             border-radius: 5px;
             font-size: 0.95rem;
         }
-
-        /* Grupo de Fechas */
         .date-filter-container {
             display: flex;
             flex-direction: column;
             gap: 5px;
         }
-
         .quick-filters {
             display: flex;
             gap: 5px;
         }
-        
-        /* Botones de Filtro Rápido (Chips) */
         .btn-chip {
             background-color: #e2e6ea;
             border: none;
@@ -81,56 +73,26 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        .btn-chip:hover {
-            background-color: #dbe2e8;
-            transform: translateY(-1px);
-        }
-        .btn-chip.active {
-            background-color: #007bff;
-            color: white;
-            box-shadow: 0 2px 4px rgba(0,123,255,0.3);
-        }
-
+        .btn-chip:hover { background-color: #dbe2e8; transform: translateY(-1px); }
+        .btn-chip.active { background-color: #007bff; color: white; box-shadow: 0 2px 4px rgba(0,123,255,0.3); }
         .date-inputs-row {
             display: flex;
             align-items: flex-end;
             gap: 10px;
         }
-
-        .date-item {
-            display: flex;
-            flex-direction: column;
-        }
-        .date-item label {
-            font-size: 0.8rem;
-            color: #6c757d;
-            margin-bottom: 2px;
-        }
-        .date-item input {
-            padding: 6px 10px;
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-            font-size: 0.9rem;
-            color: #495057;
-        }
-
+        .date-item { display: flex; flex-direction: column; }
+        .date-item label { font-size: 0.8rem; color: #6c757d; margin-bottom: 2px; }
+        .date-item input { padding: 6px 10px; border: 1px solid #ced4da; border-radius: 5px; font-size: 0.9rem; color: #495057; }
         .btn-action {
-            height: 35px;
-            width: 35px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 5px;
-            border: none;
-            cursor: pointer;
-            transition: background 0.2s;
+            height: 35px; width: 35px; display: flex; align-items: center; justify-content: center;
+            border-radius: 5px; border: none; cursor: pointer; transition: background 0.2s;
         }
         .btn-filter-go { background-color: #007bff; color: white; }
         .btn-filter-go:hover { background-color: #0056b3; }
         .btn-filter-clear { background-color: #6c757d; color: white; }
         .btn-filter-clear:hover { background-color: #545b62; }
 
-        /* Estilos del modal (Originales) */
+        /* Estilos generales */
         .feedback-message { font-size: 0.85em; margin-top: 4px; min-height: 1.2em; }
         .feedback-message.valid { color: green; }
         .feedback-message.invalid { color: red; }
@@ -171,7 +133,6 @@
                 <p style="margin-bottom: 20px; color: #666;">Esta tabla muestra todos los integrantes registrados por todos los solicitantes.</p>
 
                 <div class="toolbar-container">
-                    
                     <div class="toolbar-section">
                         <div class="search-group">
                             <label for="search-input"><i class="fas fa-search"></i> Buscar Integrante:</label>
@@ -184,7 +145,6 @@
                                 <button type="button" class="btn-chip" data-range="week">7 Días</button>
                                 <button type="button" class="btn-chip" data-range="month">Este Mes</button>
                             </div>
-                            
                             <div class="date-inputs-row">
                                 <div class="date-item">
                                     <label for="filter-date-start">Desde:</label>
@@ -237,7 +197,7 @@
             <i id="admin-info-icon" class="modal-icon fas fa-user-circle success"></i> 
             <h2 id="admin-info-title">Información</h2>
             <div id="admin-info-content" class="admin-info-modal-content">
-                </div>
+            </div>
             <div class="modal-buttons">
                 <button id="close-admin-info-btn" class="btn btn-primary">Cerrar</button>
             </div>
@@ -249,7 +209,6 @@
             <h2>Editar Integrante</h2>
             <form id="edit-integrante-form" class="anexo-form" novalidate>
                 <div class="anexo-grid">
-                    
                     <input type="hidden" id="edit-integrante-id">
                     
                     <div class="anexo-field span-12">
@@ -285,7 +244,6 @@
                     <div class="anexo-field span-12">
                         <small id="edit-error-msg" style="color: red; display: none; width: 100%;"></small>
                     </div>
-
                 </div>
             </form>
             <div class="modal-buttons" style="margin-top: 20px;">

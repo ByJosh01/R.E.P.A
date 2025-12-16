@@ -73,19 +73,14 @@ function ajustarUIporRol() {
     }
 }
 
-// --- UTILIDADES DE FECHA PARA EL FILTRO AMIGABLE ---
-const formatDateISO = (date) => {
-    return date.toISOString().split('T')[0];
-};
-
+// --- UTILIDADES DE FECHA ---
+const formatDateISO = (date) => date.toISOString().split('T')[0];
 const getTodayDate = () => formatDateISO(new Date());
-
 const getDaysAgoDate = (days) => {
     const date = new Date();
     date.setDate(date.getDate() - days);
     return formatDateISO(date);
 };
-
 const getFirstDayOfMonth = () => {
     const date = new Date();
     date.setDate(1);
@@ -142,13 +137,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tableBody = document.getElementById('embarcaciones-table-body');
     const searchInput = document.getElementById('search-input'); 
     
-    // Controles de fecha
     const dateStartInput = document.getElementById('filter-date-start');
     const dateEndInput = document.getElementById('filter-date-end');
     const btnFilterDate = document.getElementById('btn-filter-date');
     const btnClearDate = document.getElementById('btn-clear-date');
-    
-    // Botones rápidos (Chips)
     const quickFilterButtons = document.querySelectorAll('.btn-chip');
 
     // --- RENDERIZADO DE TABLA ---
@@ -234,20 +226,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     cargarDatosIniciales();
 
     // --- LÓGICA DE FILTROS ---
-
-    // 1. Botón "Aplicar Filtro" (icono filtro)
     if (btnFilterDate) {
         btnFilterDate.addEventListener('click', () => {
-            // Quitar selección visual de chips
             quickFilterButtons.forEach(btn => btn.classList.remove('active'));
-            
             const start = dateStartInput.value;
             const end = dateEndInput.value;
             cargarDatosIniciales(start, end);
         });
     }
 
-    // 2. Botón "Limpiar" (icono goma)
     const clearFilters = () => {
         dateStartInput.value = '';
         dateEndInput.value = '';
@@ -259,35 +246,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnClearDate.addEventListener('click', clearFilters);
     }
 
-    // 3. Botones Rápidos (Chips)
     quickFilterButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            // Manejo visual (clase active)
             quickFilterButtons.forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
-
             const rangeType = e.target.dataset.range;
             const today = getTodayDate();
-            let start = '';
-            let end = today; // El fin siempre es hoy por defecto
-
-            if (rangeType === 'today') {
-                start = today;
-            } else if (rangeType === 'week') {
-                start = getDaysAgoDate(7);
-            } else if (rangeType === 'month') {
-                start = getFirstDayOfMonth();
-            }
-
-            // Llenar inputs visualmente
+            let start = '', end = today;
+            if (rangeType === 'today') start = today;
+            else if (rangeType === 'week') start = getDaysAgoDate(7);
+            else if (rangeType === 'month') start = getFirstDayOfMonth();
             dateStartInput.value = start;
             dateEndInput.value = end;
-
-            // Ejecutar filtro automáticamente
             cargarDatosIniciales(start, end);
         });
     });
-
 
     // ============================================================
     // === LÓGICA DEL MODAL DE EDICIÓN ===
@@ -307,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const editFormFields = {};
     fields.forEach(f => editFormFields[f] = document.getElementById(`edit-${f}`));
 
-    // BOTONES DE AYUDA Y MATRÍCULA (Edición)
+    // BOTONES DE AYUDA Y MATRÍCULA
     const btnEditOrdinal = document.getElementById('btn-insert-ordinal-edit');
     const btnHelpEdit = document.getElementById('btn-help-matricula-edit');
     const matriculaHelpModal = document.getElementById('matricula-help-modal');
@@ -335,7 +308,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // VALIDACIÓN (Tu lógica original)
+    // VALIDACIÓN
     const setupFormValidation = (form) => {
         const matriculaRegex = /^6ª\s[A-Z]{2}-\d{1}-\d{1,4}-\d{2}$/;
         const fieldRules = {
@@ -414,10 +387,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // EVENT LISTENER UNIFICADO DE TABLA (Edición y PDF)
+    // EVENT LISTENER UNIFICADO DE TABLA
     tableBody.addEventListener('click', async (e) => {
-        
-        // 1. PDF Individual
         const pdfBtn = e.target.closest('.btn-download-emb-pdf');
         if (pdfBtn && !pdfBtn.disabled) {
             const id = pdfBtn.dataset.id;
@@ -446,7 +417,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // 2. Editar
         const editButton = e.target.closest('.btn-edit');
         if (editButton) openEditModal(editButton.dataset.id);
     });
@@ -468,24 +438,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (editForm) {
         editForm.addEventListener('submit', async (e) => {
             e.preventDefault(); 
-            
             editForm.querySelectorAll('input').forEach(input => input.dispatchEvent(new Event('input', { bubbles: true })));
-            
-            const firstInvalidElement = editForm.querySelector('.invalid');
-            if (firstInvalidElement) {
+            if (editForm.querySelector('.invalid')) {
                 editErrorMsg.textContent = 'Por favor, revisa y corrige los campos marcados en rojo.';
                 editErrorMsg.style.display = 'block';
-                firstInvalidElement.focus();
                 return;
             }
 
             const id = editIdField.value;
             const submitButton = editModal.querySelector('button[type="submit"]');
-
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.textContent = 'Guardando...';
-            }
+            if (submitButton) { submitButton.disabled = true; submitButton.textContent = 'Guardando...'; }
             editErrorMsg.style.display = 'none';
             
             const data = {};
@@ -493,31 +455,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 const res = await fetch(`/api/embarcaciones/${id}`, {
-                    method: 'PUT', 
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                     body: JSON.stringify(data)
                 });
-
                 const resData = await res.json();
                 if (!res.ok) throw new Error(resData.message || 'Error al guardar.');
-                
                 const index = allEmbarcaciones.findIndex(em => em.id == id);
-                if (index !== -1) {
-                    allEmbarcaciones[index] = { ...allEmbarcaciones[index], ...data };
-                }
+                if (index !== -1) allEmbarcaciones[index] = { ...allEmbarcaciones[index], ...data };
                 if (searchInput) searchInput.dispatchEvent(new Event('input')); 
-
                 editModal.classList.remove('visible');
                 showInfoModal('Éxito', resData.message, true); 
-
             } catch (error) {
                 editErrorMsg.textContent = error.message;
                 editErrorMsg.style.display = 'block';
             } finally {
-                if (submitButton) {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Guardar Cambios';
-                }
+                if (submitButton) { submitButton.disabled = false; submitButton.textContent = 'Guardar Cambios'; }
             }
         });
     }
@@ -543,6 +495,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (userDropdown?.classList.contains('active')) userDropdown.classList.remove('active'); 
     });
 
+    // ▼▼▼ AQUÍ ESTÁ LA CORRECCIÓN DEL NOMBRE COMPLETO ▼▼▼
     if (viewAdminInfoBtn) {
         viewAdminInfoBtn.addEventListener('click', async (e) => {
             e.preventDefault();
@@ -550,14 +503,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const r = await fetch('/api/perfil', { headers: { 'Authorization': `Bearer ${authToken}` } });
                 if (!r.ok) throw new Error('No se pudo obtener la info.');
                 const p = await r.json();
-                const infoHtml = `<div class="info-row"><label>Nombre:</label> <span>${p.nombre || 'N/A'}</span></div><div class="info-row"><label>CURP:</label> <span>${p.curp}</span></div><div class="info-row"><label>RFC:</label> <span>${p.rfc || 'N/A'}</span></div><div class="info-row"><label>Email:</label><span>${p.correo_electronico}</span></div><div class="info-row"><label>Municipio:</label> <span>${p.municipio || 'N/A'}</span></div>`;
-                const title = currentUser.rol === 'superadmin' ? 'Info Superadmin' : 'Info Admin';
+                
+                const nombreCompleto = [p.nombre, p.apellido_paterno, p.apellido_materno]
+                    .filter(part => part && part.trim() !== '')
+                    .join(' ') || 'N/A';
+
+                const infoHtml = `<div class="info-row"><label>Nombre:</label> <span>${nombreCompleto}</span></div><div class="info-row"><label>CURP:</label> <span>${p.curp || 'N/A'}</span></div><div class="info-row"><label>RFC:</label> <span>${p.rfc || 'N/A'}</span></div><div class="info-row"><label>Email:</label><span>${p.correo_electronico}</span></div><div class="info-row"><label>Municipio:</label> <span>${p.municipio || 'N/A'}</span></div>`;
+                const title = currentUser.rol === 'superadmin' ? 'Información del Administrador' : 'Info Admin';
                 showInfoModal(title, infoHtml, true);
             } catch (err) {
                 showInfoModal('Error', 'Error al obtener información del perfil.', false);
             }
         });
     }
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     if (adminLogoutBtn) {
         adminLogoutBtn.addEventListener('click', (e) => {
@@ -582,37 +541,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const start = dateStartInput.value;
                 const end = dateEndInput.value;
-
                 btnExportarPdf.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
                 btnExportarPdf.disabled = true;
-
                 let url = '/api/embarcaciones/exportar-pdf';
                 const params = new URLSearchParams();
                 if (start) params.append('startDate', start);
                 if (end) params.append('endDate', end);
                 if (start || end) url += `?${params.toString()}`;
-
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${authToken}` }
-                });
-
+                const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${authToken}` } });
                 if (response.ok) {
                     const blob = await response.blob();
                     const urlBlob = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = urlBlob;
-                    a.download = `Lista_Embarcaciones_${new Date().toISOString().slice(0,10)}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    window.URL.revokeObjectURL(urlBlob);
+                    const a = document.createElement('a'); a.href = urlBlob; a.download = `Lista_Embarcaciones_${new Date().toISOString().slice(0,10)}.pdf`; document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(urlBlob);
                 } else {
                     const errorData = await response.json();
                     showInfoModal('Error', 'Error al descargar PDF: ' + (errorData.message || 'Error desconocido'), false);
                 }
             } catch (error) {
-                console.error('Error exportando PDF:', error);
                 showInfoModal('Error', 'Ocurrió un error de red al intentar exportar.', false);
             } finally {
                 btnExportarPdf.innerHTML = '<i class="fas fa-file-pdf"></i> Exportar Lista PDF';

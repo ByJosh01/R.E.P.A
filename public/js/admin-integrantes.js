@@ -1,8 +1,6 @@
 // public/js/admin-integrantes.js
 
-// ==========================================================
-// ==== 1. LÓGICA DE INTERFAZ POR ROL ====
-// ==========================================================
+// --- 1. LÓGICA DE INTERFAZ POR ROL ---
 function ajustarUIporRol() {
     const userSession = sessionStorage.getItem('currentUser');
     if (!userSession) return; 
@@ -13,34 +11,26 @@ function ajustarUIporRol() {
 
         const navSolicitantes = document.getElementById('nav-solicitantes');
         const navCuentas = document.getElementById('nav-cuentas');
-        
         const adminTheme = document.getElementById('admin-theme-link');
         const panelAdminTheme = document.getElementById('panel-admin-theme-link');
+        const headerTitleElement = document.querySelector('.content-header div:first-child');
 
-        // Si es un ADMIN normal
+        // Rol ADMIN
         if (rol === 'admin') {
             if (navCuentas) navCuentas.style.display = 'none';
             if (navSolicitantes) navSolicitantes.href = 'panel-admin.html';
             if (adminTheme) adminTheme.disabled = true;
             if (panelAdminTheme) panelAdminTheme.disabled = false;
+            if (headerTitleElement) headerTitleElement.innerHTML = '<i class="fas fa-user-cog" style="margin-right: 10px;"></i> Panel de Gestión';
 
-        // Si es SUPERADMIN
+        // Rol SUPERADMIN
         } else if (rol === 'superadmin') {
             if (navCuentas) navCuentas.style.display = 'block'; 
             if (navSolicitantes) navSolicitantes.href = 'admin.html';
             if (adminTheme) adminTheme.disabled = false;
             if (panelAdminTheme) panelAdminTheme.disabled = true;
+            if (headerTitleElement) headerTitleElement.innerHTML = '<i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración';
         }
-        
-        const headerTitleElement = document.querySelector('.content-header div:first-child');
-        if (headerTitleElement) {
-            if (rol === 'superadmin') {
-                 headerTitleElement.innerHTML = '<i class="fas fa-user-shield" style="margin-right: 10px;"></i> Panel de Administración';
-            } else {
-                 headerTitleElement.innerHTML = '<i class="fas fa-user-cog" style="margin-right: 10px;"></i> Panel de Gestión';
-            }
-        }
-
     } catch (e) {
         console.error("Error al ajustar UI por rol:", e);
     }
@@ -69,7 +59,6 @@ window.addEventListener('pageshow', (event) => {
     if (event.persisted) ajustarUIporRol();
 });
 
-
 document.addEventListener('DOMContentLoaded', async () => {
     const authToken = localStorage.getItem('authToken');
     let currentUser = null;
@@ -77,12 +66,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         const currentUserJSON = sessionStorage.getItem('currentUser');
-        if (currentUserJSON) {
-            currentUser = JSON.parse(currentUserJSON);
-        }
-    } catch (error) {
-        console.error("Error parsing currentUser:", error);
-    }
+        if (currentUserJSON) currentUser = JSON.parse(currentUserJSON);
+    } catch (error) { console.error("Error parse user:", error); }
 
     if (!authToken || !currentUser) {
         window.location.href = 'home.html';
@@ -91,7 +76,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     ajustarUIporRol();
 
-    // --- HELPERS ---
+    // --- MODAL DE INFO (GENÉRICO) ---
+    const infoModal = document.getElementById('admin-info-modal');
+    const infoModalTitle = document.getElementById('admin-info-title');
+    const infoModalContent = document.getElementById('admin-info-content');
+    const infoModalIcon = document.getElementById('admin-info-icon');
+    const closeInfoModalBtn = document.getElementById('close-admin-info-btn');
+
+    const showInfoModal = (title, content, isSuccess = true, onConfirm = null) => {
+        if (!infoModal) { alert(`${title}: ${content}`); return; }
+        infoModalTitle.textContent = title;
+        infoModalContent.innerHTML = content.startsWith('<div') ? content : `<p style="text-align: center;">${content}</p>`;
+        infoModalIcon.className = 'modal-icon fas';
+        infoModalIcon.classList.remove('fa-check-circle', 'fa-times-circle', 'success', 'error'); 
+        infoModalIcon.classList.add(isSuccess ? 'fa-check-circle' : 'fa-times-circle', isSuccess ? 'success' : 'error');
+        infoModal.classList.add('visible');
+        
+        const confirmHandler = () => {
+            infoModal.classList.remove('visible');
+            if (onConfirm) onConfirm();
+            closeInfoModalBtn.removeEventListener('click', confirmHandler);
+        };
+        closeInfoModalBtn.addEventListener('click', confirmHandler, { once: true });
+    };
+
+    // --- HELPERS (Feedback) ---
     const showFeedback = (inputElement, message, isValid) => {
         let feedbackElement = inputElement.nextElementSibling;
         if (!feedbackElement || !feedbackElement.classList.contains('feedback-message')) {
@@ -118,35 +127,80 @@ document.addEventListener('DOMContentLoaded', async () => {
     const isValidRFC = (rfc) => /^[A-ZÑ&]{3,4}\d{6}[A-V1-9][A-Z1-9][0-9A]$/.test(rfc.toUpperCase()) && rfc.length >= 12;
     const isValidCURP = (curp) => /^[A-Z]{4}\d{6}[HM][A-Z]{5}[0-9A-Z]{2}$/.test(curp.toUpperCase());
 
+    // --- MENÚ DE USUARIO & INFO DINÁMICA ---
+    const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
+    const userMenuTrigger = document.getElementById('user-menu-trigger');
+    const userDropdown = document.getElementById('user-dropdown');
+    const viewAdminInfoBtn = document.getElementById('view-admin-info');
+    const adminLogoutBtn = document.getElementById('admin-logout-btn');
+    const adminGotoDashboardBtn = document.getElementById('admin-goto-dashboard-btn');
 
-    // --- MODAL INFO ---
-    const infoModal = document.getElementById('admin-info-modal');
-    const infoModalTitle = document.getElementById('admin-info-title');
-    const infoModalContent = document.getElementById('admin-info-content');
-    const infoModalIcon = document.getElementById('admin-info-icon');
-    const closeInfoModalBtn = document.getElementById('close-admin-info-btn');
+    if (adminEmailPlaceholder && currentUser) adminEmailPlaceholder.textContent = currentUser.email;
+    
+    if (userMenuTrigger) {
+        userMenuTrigger.addEventListener('click', (e) => { 
+            e.stopPropagation(); 
+            userDropdown?.classList.toggle('active'); 
+        });
+    }
+    
+    window.addEventListener('click', () => { 
+        if (userDropdown?.classList.contains('active')) userDropdown.classList.remove('active'); 
+    });
 
-    const showInfoModal = (title, content, isSuccess = true, onConfirm = null) => {
-        if (!infoModal) { alert(`${title}: ${content}`); return; }
-        infoModalTitle.textContent = title;
-        infoModalContent.innerHTML = content.startsWith('<div') ? content : `<p style="text-align: center;">${content}</p>`;
-        infoModalIcon.className = 'modal-icon fas';
-        infoModalIcon.classList.add(isSuccess ? 'fa-check-circle' : 'fa-times-circle', isSuccess ? 'success' : 'error');
-        infoModal.classList.add('visible');
-        const confirmHandler = () => {
-            infoModal.classList.remove('visible');
-            if (onConfirm) onConfirm();
-            closeInfoModalBtn.removeEventListener('click', confirmHandler);
-        };
-        closeInfoModalBtn.addEventListener('click', confirmHandler, { once: true });
-    };
+    // ▼▼▼ AQUÍ ESTÁ LA CORRECCIÓN DEL NOMBRE COMPLETO ▼▼▼
+    if (viewAdminInfoBtn) {
+        viewAdminInfoBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                // Fetch al servidor para obtener datos frescos
+                const r = await fetch('/api/perfil', { headers: { 'Authorization': `Bearer ${authToken}` } });
+                if (!r.ok) throw new Error('No se pudo obtener la info.');
+                const p = await r.json();
+                
+                // Construcción del NOMBRE COMPLETO
+                // Unimos nombre, apellido paterno y materno, filtrando los nulos o vacíos
+                const nombreCompleto = [p.nombre, p.apellido_paterno, p.apellido_materno]
+                    .filter(part => part && part.trim() !== '')
+                    .join(' ') || 'N/A';
 
+                // Construcción del HTML
+                const infoHtml = `
+                    <div class="info-row"><label>Nombre:</label> <span>${nombreCompleto}</span></div>
+                    <div class="info-row"><label>CURP:</label> <span>${p.curp || 'N/A'}</span></div>
+                    <div class="info-row"><label>RFC:</label> <span>${p.rfc || 'N/A'}</span></div>
+                    <div class="info-row"><label>Email:</label><span>${p.correo_electronico}</span></div>
+                    <div class="info-row"><label>Municipio:</label> <span>${p.municipio || 'N/A'}</span></div>
+                `;
+                
+                const title = currentUser.rol === 'superadmin' ? 'Información del Administrador' : 'Info Admin';
+                showInfoModal(title, infoHtml, true);
+            } catch (err) {
+                showInfoModal('Error', 'Error al obtener información del perfil.', false);
+            }
+        });
+    }
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-    // --- TABLA Y DATOS ---
+    if (adminLogoutBtn) {
+        adminLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('authToken');
+            sessionStorage.removeItem('currentUser');
+            window.location.replace('home.html');
+        });
+    }
+
+    if (adminGotoDashboardBtn) {
+        adminGotoDashboardBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = 'dashboard.html';
+        });
+    }
+
+    // --- CARGA DE DATOS ---
     const tableBody = document.getElementById('integrantes-table-body');
     const searchInput = document.getElementById('search-input');
-    
-    // Controles de fecha
     const dateStartInput = document.getElementById('filter-date-start');
     const dateEndInput = document.getElementById('filter-date-end');
     const btnFilterDate = document.getElementById('btn-filter-date');
@@ -161,13 +215,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         integrantes.forEach(integrante => {
             const row = tableBody.insertRow();
-            
             const pdfButtonHtml = `
                 <button class="btn-icon btn-download-integrante-pdf" data-id="${integrante.id}" title="Descargar Ficha Técnica">
                     <i class="fas fa-file-pdf"></i>
                 </button>
             `;
-
             row.innerHTML = `
                 <td>${integrante.nombre_completo || 'N/A'}</td>
                 <td>${integrante.rfc || 'N/A'}</td>
@@ -185,7 +237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    // --- BUSCADOR CLIENT-SIDE ---
+    // Buscador
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             const searchTerm = searchInput.value.toLowerCase().trim();
@@ -200,19 +252,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- CARGA DE DATOS (CON FILTROS AL SERVIDOR) ---
     const cargarDatosIniciales = async (startDate = '', endDate = '') => {
         tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Cargando datos...</td></tr>';
         try {
-            // CORRECCIÓN AQUÍ: Usar '/api/integrantes' en lugar de '/api/admin/integrantes'
             let url = '/api/integrantes'; 
             const params = new URLSearchParams();
             if (startDate) params.append('startDate', startDate);
             if (endDate) params.append('endDate', endDate);
-            
-            if (startDate || endDate) {
-                url += `?${params.toString()}`;
-            }
+            if (startDate || endDate) url += `?${params.toString()}`;
 
             const response = await fetch(url, { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!response.ok) throw new Error('Failed to load data.');
@@ -220,21 +267,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             allIntegrantes = await response.json();
             renderTabla(allIntegrantes);
             
-            // Reaplicar filtro de texto local si existe
             if (searchInput && searchInput.value.trim() !== '') {
                 searchInput.dispatchEvent(new Event('input'));
             }
-
         } catch (error) {
             if(tableBody) tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: red;">${error.message}</td></tr>`;
         }
     };
     
-    // Carga inicial
     cargarDatosIniciales();
 
-
-    // --- LÓGICA DE FILTROS ---
+    // Filtros
     if (btnFilterDate) {
         btnFilterDate.addEventListener('click', () => {
             quickFilterButtons.forEach(btn => btn.classList.remove('active'));
@@ -251,35 +294,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         cargarDatosIniciales();
     };
 
-    if (btnClearDate) {
-        btnClearDate.addEventListener('click', clearFilters);
-    }
+    if (btnClearDate) btnClearDate.addEventListener('click', clearFilters);
 
     quickFilterButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             quickFilterButtons.forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
-
             const rangeType = e.target.dataset.range;
             const today = getTodayDate();
-            let start = '';
-            let end = today; 
-
-            if (rangeType === 'today') {
-                start = today;
-            } else if (rangeType === 'week') {
-                start = getDaysAgoDate(7);
-            } else if (rangeType === 'month') {
-                start = getFirstDayOfMonth();
-            }
-
+            let start = '', end = today; 
+            if (rangeType === 'today') start = today;
+            else if (rangeType === 'week') start = getDaysAgoDate(7);
+            else if (rangeType === 'month') start = getFirstDayOfMonth();
             dateStartInput.value = start;
             dateEndInput.value = end;
-
             cargarDatosIniciales(start, end);
         });
     });
-
 
     // --- MODAL DE EDICIÓN ---
     const editModal = document.getElementById('edit-integrante-modal');
@@ -291,7 +322,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const editFormFields = {};
     fields.forEach(f => editFormFields[f] = document.getElementById(`edit-${f}`));
 
-    // Validación
     const setupFormValidation = () => {
         const fieldRules = {
             'edit-nombre_completo': { type: 'text', maxLength: 100, required: true },
@@ -334,7 +364,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         editForm.querySelectorAll('.feedback-message').forEach(el => el.textContent = '');
 
         try {
-            // CORRECCIÓN AQUÍ TAMBIÉN:
             const res = await fetch(`/api/integrantes/${id}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!res.ok) throw new Error('No se pudo cargar la info.');
             const integrante = await res.json();
@@ -371,7 +400,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             fields.forEach(f => data[f] = editFormFields[f].value);
 
             try {
-                // CORRECCIÓN AQUÍ:
                 const res = await fetch(`/api/integrantes/${id}`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                     body: JSON.stringify(data)
@@ -397,7 +425,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-
     tableBody.addEventListener('click', async (e) => {
         const pdfBtn = e.target.closest('.btn-download-integrante-pdf');
         if (pdfBtn && !pdfBtn.disabled) {
@@ -407,14 +434,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
             try {
-                // CORRECCIÓN AQUÍ: Ruta de exportación individual (si existe en tu router)
-                // Si no tienes una ruta individual específica en router, verifica. 
-                // Asumo que en router.js tienes algo como: router.get('/integrantes/pdf/:id', ...)
-                // Si usabas '/api/admin/integrante-pdf/:id', cámbialo a lo que tengas configurado.
-                // Basado en tu código anterior, parece que usabas una ruta admin. 
-                // Si esa ruta admin no tiene filtros, no importa para descarga individual.
-                // Pero si quieres estandarizar, usa:
-                const res = await fetch(`/api/admin/integrante-pdf/${id}`, { // Esta ruta admin parece ser la que genera el PDF individual
+                const res = await fetch(`/api/admin/integrante-pdf/${id}`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 if(!res.ok) throw new Error('Error al descargar');
@@ -438,56 +458,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (editBtn) openEditModal(editBtn.dataset.id);
     });
 
-
-    // --- MENÚ Y NAVEGACIÓN ---
-    const adminEmailPlaceholder = document.getElementById('admin-email-placeholder');
-    const userMenuTrigger = document.getElementById('user-menu-trigger');
-    const userDropdown = document.getElementById('user-dropdown');
-    const viewAdminInfoBtn = document.getElementById('view-admin-info');
-    const adminLogoutBtn = document.getElementById('admin-logout-btn');
-    const adminGotoDashboardBtn = document.getElementById('admin-goto-dashboard-btn');
-
-    if (adminEmailPlaceholder) adminEmailPlaceholder.textContent = currentUser.email;
-    
-    if (userMenuTrigger) {
-        userMenuTrigger.addEventListener('click', (e) => { 
-            e.stopPropagation(); 
-            userDropdown?.classList.toggle('active'); 
-        });
-    }
-    window.addEventListener('click', () => { 
-        if (userDropdown?.classList.contains('active')) userDropdown.classList.remove('active'); 
-    });
-
-    if (adminGotoDashboardBtn) {
-        adminGotoDashboardBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.href = 'dashboard.html';
-        });
-    }
-
-    if (viewAdminInfoBtn) {
-        viewAdminInfoBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            try {
-                const r = await fetch('/api/perfil', { headers: { 'Authorization': `Bearer ${authToken}` } });
-                const p = await r.json();
-                const infoHtml = `<div class="info-row"><label>Nombre:</label> <span>${p.nombre || 'N/A'}</span></div><div class="info-row"><label>Email:</label><span>${p.correo_electronico}</span></div>`;
-                showInfoModal('Información', infoHtml, true);
-            } catch (e) { showInfoModal('Error', 'No se pudo cargar perfil', false); }
-        });
-    }
-
-    if (adminLogoutBtn) {
-        adminLogoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.href = 'home.html';
-        });
-    }
-
-
     // --- EXPORTAR LISTA PDF ---
     const btnExportarPdf = document.getElementById('btn-exportar-pdf');
     if (btnExportarPdf) {
@@ -500,7 +470,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btnExportarPdf.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
                 btnExportarPdf.disabled = true;
 
-                // CORRECCIÓN AQUÍ: Usar ruta estandarizada
                 let url = '/api/integrantes/exportar-pdf';
                 const params = new URLSearchParams();
                 if (start) params.append('startDate', start);
