@@ -7,6 +7,7 @@ backend/node_modules/
 .env
 # Ignora el archivo .env de tu backend (¡CRÍTICO!)
 backend/.env
+backend/.env.local
 
 # Configuración de Base de Datos
 .my.cnf
