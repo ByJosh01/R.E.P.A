@@ -5,7 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const helmet = require('helmet'); 
 const rateLimit = require('express-rate-limit');
-const hpp = require('hpp'); // <--- NUEVA PROTECCIÓN (Evita ataques de duplicación de parámetros)
+const hpp = require('hpp'); 
 
 // Importación de Rutas
 const authRoutes = require('./routes/authRoutes');
@@ -21,19 +21,20 @@ const app = express();
 // =================================================================
 
 // 0. OCULTAR TECNOLOGÍA
-// Evita que hackers sepan fácilmente que usas Express
 app.disable('x-powered-by');
 
 // 1. TRUST PROXY (ESENCIAL PARA RENDER)
-// Permite leer la IP real del usuario a través del balanceador de Render
 app.set('trust proxy', 1); 
 
-// 2. CORS SEGURO
+// 2. CORS SEGURO (MODIFICADO PARA DOCKER)
 const whiteList = [
-    'https://proyecto-repa.onrender.com', 
-    'http://localhost:5500', 
-    'http://127.0.0.1:5500', 
-    'http://localhost:3000'
+    'https://proyecto-repa.onrender.com', // Producción (Render) - SE QUEDA IGUAL
+    'http://localhost:5500',              // Desarrollo Local (Live Server)
+    'http://127.0.0.1:5500',              // Desarrollo Local IP
+    'http://localhost:3000',              // Backend directo
+    // --- AGREGADOS PARA DOCKER ---
+    'http://localhost:8080',              // Tu Frontend en Docker
+    'http://127.0.0.1:8080'               // Tu Frontend en Docker (IP)
 ];
 
 const corsOptions = {
@@ -48,7 +49,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // 3. HELMET (HEADERS HTTP & CSP)
-// Configurado para permitir: FontAwesome, Google Fonts, Estilos Inline y ReCAPTCHA
 app.use(
     helmet.contentSecurityPolicy({
         directives: {
@@ -57,7 +57,7 @@ app.use(
             "frame-src": ["'self'", "https://www.google.com/recaptcha/"],
             "style-src": [
                 "'self'", 
-                "'unsafe-inline'", // Necesario para tus estilos personalizados en HTML
+                "'unsafe-inline'", 
                 "https://fonts.googleapis.com/", 
                 "https://cdnjs.cloudflare.com",
                 "https://cdn.jsdelivr.net"
@@ -76,8 +76,8 @@ app.use(
 
 // 4. RATE LIMIT (PROTECCIÓN DDOS)
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 1000, // Máximo de peticiones por IP
+    windowMs: 15 * 60 * 1000, 
+    max: 1000, 
     standardHeaders: true, 
     legacyHeaders: false, 
     message: { message: 'Demasiadas peticiones desde esta IP, intenta más tarde.' }
@@ -87,8 +87,8 @@ const apiLimiter = rateLimit({
 // ==== MIDDLEWARES GLOBALES ====
 // =================================================================
 
-app.use(express.json()); // Parser JSON
-app.use(hpp()); // <--- ACTIVA LA PROTECCIÓN HPP AQUÍ
+app.use(express.json()); 
+app.use(hpp()); 
 
 // Middleware Anti-Caché para páginas protegidas
 app.use((req, res, next) => {
@@ -106,7 +106,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// Archivos Estáticos (Tu Frontend)
+// Archivos Estáticos
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Ruta Raíz
@@ -118,7 +118,6 @@ app.get('/', (req, res) => {
 // ==== RUTAS API ====
 // =================================================================
 
-// Aplicamos el limitador a todas las rutas API
 app.use('/api', apiLimiter, authRoutes); 
 app.use('/api', apiLimiter, integranteRoutes);
 app.use('/api/embarcaciones', apiLimiter, embarcacionMenorRoutes);
