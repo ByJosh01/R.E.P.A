@@ -1,28 +1,23 @@
 // backend/controllers/embarcacionMenorController.js
 const embarcacionMenorModel = require('../models/embarcacionMenorModel');
 const solicitanteModel = require('../models/solicitanteModel');
-const pdfService = require('../services/pdfGenerator'); // Importar servicio PDF
+const pdfService = require('../services/pdfGenerator'); 
 const { validationResult } = require('express-validator');
 
 // Obtener lista de embarcaciones (Usuario o SuperAdmin)
 exports.getEmbarcaciones = async (req, res) => {
     try {
         let embarcaciones = [];
-        // Capturamos los filtros que vienen del Frontend
         const { search, startDate, endDate } = req.query;
 
-        // MODIFICACIÓN: Permitir que 'admin' también vea todas las embarcaciones
+        // Permitir que 'admin' también vea todas las embarcaciones
         if (req.user.rol === 'superadmin' || req.user.rol === 'admin') { 
-            // Pasamos los filtros de fecha y búsqueda al modelo
             embarcaciones = await embarcacionMenorModel.getAll(search, startDate, endDate);
         } else {
-            // Lógica para usuario 'solicitante' normal
             const solicitanteId = req.user.solicitante_id;
             if (!solicitanteId) {
-                // Si es un usuario nuevo sin perfil de solicitante aún
                 return res.status(200).json([]); 
             }
-            // Los usuarios normales ven solo sus registros
             embarcaciones = await embarcacionMenorModel.getBySolicitanteId(solicitanteId);
         }
         res.status(200).json(embarcaciones);
@@ -32,7 +27,7 @@ exports.getEmbarcaciones = async (req, res) => {
     }
 };
 
-// ▼▼▼ FUNCIÓN QUE FALTABA (Para editar) ▼▼▼
+// Obtener una embarcación por ID
 exports.getEmbarcacionById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -42,7 +37,6 @@ exports.getEmbarcacionById = async (req, res) => {
             return res.status(404).json({ message: 'Embarcación no encontrada.' });
         }
 
-        // Seguridad: Verificar que pertenezca al usuario (si no es admin)
         if (req.user.rol !== 'superadmin' && req.user.rol !== 'admin') {
             if (embarcacion.solicitante_id !== req.user.solicitante_id) {
                 return res.status(403).json({ message: 'No tienes permiso para ver esta embarcación.' });
@@ -55,7 +49,6 @@ exports.getEmbarcacionById = async (req, res) => {
         res.status(500).json({ message: 'Error al obtener la embarcación.' });
     }
 };
-// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 // Añadir nueva embarcación
 exports.addEmbarcacion = async (req, res) => {
@@ -67,7 +60,18 @@ exports.addEmbarcacion = async (req, res) => {
         if (!solicitanteId) {
             return res.status(400).json({ message: 'ID de solicitante no encontrado.' });
         }
+        
+        // 1. Guardar la embarcación
         const nueva = await embarcacionMenorModel.add(req.body, solicitanteId);
+
+        // 2. ACTUALIZAR ESTADO DEL ANEXO (ESTO FALTABA) ✅
+        // Le decimos a la BD: "El Anexo 5 ya está completo"
+        try {
+            await solicitanteModel.updateAnexoStatus(solicitanteId, 'anexo5_completo', true);
+        } catch (statusError) {
+            console.error("Error al actualizar estado anexo5_completo:", statusError);
+        }
+
         res.status(201).json(nueva);
     } catch (error) {
         console.error("Error en addEmbarcacion:", error);
@@ -83,7 +87,6 @@ exports.updateEmbarcacion = async (req, res) => {
     try {
         const { id } = req.params;
         
-        // Verificar existencia y propiedad
         const embarcacion = await embarcacionMenorModel.getById(id);
         if (!embarcacion) return res.status(404).json({ message: 'Embarcación no encontrada.' });
 
@@ -92,6 +95,15 @@ exports.updateEmbarcacion = async (req, res) => {
         }
 
         await embarcacionMenorModel.updateById(id, req.body);
+
+        // 2. ACTUALIZAR ESTADO DEL ANEXO (ESTO FALTABA) ✅
+        // Aseguramos que siga marcado como completo al editar
+        try {
+            await solicitanteModel.updateAnexoStatus(embarcacion.solicitante_id, 'anexo5_completo', true);
+        } catch (statusError) {
+            console.error("Error actualizando estado Anexo 5:", statusError);
+        }
+
         res.status(200).json({ message: 'Embarcación actualizada con éxito.' });
     } catch (error) {
         console.error("Error en updateEmbarcacion:", error);
@@ -111,6 +123,10 @@ exports.deleteEmbarcacion = async (req, res) => {
         }
 
         await embarcacionMenorModel.deleteById(id);
+        
+        // NOTA: No cambiamos el estado a false al borrar, 
+        // asumimos que si ya llenó una vez, el anexo cuenta como "visitado/completo".
+        
         res.status(200).json({ message: 'Embarcación eliminada.' });
     } catch (error) {
         console.error("Error en deleteEmbarcacion:", error);
@@ -122,11 +138,9 @@ exports.deleteEmbarcacion = async (req, res) => {
 exports.exportarPdf = async (req, res) => {
     try {
         let embarcaciones = [];
-        // Capturar filtros también para el PDF
         const { search, startDate, endDate } = req.query;
 
         if (req.user.rol === 'superadmin' || req.user.rol === 'admin') {
-            // Generar PDF con los filtros aplicados
             embarcaciones = await embarcacionMenorModel.getAll(search, startDate, endDate);
         } else {
             const solicitanteId = req.user.solicitante_id;

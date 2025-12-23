@@ -1820,3 +1820,75 @@ body.dark-mode .admin-table .btn-download-pdf:disabled {
     }
 }
 
+/* ======================================================= */
+/* ======== AJUSTES HEADER DASHBOARD (BOTÓN SALIR) ======= */
+/* ======================================================= */
+
+/* Hacemos que el header use Flexbox para separar Título (Izq) y Botones (Der) */
+.main-header.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 30px; /* Un poco más de aire vertical */
+}
+
+/* El título se asegura de estar a la izquierda */
+.header-title {
+    font-size: 1.1em;
+    font-weight: 500;
+}
+
+/* Contenedor para agrupar Tema + Salir a la derecha */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px; /* Separación entre la luna/sol y el botón salir */
+}
+
+/* SOBRESCRIBIMOS el estilo del theme-toggle solo para este header */
+/* Antes estaba absolute, ahora lo queremos en flujo normal flex */
+.main-header.dashboard-header .theme-toggle {
+    position: static; /* Quita el absolute */
+    transform: none;  /* Quita el translate */
+    margin: 0;
+}
+
+/* ESTILO DEL NUEVO BOTÓN DE SALIR */
+.btn-logout-header {
+    background-color: #a71d2a; /* Rojo intenso */
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 10px 25px; /* Tamaño grande y cómodo */
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15); /* Sombrita para destacar */
+}
+
+.btn-logout-header:hover {
+    background-color: #c92536; /* Rojo más claro al pasar mouse */
+    transform: translateY(-2px); /* Efecto de elevación */
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+.btn-logout-header i {
+    font-size: 1.1em;
+}
+
+/* Ajuste responsive para celulares */
+@media (max-width: 600px) {
+    .main-header.dashboard-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    .header-actions {
+        width: 100%;
+        justify-content: center;
+    }
+}

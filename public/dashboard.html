@@ -11,9 +11,21 @@
 </head>
 <body>
 
-    <header class="main-header">
-        Secretaría de Desarrollo Agropecuario, Rural y Pesca
-        <button id="theme-toggle" class="theme-toggle"><i class="fas fa-moon"></i></button>
+    <header class="main-header dashboard-header">
+        <div class="header-title">
+            Secretaría de Desarrollo Agropecuario, Rural y Pesca
+        </div>
+        
+        <div class="header-actions">
+            <button id="theme-toggle" class="theme-toggle" title="Cambiar Tema">
+                <i class="fas fa-moon"></i>
+            </button>
+            
+            <button id="btn-logout-dashboard" class="btn-logout-header" title="Cerrar Sesión y Salir">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Salir / Regresar</span>
+            </button>
+        </div>
     </header>
 
     <nav class="breadcrumb-nav">
@@ -36,9 +48,9 @@
             <div class="flowchart-tier tier-3">
                 <div class="flowchart-group" data-parent="permiso-pesca">
                     <a href="#" class="flowchart-box option-card">Avisos de Arribo</a>
-                    <a href="#" class="flowchart-box option-card">Aviso de Consecha</a>
+                    <a href="#" class="flowchart-box option-card">Aviso de Cosecha</a>
                 </div>
-                </div>
+            </div>
 
             <div class="flowchart-tier tier-4">
                 <a href="#" class="flowchart-box option-card" data-option="guia-pesca">Guía de Pesca</a>
@@ -53,5 +65,5 @@
     </footer>
 
     <script src="dashboard.js"></script>
-    </body>
+</body>
 </html>
