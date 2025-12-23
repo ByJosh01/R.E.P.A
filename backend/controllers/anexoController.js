@@ -11,24 +11,19 @@ const equiposTransporteModel = require('../models/equiposTransporteModel');
 const embarcacionesAcuaculturaModel = require('../models/embarcacionesAcuaculturaModel');
 const instalacionesHidraulicasModel = require('../models/instalacionesHidraulicasModel');
 const pool = require('../db'); 
-const { validationResult } = require('express-validator'); // <-- IMPORTADO
+const { validationResult } = require('express-validator'); 
 
 // --- Anexo 1 ---
 exports.saveAnexo1 = async (req, res) => {
-    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ message: errors.array()[0].msg });
     }
-    // --- Fin del bloque ---
 
     try {
         const usuarioId = req.user.id; 
         const data = req.body;
         
-        // La validación manual de longitud se eliminó
-        // porque express-validator ya la hizo en el archivo de rutas.
-
         await solicitanteModel.updateAnexo1(usuarioId, data);
 
         res.status(200).json({ message: 'Datos del Anexo 1 guardados exitosamente.' });
@@ -57,14 +52,45 @@ exports.saveAnexo1 = async (req, res) => {
     }
 };
 
+// --- PERFIL (MODIFICADO: SITIO DE DESEMBARQUE + CONTEO DE EMBARCACIONES) ---
 exports.getPerfil = async (req, res) => {
-    // No necesita validación
     try {
         const usuarioId = req.user.id;
+        
+        // 1. Datos básicos
         const perfilData = await solicitanteModel.getProfileDataByUserId(usuarioId);
+        
         if (!perfilData) {
-            return res.status(404).json({ message: 'No se encontraron datos del perfil para este usuario.' });
+            return res.status(404).json({ message: 'No se encontraron datos del perfil.' });
         }
+
+        // 2. Datos Extra (Pesca y Conteo)
+        if (perfilData.solicitante_id) {
+            try {
+                // A) Buscar Sitio de Desembarque
+                const [pescaRows] = await pool.query(
+                    'SELECT sitio_desembarque FROM datos_tecnicos_pesca WHERE solicitante_id = ?', 
+                    [perfilData.solicitante_id]
+                );
+                perfilData.sitio_desembarque = (pescaRows.length > 0 && pescaRows[0].sitio_desembarque) ? pescaRows[0].sitio_desembarque : 'No registrado';
+
+                // B) Contar Embarcaciones Menores (NUEVO)
+                const [conteoRows] = await pool.query(
+                    'SELECT COUNT(*) as total FROM embarcaciones_menores WHERE solicitante_id = ?',
+                    [perfilData.solicitante_id]
+                );
+                perfilData.num_embarcaciones = conteoRows[0].total; 
+
+            } catch (errExtra) {
+                console.error("Error buscando datos extra (pesca/barcos):", errExtra);
+                perfilData.sitio_desembarque = 'No disponible';
+                perfilData.num_embarcaciones = 0;
+            }
+        } else {
+            perfilData.sitio_desembarque = 'No registrado';
+            perfilData.num_embarcaciones = 0;
+        }
+
         res.status(200).json(perfilData);
     } catch (error) {
         console.error("Error en getPerfil:", error);
@@ -74,7 +100,6 @@ exports.getPerfil = async (req, res) => {
 
 // --- ANEXO 3 ---
 exports.getAnexo3 = async (req, res) => {
-    // No necesita validación
     try {
         const solicitanteId = req.user.solicitante_id;
         if (!solicitanteId) {
@@ -95,12 +120,10 @@ exports.getAnexo3 = async (req, res) => {
 };
 
 exports.saveAnexo3 = async (req, res) => {
-    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ message: errors.array()[0].msg });
     }
-    // --- Fin del bloque ---
 
     let connection; 
     try {
@@ -142,7 +165,6 @@ exports.saveAnexo3 = async (req, res) => {
 
 // --- ANEXO 4 ---
 exports.getAnexo4Acuacultura = async (req, res) => {
-    // No necesita validación
     try {
         const solicitanteId = req.user.solicitante_id;
         if (!solicitanteId) {
@@ -175,12 +197,10 @@ exports.getAnexo4Acuacultura = async (req, res) => {
 };
 
 exports.createAnexo4Acuacultura = async (req, res) => { 
-    // --- BLOQUE DE VALIDACIÓN AÑADIDO ---
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ message: errors.array()[0].msg });
     }
-    // --- Fin del bloque ---
 
     let connection;
     try {

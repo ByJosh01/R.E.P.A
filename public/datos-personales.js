@@ -1,9 +1,5 @@
 // public/datos-personales.js
 
-// SI usaste la configuración de módulos (type="module") en tu HTML, 
-// descomenta la siguiente línea:
-// import { logoutUser } from './utils.js'; 
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- LÓGICA DE LA INTERFAZ (UI) ---
     const themeToggle = document.getElementById('theme-toggle');
@@ -46,11 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!authToken || !currentUser) {
         localStorage.removeItem('authToken');
         sessionStorage.removeItem('currentUser');
-        window.location.replace('/home.html'); // <--- CAMBIO: Usar replace aquí también
+        window.location.replace('/home.html');
         return;
     }
 
-    // --- MODAL DE CERRAR SESIÓN (AQUÍ ESTÁ EL CAMBIO CLAVE) ---
+    // --- MODAL DE CERRAR SESIÓN ---
     const logoutBtn = document.getElementById('logout-btn-sidebar');
     const logoutModal = document.getElementById('logout-modal');
     
@@ -74,18 +70,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // ▼▼▼ ESTA ES LA PARTE QUE CORRIGE EL PROBLEMA DEL "ATRÁS" ▼▼▼
         confirmLogoutBtn.addEventListener('click', () => {
             // 1. Borramos credenciales
             sessionStorage.removeItem('currentUser');
             localStorage.removeItem('authToken');
             
             // 2. REDIRECCIÓN DESTRUCTIVA
-            // .replace() borra la página actual del historial.
-            // Si el usuario intenta dar "Atrás", no volverá aquí.
             window.location.replace('/home.html'); 
         });
-        // ▲▲▲ FIN DE LA CORRECCIÓN ▲▲▲
     }
 
     document.getElementById('sidebar-user-name').textContent = currentUser.email || 'Cargando...';
@@ -200,11 +192,19 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('razon-social-summary').textContent = nombreCompleto || 'No registrado';
             document.getElementById('municipio-summary').textContent = perfil.municipio || 'No registrado';
 
+            // --- LÍNEAS NUEVAS AGREGADAS AQUÍ ---
+            document.getElementById('sitio-desembarque-summary').textContent = perfil.sitio_desembarque || 'No registrado';
+            
+            // Usamos una pequeña validación para que si es undefined muestre '0'
+            const numEmbarcaciones = (perfil.num_embarcaciones !== undefined && perfil.num_embarcaciones !== null) 
+                                     ? perfil.num_embarcaciones 
+                                     : '0';
+            document.getElementById('num-embarcaciones-summary').textContent = numEmbarcaciones;
+            // ------------------------------------
+
             actualizarEstadoAnexos(perfil);
 
         } catch (error) {
-            // Si falla la carga, no necesariamente cerramos sesión, pero mostramos alerta.
-            // Podrías redirigir si es error 401 (No autorizado)
             console.error("Fallo al cargar perfil completo:", error);
         }
     };
