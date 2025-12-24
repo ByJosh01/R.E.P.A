@@ -129,6 +129,8 @@ document.addEventListener('DOMContentLoaded', async () => {
              infoModalContent.innerHTML = `<p style="text-align: center;">${content}</p>`;
         }
         infoModalIcon.className = 'modal-icon fas';
+        // Limpiamos clases previas para evitar conflictos
+        infoModalIcon.classList.remove('fa-check-circle', 'fa-times-circle', 'success', 'error');
         infoModalIcon.classList.add(isSuccess ? 'fa-check-circle' : 'fa-times-circle', isSuccess ? 'success' : 'error');
         infoModal.classList.add('visible');
         
@@ -147,17 +149,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     window.addEventListener('click', () => { if (userDropdown && userDropdown.classList.contains('active')) { userDropdown.classList.remove('active'); } });
 
-    // ▼▼▼ AQUÍ ESTÁ LA LÓGICA DINÁMICA DE INFORMACIÓN ▼▼▼
+    // Lógica dinámica de información
     if (viewAdminInfoBtn) {
         viewAdminInfoBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             try {
-                // Fetch de datos frescos
                 const r = await fetch('/api/perfil', { headers: { 'Authorization': `Bearer ${authToken}` } });
                 if (!r.ok) throw new Error('No se pudo obtener la info.');
                 const p = await r.json();
 
-                // Construcción del Nombre Completo (concatena si hay datos, o 'N/A')
                 const nombreCompleto = [p.nombre, p.apellido_paterno, p.apellido_materno]
                     .filter(part => part && part.trim() !== '')
                     .join(' ') || 'N/A';
@@ -176,7 +176,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     if (infoModal) infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.remove('visible'); });
 
@@ -207,6 +206,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) { return dateString; }
     };
     
+    // ===============================================
+    // ==== AQUÍ ESTÁ LA CORRECCIÓN DE LA TABLA ====
+    // ===============================================
     const renderTabla = (usuarios) => {
         if(!tableBody) return;
         tableBody.innerHTML = '';
@@ -217,8 +219,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             row.dataset.id = user.id;
 
             let editButtonDisabled = '';
-            if (user.id === currentUser.id) { editButtonDisabled = 'disabled'; }
-            if (currentUser.rol === 'admin' && user.rol === 'superadmin') { editButtonDisabled = 'disabled'; }
+            let deleteButtonDisabled = ''; 
+
+            // --- REGLAS DE PROTECCIÓN (CORREGIDO) ---
+            
+            // 1. Protección contra suicidio (No te puedes borrar a ti mismo)
+            if (String(user.id) === String(currentUser.id)) { 
+                editButtonDisabled = 'disabled'; 
+                deleteButtonDisabled = 'disabled'; 
+            }
+            
+            // 2. Reglas para Admin Normal
+            if (currentUser.rol === 'admin') {
+                // Admin no puede tocar a SuperAdmin
+                if (user.rol === 'superadmin') { 
+                    editButtonDisabled = 'disabled'; 
+                    deleteButtonDisabled = 'disabled'; 
+                }
+                // (Opcional) Admin no puede borrar a otros Admins
+                if (user.rol === 'admin') {
+                    deleteButtonDisabled = 'disabled';
+                }
+            }
+            
+            // 3. SuperAdmin (Implícito)
+            // Si soy SuperAdmin, los IF de arriba (admin) no se ejecutan.
+            // Por lo tanto, tengo habilitado todo, excepto mi propia fila.
 
             let roleBadgeStyle = 'background-color: #6c757d; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;';
             if (user.rol === 'superadmin') roleBadgeStyle = 'background-color: #6f42c1; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.85em;';
@@ -236,9 +262,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${user.curp || 'N/A'}</td>
                 <td><span style="${roleBadgeStyle}">${user.rol || 'N/A'}</span></td>
                 <td>${formatFecha(user.creado_en)}</td>
-                <td style="text-align: center;">${pdfButtonHtml}</td> <td>
+                <td style="text-align: center;">${pdfButtonHtml}</td> 
+                <td class="actions-cell">
                     <button class="btn-icon btn-edit-usuario" title="Editar" data-id="${user.id}" ${editButtonDisabled}>
                         <i class="fas fa-pencil-alt"></i>
+                    </button>
+                    <button class="btn-icon btn-delete" title="Eliminar" data-id="${user.id}" ${deleteButtonDisabled}>
+                        <i class="fas fa-trash-alt"></i>
                     </button>
                 </td>
             `;
@@ -265,7 +295,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             allUsuarios = await response.json();
             renderTabla(allUsuarios);
 
-            // Reaplicar filtro de texto si existe
             if (searchInput && searchInput.value.trim() !== '') {
                 searchInput.dispatchEvent(new Event('input'));
             }
@@ -359,7 +388,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEditFormValidation();
 
 
-    // --- ACCIONES DE TABLA (EDICIÓN Y DESCARGA) ---
+    // --- ACCIONES DE TABLA (EDICIÓN, DESCARGA, ELIMINACIÓN) ---
     const closeEditModal = () => { if (editModal) editModal.classList.remove('visible'); 
         editForm.querySelectorAll('.valid, .invalid').forEach(el => el.classList.remove('valid', 'invalid'));
         editForm.querySelectorAll('.feedback-message').forEach(el => el.textContent = '');
@@ -368,17 +397,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
     if (editModal) editModal.addEventListener('click', (e) => { if (e.target === editModal) closeEditModal(); });
 
+    // --- MODAL DE ELIMINACIÓN ---
+    const deleteModal = document.getElementById('delete-confirmation-modal');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+    let deleteTargetId = null;
+
+    const openDeleteModal = (id) => {
+        deleteTargetId = id;
+        deleteModal.classList.add('visible');
+    };
+    const closeDeleteModal = () => {
+        deleteTargetId = null;
+        deleteModal.classList.remove('visible');
+    };
+    if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+    if (deleteModal) deleteModal.addEventListener('click', (e) => { if (e.target === deleteModal) closeDeleteModal(); });
+
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (!deleteTargetId) return;
+            const originalText = confirmDeleteBtn.textContent;
+            confirmDeleteBtn.textContent = 'Borrando...';
+            confirmDeleteBtn.disabled = true;
+
+            try {
+                // AQUÍ SE HACE LA LLAMADA A LA RUTA QUE AHORA SÍ EXISTE
+                const response = await fetch(`/api/admin/usuarios/${deleteTargetId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || 'Error al eliminar');
+
+                showInfoModal('Éxito', result.message, true);
+                // Actualizar tabla local
+                allUsuarios = allUsuarios.filter(u => u.id != deleteTargetId);
+                // Reaplicar filtro si hay búsqueda
+                if (searchInput && searchInput.value.trim() !== '') {
+                    searchInput.dispatchEvent(new Event('input'));
+                } else {
+                    renderTabla(allUsuarios);
+                }
+                closeDeleteModal();
+
+            } catch (error) {
+                showInfoModal('Error', error.message, false);
+                closeDeleteModal();
+            } finally {
+                confirmDeleteBtn.textContent = originalText;
+                confirmDeleteBtn.disabled = false;
+            }
+        });
+    }
+
     if (tableBody) {
         tableBody.addEventListener('click', async (e) => {
-            
+            const target = e.target.closest('button');
+            if (!target) return;
+
             // DESCARGAR PDF INDIVIDUAL
-            const pdfButton = e.target.closest('button.btn-download-user-pdf');
-            if (pdfButton) {
-                if (pdfButton.disabled) return;
-                const userId = pdfButton.dataset.id;
-                const originalContent = pdfButton.innerHTML;
-                pdfButton.disabled = true;
-                pdfButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            if (target.classList.contains('btn-download-user-pdf')) {
+                if (target.disabled) return;
+                const userId = target.dataset.id;
+                const originalContent = target.innerHTML;
+                target.disabled = true;
+                target.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
                 try {
                     const response = await fetch(`/api/admin/usuario-pdf/${userId}`, {
@@ -400,36 +484,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.error(error);
                     showInfoModal('Error', 'No se pudo generar el PDF del usuario.', false);
                 } finally {
-                    pdfButton.disabled = false;
-                    pdfButton.innerHTML = originalContent;
+                    target.disabled = false;
+                    target.innerHTML = originalContent;
                 }
                 return;
             }
 
-            const button = e.target.closest('button.btn-edit-usuario');
-            if (!button || button.disabled) return;
+            // BOTÓN EDITAR
+            if (target.classList.contains('btn-edit-usuario')) {
+                if(target.disabled) return;
+                const usuarioId = target.dataset.id;
+                try {
+                    const response = await fetch(`/api/admin/usuarios/${usuarioId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+                    if (!response.ok) throw new Error('No se pudieron obtener los datos del usuario.');
+                    const data = await response.json();
 
-            const usuarioId = button.dataset.id;
-            try {
-                const response = await fetch(`/api/admin/usuarios/${usuarioId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
-                if (!response.ok) throw new Error('No se pudieron obtener los datos del usuario.');
-                const data = await response.json();
+                    if (editForm && editUsuarioId && editModal) {
+                        editForm.elements.email.value = data.email || '';
+                        editForm.elements.curp.value = data.curp || '';
+                        editForm.elements.rol.value = data.rol || 'solicitante';
+                        editForm.elements.password.value = ''; 
+                        editUsuarioId.value = data.id;
+                        
+                        editEmailInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        editCurpInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        editPasswordInput.dispatchEvent(new Event('input', { bubbles: true })); 
+                        
+                        editModal.classList.add('visible');
+                    } 
+                } catch(error) {
+                    showInfoModal('Error', error.message, false);
+                }
+                return;
+            }
 
-                if (editForm && editUsuarioId && editModal) {
-                    editForm.elements.email.value = data.email || '';
-                    editForm.elements.curp.value = data.curp || '';
-                    editForm.elements.rol.value = data.rol || 'solicitante';
-                    editForm.elements.password.value = ''; 
-                    editUsuarioId.value = data.id;
-                    
-                    editEmailInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    editCurpInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    editPasswordInput.dispatchEvent(new Event('input', { bubbles: true })); 
-                    
-                    editModal.classList.add('visible');
-                } 
-            } catch(error) {
-                showInfoModal('Error', error.message, false);
+            // BOTÓN ELIMINAR (NUEVO)
+            if (target.classList.contains('btn-delete')) {
+                if(target.disabled) return;
+                openDeleteModal(target.dataset.id);
             }
         });
     }

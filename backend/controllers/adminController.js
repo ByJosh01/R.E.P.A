@@ -22,15 +22,11 @@ const { validationResult } = require('express-validator');
 // 1. GESTIÓN DE SOLICITANTES
 // ==================================================
 
-// --- MODIFICADO PARA SOPORTAR FILTROS DE FECHA ---
 exports.getAllSolicitantes = async (req, res) => {
     try {
         const { search, startDate, endDate } = req.query;
         const userRole = req.user.rol; 
-
-        // Usamos la nueva función del modelo que incluye filtrado por fecha_actualizacion
         const solicitantes = await solicitanteModel.getAll(userRole, search, startDate, endDate);
-        
         res.status(200).json(solicitantes);
     } catch (error) {
         console.error("Error en getAllSolicitantes:", error);
@@ -277,6 +273,70 @@ exports.updateUsuario = async (req, res) => {
     }
 };
 
+// --- FUNCIÓN DE ELIMINACIÓN EN CASCADA ---
+exports.deleteUsuario = async (req, res) => {
+    const { id } = req.params; 
+    const adminMakingRequest = req.user;
+    
+    // 1. Seguridad básica
+    if (adminMakingRequest.id == id) {
+        return res.status(403).json({ message: 'No puedes eliminar tu propia cuenta mientras estás logueado.' });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        // 2. Verificar rol del objetivo
+        const [targets] = await connection.query('SELECT id, rol FROM usuarios WHERE id = ?', [id]);
+        if (targets.length === 0) {
+            connection.release();
+            return res.status(404).json({ message: 'Usuario no encontrado.' });
+        }
+        const targetRol = targets[0].rol;
+
+        if (adminMakingRequest.rol === 'admin' && targetRol === 'superadmin') {
+            connection.release();
+            return res.status(403).json({ message: 'No tienes permisos para eliminar a un SuperAdmin.' });
+        }
+
+        await connection.beginTransaction();
+
+        // 3. Buscar si tiene perfil de Solicitante
+        const [solicitanteRows] = await connection.query('SELECT solicitante_id FROM solicitantes WHERE usuario_id = ?', [id]);
+        
+        if (solicitanteRows.length > 0) {
+            const solicitanteId = solicitanteRows[0].solicitante_id;
+            
+            // 4. BORRADO EN CASCADA (Datos hijos)
+            const childTables = [
+                'integrantes', 'embarcaciones_menores', 'datos_tecnicos_pesca',
+                'datos_tecnicos_acuacultura', 'unidad_pesquera', 'unidad_produccion',
+                'tipo_estanques', 'instrumentos_medicion', 'sistema_conservacion',
+                'equipo_transporte', 'embarcaciones', 'instalacion_hidraulica_aireacion'
+            ];
+            
+            for (const table of childTables) {
+                await connection.query(`DELETE FROM ${table} WHERE solicitante_id = ?`, [solicitanteId]);
+            }
+
+            // 5. Borrar perfil solicitante
+            await connection.query('DELETE FROM solicitantes WHERE solicitante_id = ?', [solicitanteId]);
+        }
+
+        // 6. Borrar la cuenta de usuario
+        await connection.query('DELETE FROM usuarios WHERE id = ?', [id]);
+
+        await connection.commit();
+        res.status(200).json({ message: 'Usuario y todos sus datos asociados eliminados correctamente.' });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error("Error en deleteUsuario:", error);
+        res.status(500).json({ message: 'Error en el servidor al eliminar usuario.' });
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
 // ==================================================
 // 3. INTEGRANTES
 // ==================================================
@@ -414,18 +474,12 @@ exports.backupDatabase = async (req, res) => {
     const certPath = path.join(__dirname, '../isrgrootx1.pem');
     let sslOptions = '';
 
-    // Lógica Híbrida Adaptada para MariaDB Client (Alpine)
     if (fs.existsSync(certPath)) {
-        console.log("🔒 Nube detectada: Usando flags SSL compatibles con MariaDB/Alpine.");
-        // MariaDB usa --ssl y --ssl-ca en lugar de --ssl-mode
         sslOptions = `--ssl --ssl-ca="${certPath}" --ssl-verify-server-cert`;
     } else {
-        console.log("⚠️ Local detectado: Sin SSL.");
-        // En local sin SSL, no ponemos flags extra
         sslOptions = ''; 
     }
 
-    // COMANDO FINAL LIMPIO
     const command = `mysqldump -h ${host} -P ${port} -u ${user} -p"${password}" ${sslOptions} --no-tablespaces ${database}`;
 
     try {
@@ -439,7 +493,6 @@ exports.backupDatabase = async (req, res) => {
         dumpProcess.stdout.pipe(res);
 
         dumpProcess.stderr.on('data', (data) => {
-            // Filtramos el mensaje de "Deprecated program name" que es solo ruido
             if (!data.includes('Deprecated') && !data.includes('Warning')) {
                 console.error(`[dump error]: ${data}`);
             }
@@ -465,23 +518,15 @@ exports.downloadRegistroPdf = async (req, res) => {
     await generateRegistroPdf(req, res);
 };
 
-// --- MODIFICADO PARA REPORTE GENERAL CON FILTROS ---
 exports.downloadGeneralReportPdf = async (req, res) => {
     try {
         const { search, startDate, endDate } = req.query;
         const userRole = req.user.rol; 
-
-        // Obtenemos los datos filtrados igual que en la tabla
         const solicitantes = await solicitanteModel.getAll(userRole, search, startDate, endDate);
 
         if (!solicitantes || solicitantes.length === 0) {
             return res.status(404).json({ message: 'No hay datos para el reporte con estos filtros.' });
         }
-
-        // Importante: Si 'generateGeneralReportPdf' hace la query por dentro, necesitarás modificarlo también.
-        // Aquí asumimos que lo has ajustado para recibir 'solicitantes' o que lee 'req.query' por sí mismo.
-        // Como solución rápida sin tocar pdfGenerator.js, le pasamos req y res tal cual, 
-        // pero pdfGenerator.js debe leer los query params de req.
         await generateGeneralReportPdf(req, res); 
     } catch (error) {
         console.error("Error generando Reporte General:", error);
