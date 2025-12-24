@@ -98,6 +98,10 @@
         .feedback-message.invalid { color: red; }
         input.invalid { border-color: red; }
         input.valid { border-color: green; }
+
+        /* NUEVO: Estilo para el botón de eliminar */
+        .btn-delete { color: #dc3545; }
+        .btn-delete:hover { color: #bd2130; background-color: rgba(220, 53, 69, 0.1); }
     </style>
 </head>
 <body class="layout-app page-full-width">
@@ -249,6 +253,18 @@
             <div class="modal-buttons" style="margin-top: 20px;">
                 <button type="button" id="close-edit-modal-btn" class="btn btn-secondary">Cancelar</button>
                 <button type="submit" form="edit-integrante-form" class="btn btn-primary">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-confirmation-modal" class="modal-overlay">
+        <div class="modal-content">
+            <i class="modal-icon fas fa-exclamation-triangle error"></i>
+            <h2>¿Estás seguro?</h2>
+            <p>Estás a punto de eliminar este integrante. Esta acción no se puede deshacer.</p>
+            <div class="modal-buttons">
+                <button id="cancel-delete-btn" class="btn btn-secondary">Cancelar</button>
+                <button id="confirm-delete-btn" class="btn btn-danger">Sí, eliminar</button>
             </div>
         </div>
     </div>

@@ -148,7 +148,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (userDropdown?.classList.contains('active')) userDropdown.classList.remove('active'); 
     });
 
-    // ▼▼▼ AQUÍ ESTÁ LA CORRECCIÓN DEL NOMBRE COMPLETO ▼▼▼
     if (viewAdminInfoBtn) {
         viewAdminInfoBtn.addEventListener('click', async (e) => {
             e.preventDefault();
@@ -159,7 +158,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const p = await r.json();
                 
                 // Construcción del NOMBRE COMPLETO
-                // Unimos nombre, apellido paterno y materno, filtrando los nulos o vacíos
                 const nombreCompleto = [p.nombre, p.apellido_paterno, p.apellido_materno]
                     .filter(part => part && part.trim() !== '')
                     .join(' ') || 'N/A';
@@ -180,7 +178,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     if (adminLogoutBtn) {
         adminLogoutBtn.addEventListener('click', (e) => {
@@ -207,6 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnClearDate = document.getElementById('btn-clear-date');
     const quickFilterButtons = document.querySelectorAll('.btn-chip');
 
+    // --- RENDERIZADO DE TABLA (MODIFICADO: Botón Eliminar) ---
     const renderTabla = (integrantes) => { 
         tableBody.innerHTML = '';
         if (integrantes.length === 0) {
@@ -231,6 +229,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td class="actions-cell">
                     <button class="btn-icon btn-edit" data-id="${integrante.id}" title="Editar">
                         <i class="fas fa-pencil-alt"></i> 
+                    </button>
+                    <button class="btn-icon btn-delete" data-id="${integrante.id}" title="Eliminar">
+                        <i class="fas fa-trash-alt"></i> 
                     </button>
                 </td>
             `;
@@ -311,6 +312,75 @@ document.addEventListener('DOMContentLoaded', async () => {
             cargarDatosIniciales(start, end);
         });
     });
+
+    // ============================================================
+    // === LÓGICA DEL MODAL DE ELIMINACIÓN ===
+    // ============================================================
+    const deleteModal = document.getElementById('delete-confirmation-modal');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+    let deleteTargetId = null;
+
+    const openDeleteModal = (id) => {
+        deleteTargetId = id;
+        deleteModal.classList.add('visible');
+    };
+
+    const closeDeleteModal = () => {
+        deleteTargetId = null;
+        deleteModal.classList.remove('visible');
+    };
+
+    if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+    if (deleteModal) {
+        deleteModal.addEventListener('click', (e) => {
+            if (e.target === deleteModal) closeDeleteModal();
+        });
+    }
+
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (!deleteTargetId) return;
+            
+            // UI feedback
+            const originalText = confirmDeleteBtn.textContent;
+            confirmDeleteBtn.textContent = 'Eliminando...';
+            confirmDeleteBtn.disabled = true;
+
+            try {
+                const response = await fetch(`/api/integrantes/${deleteTargetId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) throw new Error(result.message || 'Error al eliminar');
+
+                // Éxito
+                showInfoModal('Eliminado', 'El integrante ha sido eliminado correctamente.', true);
+                
+                // Actualizar tabla localmente
+                allIntegrantes = allIntegrantes.filter(i => i.id != deleteTargetId);
+                
+                // Reaplicar búsqueda si existe
+                if (searchInput && searchInput.value.trim() !== '') {
+                    searchInput.dispatchEvent(new Event('input'));
+                } else {
+                    renderTabla(allIntegrantes);
+                }
+
+                closeDeleteModal();
+
+            } catch (error) {
+                showInfoModal('Error', error.message, false);
+                closeDeleteModal();
+            } finally {
+                confirmDeleteBtn.textContent = originalText;
+                confirmDeleteBtn.disabled = false;
+            }
+        });
+    }
 
     // --- MODAL DE EDICIÓN ---
     const editModal = document.getElementById('edit-integrante-modal');
@@ -426,12 +496,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     tableBody.addEventListener('click', async (e) => {
-        const pdfBtn = e.target.closest('.btn-download-integrante-pdf');
-        if (pdfBtn && !pdfBtn.disabled) {
-            const id = pdfBtn.dataset.id;
-            const original = pdfBtn.innerHTML;
-            pdfBtn.disabled = true;
-            pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        // Caso PDF
+        if (target.classList.contains('btn-download-integrante-pdf')) {
+            if (target.disabled) return;
+            const id = target.dataset.id;
+            const original = target.innerHTML;
+            target.disabled = true;
+            target.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
             try {
                 const res = await fetch(`/api/admin/integrante-pdf/${id}`, {
@@ -448,14 +522,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (e) {
                 showInfoModal('Error', 'No se pudo descargar la ficha.', false);
             } finally {
-                pdfBtn.disabled = false;
-                pdfBtn.innerHTML = original;
+                target.disabled = false;
+                target.innerHTML = original;
             }
             return;
         }
 
-        const editBtn = e.target.closest('.btn-edit');
-        if (editBtn) openEditModal(editBtn.dataset.id);
+        // Caso Editar
+        if (target.classList.contains('btn-edit')) {
+            openEditModal(target.dataset.id);
+            return;
+        }
+
+        // Caso Eliminar (NUEVO)
+        if (target.classList.contains('btn-delete')) {
+            openDeleteModal(target.dataset.id);
+            return;
+        }
     });
 
     // --- EXPORTAR LISTA PDF ---

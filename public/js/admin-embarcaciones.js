@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnClearDate = document.getElementById('btn-clear-date');
     const quickFilterButtons = document.querySelectorAll('.btn-chip');
 
-    // --- RENDERIZADO DE TABLA ---
+    // --- RENDERIZADO DE TABLA (MODIFICADO: Botón Eliminar) ---
     const renderTabla = (embarcaciones) => { 
         tableBody.innerHTML = '';
         if (embarcaciones.length === 0) {
@@ -172,6 +172,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td class="actions-cell">
                     <button class="btn-icon btn-edit" data-id="${e.id}" title="Editar">
                         <i class="fas fa-pencil-alt"></i> 
+                    </button>
+                    <button class="btn-icon btn-delete" data-id="${e.id}" title="Eliminar">
+                        <i class="fas fa-trash-alt"></i> 
                     </button>
                 </td>
             `;
@@ -261,6 +264,75 @@ document.addEventListener('DOMContentLoaded', async () => {
             cargarDatosIniciales(start, end);
         });
     });
+
+    // ============================================================
+    // === LÓGICA DEL MODAL DE ELIMINACIÓN ===
+    // ============================================================
+    const deleteModal = document.getElementById('delete-confirmation-modal');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+    let deleteTargetId = null;
+
+    const openDeleteModal = (id) => {
+        deleteTargetId = id;
+        deleteModal.classList.add('visible');
+    };
+
+    const closeDeleteModal = () => {
+        deleteTargetId = null;
+        deleteModal.classList.remove('visible');
+    };
+
+    if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+    if (deleteModal) {
+        deleteModal.addEventListener('click', (e) => {
+            if (e.target === deleteModal) closeDeleteModal();
+        });
+    }
+
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (!deleteTargetId) return;
+            
+            // UI feedback
+            const originalText = confirmDeleteBtn.textContent;
+            confirmDeleteBtn.textContent = 'Eliminando...';
+            confirmDeleteBtn.disabled = true;
+
+            try {
+                const response = await fetch(`/api/embarcaciones/${deleteTargetId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) throw new Error(result.message || 'Error al eliminar');
+
+                // Éxito
+                showInfoModal('Eliminado', 'La embarcación ha sido eliminada correctamente.', true);
+                
+                // Actualizar tabla localmente
+                allEmbarcaciones = allEmbarcaciones.filter(emb => emb.id != deleteTargetId);
+                
+                // Reaplicar búsqueda si existe
+                if (searchInput && searchInput.value.trim() !== '') {
+                    searchInput.dispatchEvent(new Event('input'));
+                } else {
+                    renderTabla(allEmbarcaciones);
+                }
+
+                closeDeleteModal();
+
+            } catch (error) {
+                showInfoModal('Error', error.message, false);
+                closeDeleteModal();
+            } finally {
+                confirmDeleteBtn.textContent = originalText;
+                confirmDeleteBtn.disabled = false;
+            }
+        });
+    }
 
     // ============================================================
     // === LÓGICA DEL MODAL DE EDICIÓN ===
@@ -387,14 +459,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // EVENT LISTENER UNIFICADO DE TABLA
+    // EVENT LISTENER UNIFICADO DE TABLA (PDF, EDITAR, ELIMINAR)
     tableBody.addEventListener('click', async (e) => {
-        const pdfBtn = e.target.closest('.btn-download-emb-pdf');
-        if (pdfBtn && !pdfBtn.disabled) {
-            const id = pdfBtn.dataset.id;
-            const original = pdfBtn.innerHTML;
-            pdfBtn.disabled = true;
-            pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        // Caso PDF
+        if (target.classList.contains('btn-download-emb-pdf')) {
+            if (target.disabled) return;
+            const id = target.dataset.id;
+            const original = target.innerHTML;
+            target.disabled = true;
+            target.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
             try {
                 const res = await fetch(`/api/admin/embarcacion-pdf/${id}`, {
@@ -411,14 +487,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (err) {
                 showInfoModal('Error', 'No se pudo descargar la ficha técnica.', false);
             } finally {
-                pdfBtn.disabled = false;
-                pdfBtn.innerHTML = original;
+                target.disabled = false;
+                target.innerHTML = original;
             }
             return;
         }
 
-        const editButton = e.target.closest('.btn-edit');
-        if (editButton) openEditModal(editButton.dataset.id);
+        // Caso Editar
+        if (target.classList.contains('btn-edit')) {
+            openEditModal(target.dataset.id);
+            return;
+        }
+
+        // Caso Eliminar (NUEVO)
+        if (target.classList.contains('btn-delete')) {
+            openDeleteModal(target.dataset.id);
+            return;
+        }
     });
 
     // CERRAR MODAL
@@ -495,7 +580,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (userDropdown?.classList.contains('active')) userDropdown.classList.remove('active'); 
     });
 
-    // ▼▼▼ AQUÍ ESTÁ LA CORRECCIÓN DEL NOMBRE COMPLETO ▼▼▼
     if (viewAdminInfoBtn) {
         viewAdminInfoBtn.addEventListener('click', async (e) => {
             e.preventDefault();
@@ -516,7 +600,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     if (adminLogoutBtn) {
         adminLogoutBtn.addEventListener('click', (e) => {
