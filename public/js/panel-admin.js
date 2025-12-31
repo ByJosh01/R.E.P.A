@@ -41,6 +41,25 @@ function checkPanelAdminRole() {
     return true;
 }
 
+// --- UTILIDADES DE FECHA (NUEVO) ---
+const formatDateISO = (date) => {
+    return date.toISOString().split('T')[0];
+};
+
+const getTodayDate = () => formatDateISO(new Date());
+
+const getDaysAgoDate = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return formatDateISO(date);
+};
+
+const getFirstDayOfMonth = () => {
+    const date = new Date();
+    date.setDate(1);
+    return formatDateISO(date);
+};
+
 // 1. Ejecutar la lógica de rol en PAGESHOW
 window.addEventListener('pageshow', (event) => {
     if (event.persisted) {
@@ -107,6 +126,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const adminLogoutBtn = document.getElementById('admin-logout-btn');
     const tableBody = document.getElementById('solicitantes-table-body');
     const searchInput = document.getElementById('search-input');
+    
+    // --- ELEMENTOS DE FILTRO DE FECHA (NUEVO) ---
+    const dateStartInput = document.getElementById('filter-date-start');
+    const dateEndInput = document.getElementById('filter-date-end');
+    const btnFilterDate = document.getElementById('btn-filter-date');
+    const btnClearDate = document.getElementById('btn-clear-date');
+    const quickFilterButtons = document.querySelectorAll('.btn-chip');
+
     let allSolicitantes = []; 
 
     const adminInfoModal = document.getElementById('admin-info-modal');
@@ -181,12 +208,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (closeAdminModalBtn) { closeAdminModalBtn.addEventListener('click', () => { if(adminInfoModal) adminInfoModal.classList.remove('visible'); }); }
 
     if (adminGotoDashboardBtn) {
-        adminGotoDashboardBtn.addEventListener('click', (e) => {
-            e.preventDefault();
+        adminGotoDashboardBtn.addEventListener('click', (e) => {
+            e.preventDefault();
             // Esta página es solo para 'admin', así que su dashboard es 'dashboard.html'
-            window.location.href = 'dashboard.html';
-        });
-    }
+            window.location.href = 'dashboard.html';
+        });
+    }
 
     if (adminLogoutBtn) {
         adminLogoutBtn.addEventListener('click', (e) => {
@@ -246,9 +273,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    const cargarSolicitantes = async () => {
+    // MODIFICADO: Acepta startDate y endDate
+    const cargarSolicitantes = async (startDate = '', endDate = '') => {
         try {
-            const response = await fetch('/api/admin/solicitantes', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            // Construir URL con parámetros
+            let url = '/api/admin/solicitantes';
+            const params = new URLSearchParams();
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+            if (startDate || endDate) url += `?${params.toString()}`;
+
+            const response = await fetch(url, { headers: { 'Authorization': `Bearer ${authToken}` } });
              if (response.status === 403) { showInfoModal('Acceso Denegado', 'No tienes permisos.', false, () => window.location.href = 'dashboard.html'); return; }
             if (!response.ok) { throw new Error('No se pudieron cargar los solicitantes.'); }
             allSolicitantes = await response.json();
@@ -258,6 +293,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             if(navCuentas) navCuentas.style.display = 'none';
 
             renderTabla(allSolicitantes);
+            
+            // Re-aplicar filtro de búsqueda si hay texto escrito
+            if (searchInput && searchInput.value.trim() !== '') {
+                searchInput.dispatchEvent(new Event('input'));
+            }
         } catch (error) {
             console.error("Error al cargar solicitantes:", error);
             if(tableBody) tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Error al cargar datos.</td></tr>`;
@@ -276,6 +316,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderTabla(filteredSolicitantes);
         });
     }
+    
+    // --- NUEVO: EVENTOS DE FILTROS DE FECHA ---
+    if (btnFilterDate) {
+        btnFilterDate.addEventListener('click', () => {
+            quickFilterButtons.forEach(btn => btn.classList.remove('active'));
+            cargarSolicitantes(dateStartInput.value, dateEndInput.value);
+        });
+    }
+
+    if (btnClearDate) {
+        btnClearDate.addEventListener('click', () => {
+            dateStartInput.value = '';
+            dateEndInput.value = '';
+            quickFilterButtons.forEach(btn => btn.classList.remove('active'));
+            cargarSolicitantes();
+        });
+    }
+
+    quickFilterButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            quickFilterButtons.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            const type = e.target.dataset.range;
+            const today = getTodayDate();
+            let start = '', end = today;
+
+            if (type === 'today') start = today;
+            else if (type === 'week') start = getDaysAgoDate(7);
+            else if (type === 'month') start = getFirstDayOfMonth();
+
+            dateStartInput.value = start;
+            dateEndInput.value = end;
+            cargarSolicitantes(start, end);
+        });
+    });
 
     // =======================================================
     // === VALIDACIÓN EN TIEMPO REAL DEL FORMULARIO DE EDICIÓN ===
@@ -493,7 +569,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnDownloadGeneralReport.disabled = true;
             btnDownloadGeneralReport.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
             try {
-                const response = await fetch(`/api/admin/download-reporte-general`, { method: 'GET', headers: { 'Authorization': `Bearer ${authToken}` } });
+                // MODIFICADO: Incluir parámetros de fecha en la URL del reporte
+                let url = `/api/admin/download-reporte-general`;
+                const params = new URLSearchParams();
+                if (dateStartInput.value) params.append('startDate', dateStartInput.value);
+                if (dateEndInput.value) params.append('endDate', dateEndInput.value);
+                if (dateStartInput.value || dateEndInput.value) url += `?${params.toString()}`;
+
+                const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${authToken}` } });
                 if (!response.ok) { throw new Error('Falló la generación del reporte.'); }
                 
                 const contentDisposition = response.headers.get('content-disposition');
@@ -504,10 +587,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.style.display = 'none'; a.href = url; a.download = filename;
+                const urlObj = window.URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.style.display = 'none'; a.href = urlObj; a.download = filename;
                 document.body.appendChild(a); a.click();
-                window.URL.revokeObjectURL(url); a.remove();
+                window.URL.revokeObjectURL(urlObj); a.remove();
             } catch (error) {
                 showInfoModal('Error de Descarga', `No se pudo descargar el reporte: ${error.message}`, false);
             } finally {

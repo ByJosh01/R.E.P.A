@@ -12,7 +12,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <style>
-        /* Estilos de la barra de herramientas */
+        /* =========================================
+           === ESTILOS GENERALES (Barra de Herramientas) ===
+           ========================================= */
         .toolbar-container {
             background-color: #f8f9fa;
             border: 1px solid #e9ecef;
@@ -96,6 +98,75 @@
         .feedback-message.invalid { color: red; }
         input.invalid { border-color: red; }
         input.valid { border-color: green; }
+
+        /* =========================================
+           === OPTIMIZACIÓN MÓVIL (MOBILE PATCH) ===
+           Esto arregla la vista en celulares
+           ========================================= */
+        @media (max-width: 768px) {
+            /* Forzar Grid del formulario a una sola columna */
+            .anexo-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100% !important;
+            }
+            .anexo-field, .anexo-grid > div {
+                border-right: none !important;
+                border-bottom: 1px solid #ccc !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            /* Tabla con Scroll Horizontal */
+            .table-container {
+                width: 100%;
+                overflow-x: auto !important; /* Habilita scroll horizontal */
+                -webkit-overflow-scrolling: touch; /* Scroll suave en iPhone */
+                margin-bottom: 20px;
+                border: 1px solid #e9ecef;
+            }
+            .admin-table {
+                min-width: 600px; /* Fuerza ancho mínimo para activar scroll */
+            }
+
+            /* Barra de Herramientas en columna */
+            .toolbar-container {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 15px;
+                padding: 10px !important;
+            }
+            .toolbar-section, 
+            .search-group, 
+            .date-filter-container, 
+            .quick-filters {
+                width: 100% !important;
+                min-width: 0 !important;
+                flex: none !important;
+            }
+            .date-inputs-row {
+                flex-wrap: wrap;
+            }
+            .date-item {
+                flex-grow: 1;
+            }
+
+            /* Botones más grandes para el dedo */
+            .btn, .btn-action, .tab-link {
+                min-height: 44px;
+                padding: 12px 15px;
+            }
+
+            /* Modales Full Screen */
+            .modal-content, .modal-content.large {
+                width: 95% !important;
+                max-width: 95% !important;
+                padding: 20px 15px !important;
+                margin: 10px auto;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+        }
     </style>
 </head>
 <body class="layout-app page-full-width">

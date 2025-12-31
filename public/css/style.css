@@ -1892,3 +1892,105 @@ body.dark-mode .admin-table .btn-download-pdf:disabled {
         justify-content: center;
     }
 }
+
+/* =========================================
+   === OPTIMIZACIÓN MÓVIL (MOBILE PATCH) ===
+   ========================================= */
+
+@media (max-width: 768px) {
+
+    /* 1. FORZAR GRID A UNA SOLA COLUMNA (FORMULARIOS)
+       Esto asegura que TODOS los campos (span-3, span-4, etc.) ocupen el 100% 
+       del ancho en celular, evitando que se vean aplastados. */
+    .anexo-grid, 
+    .activos-container-grid, 
+    .anexo4-final-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+
+    .anexo-field, 
+    .anexo-grid > div,
+    .anexo4-final-grid > div {
+        border-right: none !important; /* Quita líneas divisorias verticales */
+        border-bottom: 1px solid #ccc !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 2. TABLAS RESPONSIVAS (SCROLL HORIZONTAL)
+       Evita que la tabla rompa el diseño. */
+    .table-container {
+        width: 100%;
+        overflow-x: auto !important; /* Habilita scroll horizontal */
+        -webkit-overflow-scrolling: touch; /* Scroll suave en iPhone */
+        margin-bottom: 20px;
+        border: 1px solid var(--border-color);
+        box-shadow: none; /* Quita sombras pesadas en móvil */
+    }
+
+    .admin-table, 
+    .embarcaciones-table {
+        min-width: 600px; /* Fuerza un ancho mínimo para que el scroll aparezca */
+    }
+
+    /* 3. AJUSTES DE BARRA DE HERRAMIENTAS (ADMIN) 
+       Para que el buscador y los filtros de fecha no se amontonen. */
+    .toolbar-container {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 15px;
+        padding: 10px !important;
+    }
+
+    .toolbar-section, 
+    .search-group, 
+    .date-filter-container, 
+    .quick-filters {
+        width: 100% !important;
+        min-width: 0 !important; /* Resetea min-widths antiguos */
+        flex: none !important;
+    }
+
+    .date-inputs-row {
+        flex-wrap: wrap; /* Permite que las fechas bajen de línea si no caben */
+    }
+    
+    .date-item {
+        flex-grow: 1; /* Inputs de fecha ocupan espacio disponible */
+    }
+
+    /* 4. BOTONES Y TOUCH TARGETS
+       Hace los botones más fáciles de tocar con el dedo. */
+    .btn, 
+    .btn-action, 
+    .tab-link {
+        min-height: 44px; /* Altura mínima recomendada para touch */
+        padding: 12px 15px;
+    }
+
+    /* 5. MODALES FULL SCREEN
+       En celular, los modales se ven mejor si ocupan casi toda la pantalla
+       y están pegados abajo o centrados sin márgenes grandes. */
+    .modal-content, 
+    .modal-content.large {
+        width: 95% !important;
+        max-width: 95% !important;
+        padding: 20px 15px !important;
+        margin: 10px auto;
+        max-height: 90vh;
+        overflow-y: auto; /* Scroll dentro del modal si es muy alto */
+    }
+    
+    /* Ajuste específico para el Dashboard Flowchart */
+    .flowchart-tier {
+        flex-direction: column;
+        gap: 20px !important;
+    }
+    .flowchart-tier::before,
+    .flowchart-box::before,
+    .flowchart-box::after {
+        display: none !important; /* Oculta las líneas conectoras en móvil */
+    }
+}
