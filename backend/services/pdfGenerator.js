@@ -144,9 +144,7 @@ const _drawPdfForSolicitante = async (doc, data, FONT_STYLES) => {
     addField('Representante Legal', perfil.nombre_representante_legal);
     addSubTitle('Domicilio Fiscal:');
     addField('Entidad Federativa', perfil.entidad_federativa);
-    // ▼▼▼ CORRECCIÓN ▼▼▼
-    addField('Municipio', perfil.municipio); // Corregido de 'perfilfil' a 'perfil'
-    // ▲▲▲ FIN CORRECCIÓN ▲▲▲
+    addField('Municipio', perfil.municipio); 
     addField('Localidad', perfil.localidad);
     addField('Colonia', perfil.colonia);
     addField('Código Postal', perfil.codigo_postal);
@@ -154,12 +152,11 @@ const _drawPdfForSolicitante = async (doc, data, FONT_STYLES) => {
     addField('No. Exterior', perfil.no_exterior);
     addField('No. Interior', perfil.no_interior);
 
-    // --- ANEXO 2: USANDO TABLA (CORREGIDO) ---
+    // --- ANEXO 2: USANDO TABLA ---
     if (integrantes && integrantes.length > 0) {
         addTitle('Anexo 2: Integrantes');
         if (isNaN(doc.y)) { doc.y = 100; } else { doc.moveDown(0.5); }
-        console.log('Posición Y antes de tabla Integrantes:', doc.y);
-
+        
         const tableIntegrantes = {
             title: "",
             headers: ["Nombre", "CURP", "RFC", "Sexo", "Actividad"],
@@ -182,7 +179,7 @@ const _drawPdfForSolicitante = async (doc, data, FONT_STYLES) => {
                  headerColor: PRIMARY_RED,
                  headerOpacity: 0.9,
              });
-        } catch (tableError) {
+         } catch (tableError) {
              console.error("Error al dibujar tabla Integrantes:", tableError);
              addText("Error al generar la tabla de integrantes.");
         }
@@ -314,12 +311,11 @@ const _drawPdfForSolicitante = async (doc, data, FONT_STYLES) => {
          } else { addText('   Inst. Hidráulica: No registrada.');}
     }
 
-    // --- ANEXO 5: USANDO TABLA (CORREGIDO) ---
+    // --- ANEXO 5: USANDO TABLA ---
     if (embarcacionesMenores && embarcacionesMenores.length > 0) {
          addTitle('Anexo 5: Embarcaciones Menores (Pesca)');
          if (isNaN(doc.y)) { doc.y = 100; } else { doc.moveDown(0.5); }
-         console.log('Posición Y antes de tabla Embarcaciones:', doc.y);
-
+         
          const tableEmbarcaciones = {
             title: "",
              headers: ["Nombre", "Matrícula", "Ton.", "Marca Motor", "Serie", "HP", "Puerto Base"],
@@ -335,7 +331,6 @@ const _drawPdfForSolicitante = async (doc, data, FONT_STYLES) => {
          };
          try {
              await doc.table(tableEmbarcaciones, {
-                 // Dejamos que pdfkit-table calcule los anchos
                  prepareHeader: () => doc.font(FONT_BOLD).fontSize(FONT_SIZE_SMALL).fillColor(WHITE),
                  prepareRow: (row, indexColumn, indexRow, rectRow, rectCell) => {
                      doc.font(FONT_NORMAL).fontSize(FONT_SIZE_SMALL).fillColor(TEXT_COLOR);
@@ -429,20 +424,31 @@ const generateRegistroPdf = async (req, res) => {
 };
 
 // --- ================================== ---
-// --- FUNCIÓN PÚBLICA: PDF GENERAL ---
+// --- FUNCIÓN PÚBLICA: PDF GENERAL (CORREGIDO) ---
 // --- ================================== ---
 const generateGeneralReportPdf = async (req, res) => {
     try {
-        // 1. Obtener TODOS los solicitantes
-        // ▼▼▼ CORRECCIÓN SQL (añadir s. a columnas ambiguas) ▼▼▼
-        const [solicitantes] = await pool.query(
-            `SELECT 
+        // Obtenemos el rol del usuario que está pidiendo el reporte
+        const userRole = req.user.rol; 
+
+        // Construcción Dinámica de la Query SQL
+        let query = `
+            SELECT 
                 s.solicitante_id, s.curp, s.nombre, s.apellido_paterno, s.apellido_materno, s.rfc, s.actividad, u.rol 
              FROM solicitantes s
              LEFT JOIN usuarios u ON s.usuario_id = u.id
-             ORDER BY s.nombre, s.apellido_paterno`
-        );
-        // ▲▲▲ FIN CORRECCIÓN SQL ▲▲▲
+        `;
+
+        // === FILTRO DE SEGURIDAD ===
+        if (userRole === 'admin') {
+            // Si es ADMIN: Excluye a SuperAdmins (ve a solicitantes y a otros admins)
+            query += " WHERE u.rol != 'superadmin'";
+        } 
+        // Si es SUPERADMIN: No agregamos WHERE, ve TODO (incluidos superadmins)
+
+        query += " ORDER BY s.nombre, s.apellido_paterno";
+
+        const [solicitantes] = await pool.query(query);
 
         if (!solicitantes || solicitantes.length === 0) {
             return res.status(404).json({ message: 'No se encontraron solicitantes para el reporte.' });
@@ -489,13 +495,13 @@ const generateGeneralReportPdf = async (req, res) => {
 
         // 2. Preparar datos para la tabla resumen
         const tableData = {
-            headers: ["Nombre", "RFC", "CURP", "Actividad", "Rol"], // Simplificado
+            headers: ["Nombre", "RFC", "CURP", "Actividad", "Rol"],
             rows: solicitantes.map(s => [
                 [s.nombre, s.apellido_paterno, s.apellido_materno].filter(Boolean).join(' ') || 'N/A',
                 s.rfc || 'N/A',
                 s.curp || 'N/A',
                 s.actividad || 'N/A',
-                s.rol || 'N/A'
+                s.rol || 'N/A' // Añadí la columna Rol para que el SuperAdmin verifique quién es quién
             ])
         };
 
@@ -1043,9 +1049,5 @@ module.exports = {
     generateEmbarcacionesListPDF,
     generateUsuarioIndividualPdf,
     generateIntegranteIndividualPdf,
-    generateEmbarcacionIndividualPdf // <--- NUEVA FUNCIÓN AGREGADA
+    generateEmbarcacionIndividualPdf
 };
-
-
-
-
