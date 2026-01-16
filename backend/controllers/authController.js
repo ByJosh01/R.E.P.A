@@ -18,8 +18,12 @@ const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL;
 const SENDER_NAME = "Sistema de Avisos REPA";
 const CLIENT_URL = process.env.CLIENT_URL || "https://proyecto-repa.onrender.com"; 
 
-const generateToken = (userId) => {
-    return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '1d' });
+// ==========================================================
+// 1. CORRECCIÓN AQUÍ: Agregamos 'role' al generar el Token
+// ==========================================================
+const generateToken = (userId, role) => {
+    // Ahora el token lleva el ID y el ROL en su interior
+    return jwt.sign({ id: userId, rol: role }, JWT_SECRET, { expiresIn: '1d' });
 };
 
 exports.registerUser = async (req, res) => {
@@ -47,8 +51,7 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Falló la verificación de seguridad (Captcha).' });
         }
 
-        // 4. Verificar duplicados (Optimizando consultas)
-        // Hacemos las dos consultas en paralelo para ser más rápidos
+        // 4. Verificar duplicados
         const [existingCurp, existingEmail] = await Promise.all([
             userModel.findUserByCurp(curp),
             userModel.findUserByEmail(email)
@@ -62,12 +65,9 @@ exports.registerUser = async (req, res) => {
         }
 
         // 5. Crear Usuario
-        // Nota: La encriptación de password (hashing) debe hacerse dentro de userModel.createUser o aquí mismo antes de enviar
-        // Asumo que tu userModel ya hace el hash con bcrypt, si no, avísame.
         await userModel.createUser({ curp, email, password });
 
-        // 6. Enviar Correo de Bienvenida
-        // Usamos .catch para que si falla el correo, NO falle el registro del usuario
+        // 6. Enviar Correo
         sendWelcomeEmail(curp, email).catch(err => {
             console.error("⚠️ Advertencia: Usuario registrado pero falló el correo:", err.message);
         });
@@ -88,7 +88,11 @@ exports.loginUser = async (req, res) => {
         const user = await userModel.findUserByCurp(curp);
 
         if (user && await bcrypt.compare(password, user.password)) {
-            const token = generateToken(user.id);
+            
+            // ==========================================================
+            // 2. CORRECCIÓN AQUÍ: Pasamos el ROL al generar el token
+            // ==========================================================
+            const token = generateToken(user.id, user.rol);
             
             const userSafe = { 
                 curp: user.curp, 
@@ -113,9 +117,7 @@ exports.loginUser = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
     try {
         let { email } = req.body;
-        // Validación básica de input
         if (!email) return res.status(400).json({ message: 'El email es requerido.' });
-        
         email = email.trim().toLowerCase();
 
         const user = await userModel.findUserByEmail(email);
@@ -130,7 +132,6 @@ exports.forgotPassword = async (req, res) => {
             sendRecoveryEmail(email, resetLink).catch(console.error);
         }
         
-        // Respondemos siempre OK por seguridad (evita enumeración de usuarios)
         return res.status(200).json({ message: 'Si el correo existe, recibirás instrucciones.' });
     } catch (error) {
         console.error("Error en forgotPassword:", error);
@@ -142,7 +143,6 @@ exports.resetPassword = async (req, res) => {
     try {
         const { token, newPassword } = req.body;
         
-        // Validación de password en reset también
         if (!newPassword || newPassword.length < 8) {
             return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 8 caracteres.' });
         }
@@ -153,7 +153,6 @@ exports.resetPassword = async (req, res) => {
             return res.status(400).json({ message: 'El enlace ha expirado o es inválido.' });
         }
 
-        // Aquí asumimos que updateUserPassword hace el hash de la nueva contraseña
         await userModel.updateUserPassword(tokenData.email, newPassword);
         await userModel.deleteResetToken(token);
 

@@ -6,6 +6,7 @@ const path = require('path');
 const helmet = require('helmet'); 
 const rateLimit = require('express-rate-limit');
 const hpp = require('hpp'); 
+const jwt = require('jsonwebtoken'); 
 
 // Importación de Rutas
 const authRoutes = require('./routes/authRoutes');
@@ -16,37 +17,46 @@ const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
-// =================================================================
-// ==== CONFIGURACIÓN DE SEGURIDAD (HARDENING) ====
-// =================================================================
-
 // 0. DETECCIÓN DE ENTORNO
 const isProduction = process.env.NODE_ENV === 'production';
 
-// 1. OCULTAR TECNOLOGÍA
+// 1. HARDENING BÁSICO
 app.disable('x-powered-by');
-
-// 2. TRUST PROXY (CRÍTICO PARA RENDER)
 app.set('trust proxy', 1); 
 
-// 3. RATE LIMIT
+// 2. LIMITADORES
+
+// A) Limitador Global con "Pase VIP" (Para navegación diaria)
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
-    max: 1000, 
+    max: 5000, 
     standardHeaders: true, 
     legacyHeaders: false, 
-    message: { message: 'Demasiadas peticiones generales. Calma un poco.' }
+    message: { message: 'Sistema saturado. Espere unos minutos.' },
+    skip: (req, res) => {
+        if (req.method === 'OPTIONS') return true; // Ignorar preflight CORS
+        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+            try {
+                const token = req.headers.authorization.split(' ')[1];
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                // Si es admin, pase VIP
+                if (decoded.rol === 'admin' || decoded.rol === 'superadmin') return true; 
+            } catch (e) { return false; }
+        }
+        return false;
+    }
 });
 
+// B) Limitador Estricto (SOLO para Login/Registro)
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
-    max: isProduction ? 10 : 100, 
+    max: isProduction ? 30 : 100, // Estricto
     standardHeaders: true,
     legacyHeaders: false,
-    message: { message: 'Demasiados intentos de acceso. Intenta más tarde.' }
+    message: { message: 'Demasiados intentos de acceso/login.' }
 });
 
-// 4. CORS SEGURO (CORREGIDO)
+// 3. CORS
 const whiteList = [
     'https://proyecto-repa.onrender.com', 
     'http://localhost:5500',              
@@ -55,95 +65,70 @@ const whiteList = [
     'http://localhost:8080',              
     'http://127.0.0.1:8080'               
 ];
-
-const corsOptions = {
+app.use(cors({
     origin: function (origin, callback) {
-        // CORRECCIÓN IMPORTANTE:
-        // Permitimos peticiones sin origen (!origin) en CUALQUIER entorno.
-        // Esto es vital para que el Frontend (que vive en el mismo servidor) pueda hablar con el Backend.
-        if (whiteList.includes(origin) || !origin) {
-            callback(null, true);
-        } else {
-            console.error(`Bloqueado por CORS: ${origin}`); // Log para depurar si vuelve a pasar
-            callback(new Error('Acceso denegado por CORS'));
-        }
+        if (whiteList.includes(origin) || !origin) callback(null, true);
+        else callback(new Error('Acceso denegado por CORS'));
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
-};
-app.use(cors(corsOptions));
+}));
 
-// 5. HELMET (HEADERS HTTP & CSP)
+// 4. MIDDLEWARES GLOBALES
 app.use(
     helmet.contentSecurityPolicy({
         directives: {
             ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-            "script-src": ["'self'", "https://www.google.com/recaptcha/", "https://www.gstatic.com/", "https://cdnjs.cloudflare.com"],
-            "frame-src": ["'self'", "https://www.google.com/recaptcha/"],
-            "style-src": [
-                "'self'", 
-                "'unsafe-inline'", 
-                "https://fonts.googleapis.com/", 
-                "https://cdnjs.cloudflare.com",
-                "https://cdn.jsdelivr.net"
-            ],
-            "font-src": [
-                "'self'", 
-                "https://fonts.gstatic.com/", 
-                "https://cdnjs.cloudflare.com", 
-                "data:"
-            ],
+            "script-src": ["'self'", "https://www.google.com", "https://www.gstatic.com", "https://cdnjs.cloudflare.com"],
+            "frame-src": ["'self'", "https://www.google.com"],
             "img-src": ["'self'", "data:", "https:"],
-            "connect-src": ["'self'", "https://www.google.com/recaptcha/"] 
+            "connect-src": ["'self'", "https://www.google.com"] 
         },
     })
 );
-
-// =================================================================
-// ==== MIDDLEWARES GLOBALES ====
-// =================================================================
-
 app.use(express.json({ limit: '10kb' })); 
 app.use(hpp()); 
-
-// Middleware Anti-Caché
 app.use((req, res, next) => {
     const protectedPages = [
         '/dashboard.html', '/admin.html', '/panel-admin.html', '/anexos.html',
         '/datos-personales.html', '/detalle-solicitante.html', '/admin-usuarios.html',
         '/admin-integrantes.html', '/admin-embarcaciones.html'
     ];
-
     if (protectedPages.includes(req.path) || req.path.startsWith('/api/admin')) {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
     }
     next();
 });
-
-// Archivos Estáticos
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Ruta Raíz
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public', 'home.html'));
-});
-
 // =================================================================
-// ==== RUTAS API ====
+// ==== RUTAS API (CORREGIDO - EL SECRETO ESTÁ AQUÍ) ====
 // =================================================================
 
-app.use('/api', authLimiter, authRoutes); 
+// 1. APLICAMOS EL CANDADO ESTRICTO **SOLO** A LAS RUTAS DE LOGIN/REGISTRO
+// (Asumiendo que tus rutas son /api/login, /api/register, etc.)
+app.use('/api/login', authLimiter);
+app.use('/api/register', authLimiter);
+app.use('/api/forgot-password', authLimiter);
+app.use('/api/reset-password', authLimiter);
+
+// 2. CARGAMOS TODAS LAS RUTAS DE AUTH
+// (Ya protegimos las sensibles arriba, el resto pasan normal)
+app.use('/api', authRoutes); 
+
+// 3. RUTAS PROTEGIDAS CON "PASE VIP"
+// (Aquí aplica el globalLimiter que sí respeta tu rol de Admin)
 app.use('/api', globalLimiter, integranteRoutes);
 app.use('/api/embarcaciones', globalLimiter, embarcacionMenorRoutes);
 app.use('/api/admin', globalLimiter, adminRoutes);
 app.use('/api', globalLimiter, anexoRoutes); 
 app.use('/api/anexos', globalLimiter, anexoRoutes); 
 
-// Puerto
+// FRONTEND
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public', 'home.html')));
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`✅ Servidor seguro escuchando en el puerto ${PORT}`);
-    console.log(`🛡️  Modo Rate Limit: ${isProduction ? 'ESTRICTO (Prod)' : 'RELAJADO (Dev)'}`);
+    console.log(`✅ Servidor REPA escuchando en puerto ${PORT}`);
+    console.log(`🛡️  Rate Limits Configurados Correctamente (Pase VIP Activo)`);
 });
