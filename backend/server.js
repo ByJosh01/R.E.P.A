@@ -20,56 +20,51 @@ const app = express();
 // ==== CONFIGURACIÓN DE SEGURIDAD (HARDENING) ====
 // =================================================================
 
-// 0. DETECCIÓN DE ENTORNO (Para ajustar seguridad)
+// 0. DETECCIÓN DE ENTORNO
 const isProduction = process.env.NODE_ENV === 'production';
 
 // 1. OCULTAR TECNOLOGÍA
 app.disable('x-powered-by');
 
 // 2. TRUST PROXY (CRÍTICO PARA RENDER)
-// Permite que Express confíe en el balanceador de carga de Render para leer la IP real del usuario
 app.set('trust proxy', 1); 
 
-// 3. RATE LIMIT (PROTECCIÓN DDOS DIFERENCIADA)
-
-// A) Limitador General (Para navegación normal de la API)
+// 3. RATE LIMIT
 const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 1000, // 1000 peticiones
+    windowMs: 15 * 60 * 1000, 
+    max: 1000, 
     standardHeaders: true, 
     legacyHeaders: false, 
     message: { message: 'Demasiadas peticiones generales. Calma un poco.' }
 });
 
-// B) Limitador Estricto (Para Login/Registro - Anti Fuerza Bruta)
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    // LÓGICA DINÁMICA:
-    // En Producción (Render): 10 intentos (Seguridad Máxima)
-    // En Local (PC): 100 intentos (Comodidad para Desarrollo)
+    windowMs: 15 * 60 * 1000, 
     max: isProduction ? 10 : 100, 
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: 'Demasiados intentos de acceso. Intenta más tarde.' }
 });
 
-// 4. CORS SEGURO
+// 4. CORS SEGURO (CORREGIDO)
 const whiteList = [
-    'https://proyecto-repa.onrender.com', // Producción (Render)
-    'http://localhost:5500',              // Desarrollo Local (Live Server)
-    'http://127.0.0.1:5500',              // Desarrollo Local IP
-    'http://localhost:3000',              // Backend directo
-    'http://localhost:8080',              // Frontend Docker
-    'http://127.0.0.1:8080'               // Frontend Docker IP
+    'https://proyecto-repa.onrender.com', 
+    'http://localhost:5500',              
+    'http://127.0.0.1:5500',              
+    'http://localhost:3000',              
+    'http://localhost:8080',              
+    'http://127.0.0.1:8080'               
 ];
 
 const corsOptions = {
     origin: function (origin, callback) {
-        // Permitimos peticiones sin origen (como Postman) SOLO si no estamos en producción
-        // O si el origen está en la lista blanca
-        if (whiteList.includes(origin) || (!origin && !isProduction)) {
+        // CORRECCIÓN IMPORTANTE:
+        // Permitimos peticiones sin origen (!origin) en CUALQUIER entorno.
+        // Esto es vital para que el Frontend (que vive en el mismo servidor) pueda hablar con el Backend.
+        if (whiteList.includes(origin) || !origin) {
             callback(null, true);
         } else {
+            console.error(`Bloqueado por CORS: ${origin}`); // Log para depurar si vuelve a pasar
             callback(new Error('Acceso denegado por CORS'));
         }
     },
@@ -108,11 +103,10 @@ app.use(
 // ==== MIDDLEWARES GLOBALES ====
 // =================================================================
 
-// Limitar tamaño del body JSON a 10kb para prevenir ataques DoS de memoria
 app.use(express.json({ limit: '10kb' })); 
-app.use(hpp()); // Protección contra contaminación de parámetros HTTP
+app.use(hpp()); 
 
-// Middleware Anti-Caché para páginas protegidas
+// Middleware Anti-Caché
 app.use((req, res, next) => {
     const protectedPages = [
         '/dashboard.html', '/admin.html', '/panel-admin.html', '/anexos.html',
@@ -140,10 +134,7 @@ app.get('/', (req, res) => {
 // ==== RUTAS API ====
 // =================================================================
 
-// Aplicamos el limitador ESTRICTO solo a autenticación
 app.use('/api', authLimiter, authRoutes); 
-
-// Aplicamos el limitador GENERAL al resto de rutas
 app.use('/api', globalLimiter, integranteRoutes);
 app.use('/api/embarcaciones', globalLimiter, embarcacionMenorRoutes);
 app.use('/api/admin', globalLimiter, adminRoutes);
