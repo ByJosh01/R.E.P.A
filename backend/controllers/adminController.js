@@ -1,13 +1,15 @@
 // backend/controllers/adminController.js
 const pool = require('../db');
 const fs = require('fs');
-const { exec } = require('child_process');
+const { spawn } = require('child_process'); // MEJORA: spawn es mejor para backups grandes
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const solicitanteModel = require('../models/solicitanteModel');
 const embarcacionMenorModel = require('../models/embarcacionMenorModel');
 const userModel = require('../models/userModel'); 
+const { validationResult } = require('express-validator');
 
+// Servicios PDF
 const { 
     generateRegistroPdf, 
     generateGeneralReportPdf, 
@@ -16,7 +18,22 @@ const {
     generateIntegranteIndividualPdf,
     generateEmbarcacionIndividualPdf 
 } = require('../services/pdfGenerator');
-const { validationResult } = require('express-validator');
+
+// --- HELPER INTERNO PARA ELIMINACIÓN EN CASCADA (DRY) ---
+// Evita repetir la lista de tablas en dos funciones distintas
+async function _deleteUserResources(connection, solicitanteId) {
+    const childTables = [
+        'integrantes', 'embarcaciones_menores', 'datos_tecnicos_pesca',
+        'datos_tecnicos_acuacultura', 'unidad_pesquera', 'unidad_produccion',
+        'tipo_estanques', 'instrumentos_medicion', 'sistema_conservacion',
+        'equipo_transporte', 'embarcaciones', 'instalacion_hidraulica_aireacion'
+    ];
+    for (const table of childTables) {
+        await connection.query(`DELETE FROM ${table} WHERE solicitante_id = ?`, [solicitanteId]);
+    }
+    await connection.query('DELETE FROM solicitantes WHERE solicitante_id = ?', [solicitanteId]);
+}
+// ---------------------------------------------------------
 
 // ==================================================
 // 1. GESTIÓN DE SOLICITANTES
@@ -35,9 +52,6 @@ exports.getAllSolicitantes = async (req, res) => {
 };
 
 exports.getSolicitanteById = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-
     try {
         const { id } = req.params;
         const [rows] = await pool.query(
@@ -56,6 +70,7 @@ exports.getSolicitanteById = async (req, res) => {
 };
 
 exports.updateSolicitante = async (req, res) => {
+    // Nota: Si usas validateRequest en las rutas, puedes quitar este bloque
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
 
@@ -68,6 +83,7 @@ exports.updateSolicitante = async (req, res) => {
         
         const usuarioId = solicitantes[0].usuario_id;
         
+        // Construcción dinámica de objeto para evitar nulls no deseados
         const dataToUpdate = {
             nombre: data.nombre,
             apellido_paterno: data.apellido_paterno, 
@@ -89,6 +105,7 @@ exports.updateSolicitante = async (req, res) => {
             numero_integrantes: data.numIntegrantes
         };
 
+        // Limpiar undefined
         Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
 
         if (Object.keys(dataToUpdate).length > 0) {
@@ -101,7 +118,7 @@ exports.updateSolicitante = async (req, res) => {
             }
             await pool.query('UPDATE usuarios SET rol = ? WHERE id = ?', [data.rol, usuarioId]);
         }
-        res.status(200).json({ message: 'Datos del solicitante actualizados correctamente.' });
+        res.status(200).json({ message: 'Datos actualizados correctamente.' });
     } catch (error) {
         console.error("Error en updateSolicitante:", error);
         res.status(500).json({ message: 'Error en el servidor al actualizar.' });
@@ -109,9 +126,6 @@ exports.updateSolicitante = async (req, res) => {
 };
 
 exports.deleteSolicitante = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-
     const { id } = req.params;
     const adminMakingRequest = req.user;
     const connection = await pool.getConnection();
@@ -132,50 +146,41 @@ exports.deleteSolicitante = async (req, res) => {
 
         if (targetUsuarioId == adminMakingRequest.id) {
             connection.release();
-            return res.status(403).json({ message: 'Acción no permitida: no puedes eliminar tu propia cuenta.' });
+            return res.status(403).json({ message: 'No puedes eliminar tu propia cuenta.' });
         }
 
         if (adminMakingRequest.rol === 'admin' && (targetRol === 'superadmin' || targetRol === 'admin')) {
              connection.release();
-             return res.status(403).json({ message: 'Permiso denegado: los administradores solo pueden eliminar cuentas de solicitante.' });
+             return res.status(403).json({ message: 'Solo SuperAdmin puede eliminar otros administradores.' });
         }
         
         await connection.beginTransaction(); 
 
-        const childTables = [
-            'integrantes', 'embarcaciones_menores', 'datos_tecnicos_pesca',
-            'datos_tecnicos_acuacultura', 'unidad_pesquera', 'unidad_produccion',
-            'tipo_estanques', 'instrumentos_medicion', 'sistema_conservacion',
-            'equipo_transporte', 'embarcaciones', 'instalacion_hidraulica_aireacion'
-        ];
-        for (const table of childTables) {
-            await connection.query(`DELETE FROM ${table} WHERE solicitante_id = ?`, [id]);
-        }
-        await connection.query('DELETE FROM solicitantes WHERE solicitante_id = ?', [id]);
+        // Usamos el helper interno
+        await _deleteUserResources(connection, id);
+        
+        // Finalmente borramos el usuario base
         await connection.query('DELETE FROM usuarios WHERE id = ?', [targetUsuarioId]);
 
         await connection.commit();
-        res.status(200).json({ message: 'Usuario y todos sus datos asociados han sido eliminados.' });
+        res.status(200).json({ message: 'Solicitante y datos asociados eliminados.' });
 
     } catch (error) {
         await connection.rollback();
         console.error("Error en deleteSolicitante:", error);
-        res.status(500).json({ message: 'Error en el servidor al eliminar el usuario.' });
+        res.status(500).json({ message: 'Error interno al eliminar.' });
     } finally {
         if (connection) connection.release();
     }
 };
 
 exports.getSolicitanteDetails = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-
     try {
         const { id } = req.params;
         const [perfilRows] = await pool.query('SELECT * FROM solicitantes WHERE solicitante_id = ?', [id]);
         if (perfilRows.length === 0) return res.status(404).json({ message: 'Solicitante no encontrado.' });
         
-        const perfil = perfilRows[0];
+        // Paralelizar consultas para mayor velocidad
         const [integrantes, embarcaciones, anexo3Data, anexo4Data] = await Promise.all([
             pool.query('SELECT * FROM integrantes WHERE solicitante_id = ?', [id]),
             pool.query('SELECT * FROM embarcaciones_menores WHERE solicitante_id = ?', [id]),
@@ -183,17 +188,16 @@ exports.getSolicitanteDetails = async (req, res) => {
             pool.query('SELECT * FROM datos_tecnicos_acuacultura WHERE solicitante_id = ?', [id])
         ]);
         
-        const fullDetails = {
-            perfil: perfil,
+        res.status(200).json({
+            perfil: perfilRows[0],
             integrantes: integrantes[0],
             embarcaciones: embarcaciones[0],
             anexo3: anexo3Data[0][0] || null,
             anexo4: anexo4Data[0][0] || null
-        };
-        res.status(200).json(fullDetails);
+        });
     } catch (error) {
         console.error("Error en getSolicitanteDetails:", error);
-        res.status(500).json({ message: 'Error en el servidor al obtener los detalles.' });
+        res.status(500).json({ message: 'Error obteniendo detalles.' });
     }
 };
 
@@ -204,6 +208,7 @@ exports.getSolicitanteDetails = async (req, res) => {
 exports.getAllUsuarios = async (req, res) => {
     try {
         const { search, startDate, endDate } = req.query;
+        // La función optimizada en el modelo ya NO trae passwords
         const users = await userModel.getAllUsuarios(search, startDate, endDate);
         res.status(200).json(users);
     } catch (error) {
@@ -213,12 +218,9 @@ exports.getAllUsuarios = async (req, res) => {
 };
 
 exports.getUsuarioById = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-
     try {
         const { id } = req.params;
-        const [rows] = await pool.query('SELECT id, email, curp, rol FROM usuarios WHERE id = ?', [id]);
+        const [rows] = await pool.query('SELECT id, email, curp, rol, creado_en FROM usuarios WHERE id = ?', [id]);
         if (rows.length === 0) return res.status(404).json({ message: 'Usuario no encontrado.' });
         res.status(200).json(rows[0]);
     } catch (error) {
@@ -237,7 +239,7 @@ exports.updateUsuario = async (req, res) => {
         const { email, curp, rol, password } = req.body; 
 
         if (req.user.id == id && rol !== 'superadmin') {
-             return res.status(403).json({ message: 'Un superadmin no puede cambiar su propio rol.' });
+             return res.status(403).json({ message: 'No puedes degradar tu propio rol.' });
         }
         
         await connection.beginTransaction(); 
@@ -252,40 +254,39 @@ exports.updateUsuario = async (req, res) => {
         }
         queryUpdateUsuario += ' WHERE id = ?';
         queryParams.push(id);
+        
         await connection.query(queryUpdateUsuario, queryParams);
         
+        // Sincronizar datos con tabla solicitantes si existe
         await connection.query(
             'UPDATE solicitantes SET curp = ?, correo_electronico = ? WHERE usuario_id = ?',
             [curp.toUpperCase(), email, id]
         );
         
         await connection.commit(); 
-        res.status(200).json({ message: 'Cuenta de usuario actualizada correctamente.' });
+        res.status(200).json({ message: 'Usuario actualizado.' });
     } catch (error) {
         await connection.rollback(); 
         console.error("Error en updateUsuario:", error);
         if (error.code === 'ER_DUP_ENTRY') {
-             return res.status(409).json({ message: 'Error: El email o CURP ya está en uso por otra cuenta.' });
+             return res.status(409).json({ message: 'Email o CURP ya registrados.' });
         }
-        res.status(500).json({ message: 'Error en el servidor al actualizar el usuario.' });
+        res.status(500).json({ message: 'Error al actualizar.' });
     } finally {
          if (connection) connection.release(); 
     }
 };
 
-// --- FUNCIÓN DE ELIMINACIÓN EN CASCADA ---
 exports.deleteUsuario = async (req, res) => {
     const { id } = req.params; 
     const adminMakingRequest = req.user;
     
-    // 1. Seguridad básica
     if (adminMakingRequest.id == id) {
-        return res.status(403).json({ message: 'No puedes eliminar tu propia cuenta mientras estás logueado.' });
+        return res.status(403).json({ message: 'No puedes eliminarte a ti mismo.' });
     }
 
     const connection = await pool.getConnection();
     try {
-        // 2. Verificar rol del objetivo
         const [targets] = await connection.query('SELECT id, rol FROM usuarios WHERE id = ?', [id]);
         if (targets.length === 0) {
             connection.release();
@@ -295,50 +296,34 @@ exports.deleteUsuario = async (req, res) => {
 
         if (adminMakingRequest.rol === 'admin' && targetRol === 'superadmin') {
             connection.release();
-            return res.status(403).json({ message: 'No tienes permisos para eliminar a un SuperAdmin.' });
+            return res.status(403).json({ message: 'Sin permisos para eliminar SuperAdmin.' });
         }
 
         await connection.beginTransaction();
 
-        // 3. Buscar si tiene perfil de Solicitante
         const [solicitanteRows] = await connection.query('SELECT solicitante_id FROM solicitantes WHERE usuario_id = ?', [id]);
         
         if (solicitanteRows.length > 0) {
-            const solicitanteId = solicitanteRows[0].solicitante_id;
-            
-            // 4. BORRADO EN CASCADA (Datos hijos)
-            const childTables = [
-                'integrantes', 'embarcaciones_menores', 'datos_tecnicos_pesca',
-                'datos_tecnicos_acuacultura', 'unidad_pesquera', 'unidad_produccion',
-                'tipo_estanques', 'instrumentos_medicion', 'sistema_conservacion',
-                'equipo_transporte', 'embarcaciones', 'instalacion_hidraulica_aireacion'
-            ];
-            
-            for (const table of childTables) {
-                await connection.query(`DELETE FROM ${table} WHERE solicitante_id = ?`, [solicitanteId]);
-            }
-
-            // 5. Borrar perfil solicitante
-            await connection.query('DELETE FROM solicitantes WHERE solicitante_id = ?', [solicitanteId]);
+            // Reutilizamos la lógica de borrado en cascada
+            await _deleteUserResources(connection, solicitanteRows[0].solicitante_id);
         }
 
-        // 6. Borrar la cuenta de usuario
         await connection.query('DELETE FROM usuarios WHERE id = ?', [id]);
 
         await connection.commit();
-        res.status(200).json({ message: 'Usuario y todos sus datos asociados eliminados correctamente.' });
+        res.status(200).json({ message: 'Usuario eliminado correctamente.' });
 
     } catch (error) {
         await connection.rollback();
         console.error("Error en deleteUsuario:", error);
-        res.status(500).json({ message: 'Error en el servidor al eliminar usuario.' });
+        res.status(500).json({ message: 'Error interno.' });
     } finally {
         if (connection) connection.release();
     }
 };
 
 // ==================================================
-// 3. INTEGRANTES
+// 3. INTEGRANTES Y EMBARCACIONES
 // ==================================================
 
 exports.getAllIntegrantes = async (req, res) => {
@@ -357,10 +342,6 @@ exports.getAllIntegrantes = async (req, res) => {
     }
 };
 
-// ==================================================
-// 4. EMBARCACIONES MENORES
-// ==================================================
-
 exports.getAllEmbarcaciones = async (req, res) => {
     try {
         const userRole = req.user.rol;
@@ -378,28 +359,18 @@ exports.getAllEmbarcaciones = async (req, res) => {
 };
 
 exports.getEmbarcacionById = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-
     try {
         const { id } = req.params;
         const embarcacion = await embarcacionMenorModel.getById(id);
-        
         if (!embarcacion) return res.status(404).json({ message: 'Embarcación no encontrada.' });
-        
         res.status(200).json(embarcacion);
     } catch (error) {
-        console.error("Error en getEmbarcacionById (Admin):", error);
-        res.status(500).json({ message: 'Error en el servidor al obtener la embarcación.' });
+        console.error("Error en getEmbarcacionById:", error);
+        res.status(500).json({ message: 'Error en el servidor.' });
     }
 };
 
 exports.updateEmbarcacionById = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ message: errors.array()[0].msg });
-    }
-
     try {
         const { id } = req.params;
         const data = { ...req.body };
@@ -411,18 +382,18 @@ exports.updateEmbarcacionById = async (req, res) => {
         if (result.affectedRows === 0) {
             const exists = await embarcacionMenorModel.getById(id);
             if (!exists) return res.status(404).json({ message: 'Embarcación no encontrada.' });
-            return res.status(200).json({ message: 'No hubo cambios en los datos.' });
+            return res.status(200).json({ message: 'No hubo cambios.' });
         }
 
-        res.status(200).json({ message: 'Embarcación actualizada con éxito.' });
+        res.status(200).json({ message: 'Embarcación actualizada.' });
     } catch (error) {
-        console.error("Error en updateEmbarcacionById (Admin):", error);
-        res.status(500).json({ message: 'Error en el servidor al actualizar la embarcación.' });
+        console.error("Error updateEmbarcacionById:", error);
+        res.status(500).json({ message: 'Error en el servidor.' });
     }
 };
 
 // ==================================================
-// 5. DB MAINTENANCE & PDF
+// 4. MANTENIMIENTO DB & PDF
 // ==================================================
 
 exports.resetDatabase = async (req, res) => {
@@ -430,31 +401,36 @@ exports.resetDatabase = async (req, res) => {
     const superAdminUserId = req.user.id; 
 
     if (masterPassword !== process.env.MASTER_RESET_PASSWORD) {
-        return res.status(403).json({ message: 'Contraseña maestra incorrecta. Acceso denegado.' });
+        return res.status(403).json({ message: 'Contraseña maestra incorrecta.' });
     }
 
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
         await connection.query('SET FOREIGN_KEY_CHECKS = 0;');
+        
+        // Borrar todo menos el SuperAdmin actual
         await connection.query('DELETE FROM usuarios WHERE id != ?', [superAdminUserId]);
         await connection.query('DELETE FROM solicitantes WHERE usuario_id != ?', [superAdminUserId]);
+        
         const tablesToTruncate = [
             'integrantes', 'embarcaciones_menores', 'datos_tecnicos_pesca', 'datos_tecnicos_acuacultura',
             'unidad_pesquera', 'unidad_produccion', 'tipo_estanques', 'instrumentos_medicion',
             'sistema_conservacion', 'equipo_transporte', 'embarcaciones', 'instalacion_hidraulica_aireacion',
             'password_reset_tokens'
         ];
+        
         for (const table of tablesToTruncate) {
             await connection.query(`TRUNCATE TABLE ${table};`);
         }
+        
         await connection.query('SET FOREIGN_KEY_CHECKS = 1;');
         await connection.commit();
-        res.status(200).json({ message: '¡Reseteo completado! Cuentas eliminadas excepto superadmin.' });
+        res.status(200).json({ message: 'Base de datos reseteada (SuperAdmin preservado).' });
     } catch (error) {
         await connection.rollback();
-        console.error("Error crítico al resetear la base de datos:", error);
-        res.status(500).json({ message: 'Error en el servidor al intentar resetear la base de datos.' });
+        console.error("Error Reset DB:", error);
+        res.status(500).json({ message: 'Error crítico en reseteo.' });
     } finally {
         if (connection) connection.release();
     }
@@ -464,57 +440,57 @@ exports.backupDatabase = async (req, res) => {
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
     const fileName = `repa_backup_${timestamp}.sql`;
     
-    // Variables de entorno
     const host = process.env.DB_HOST || process.env.MYSQL_HOST || 'localhost';
     const user = process.env.DB_USER || process.env.MYSQL_USER || 'root';
     const password = process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || '';
     const database = process.env.DB_NAME || process.env.MYSQL_DATABASE || 'repa';
     const port = process.env.DB_PORT || process.env.MYSQL_PORT || 3306;
-
     const certPath = path.join(__dirname, '../isrgrootx1.pem');
-    let sslOptions = '';
+
+    // Construir argumentos para spawn (Más seguro que exec string)
+    let args = [
+        '-h', host,
+        '-P', port,
+        '-u', user,
+        `--password=${password}`, // Nota: En entornos de alta seguridad, esto debería ir en un .cnf temporal
+        '--no-tablespaces'
+    ];
 
     if (fs.existsSync(certPath)) {
-        sslOptions = `--ssl --ssl-ca="${certPath}" --ssl-verify-server-cert`;
-    } else {
-        sslOptions = ''; 
+        args.push('--ssl', `--ssl-ca=${certPath}`, '--ssl-verify-server-cert');
     }
 
-    const command = `mysqldump -h ${host} -P ${port} -u ${user} -p"${password}" ${sslOptions} --no-tablespaces ${database}`;
+    args.push(database);
 
     try {
-        console.log(`🚀 Iniciando respaldo...`);
-        
+        console.log(`🚀 Iniciando respaldo con spawn...`);
         res.setHeader('Content-Type', 'application/sql');
         res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
 
-        const dumpProcess = exec(command);
+        // Usamos spawn para manejar streams grandes sin colapsar la RAM
+        const dumpProcess = spawn('mysqldump', args);
 
         dumpProcess.stdout.pipe(res);
 
         dumpProcess.stderr.on('data', (data) => {
-            if (!data.includes('Deprecated') && !data.includes('Warning')) {
-                console.error(`[dump error]: ${data}`);
+            const msg = data.toString();
+            if (!msg.includes('Deprecated') && !msg.includes('Warning')) {
+                console.error(`[mysqldump]: ${msg}`);
             }
         });
 
         dumpProcess.on('close', (code) => {
-            if (code === 0) {
-                console.log('✅ Respaldo exitoso.');
-            } else {
-                console.error(`❌ Falló con código ${code}.`);
-            }
+            if (code !== 0) console.error(`❌ Respaldo terminó con código ${code}`);
+            else console.log('✅ Respaldo completado.');
         });
 
     } catch (error) {
-        console.error("Error crítico:", error);
+        console.error("Error crítico Backup:", error);
         if (!res.headersSent) res.status(500).json({ message: 'Error interno.' });
     }
 };
 
 exports.downloadRegistroPdf = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).send("Error: ID de solicitante no válido.");
     await generateRegistroPdf(req, res);
 };
 
@@ -525,23 +501,24 @@ exports.downloadGeneralReportPdf = async (req, res) => {
         const solicitantes = await solicitanteModel.getAll(userRole, search, startDate, endDate);
 
         if (!solicitantes || solicitantes.length === 0) {
-            return res.status(404).json({ message: 'No hay datos para el reporte con estos filtros.' });
+            return res.status(404).json({ message: 'No hay datos para el reporte.' });
         }
         await generateGeneralReportPdf(req, res); 
     } catch (error) {
-        console.error("Error generando Reporte General:", error);
-        res.status(500).json({ message: "Error al generar el PDF" });
+        console.error("Error Reporte General:", error);
+        res.status(500).json({ message: "Error al generar PDF" });
     }
 };
 
 exports.downloadUsuariosReportPdf = async (req, res) => {
     try {
         const { search, startDate, endDate } = req.query;
+        // Obtenemos usuarios (versión segura sin pass)
         const users = await userModel.getAllUsuarios(search, startDate, endDate);
         if (!users || users.length === 0) return res.status(404).json({ message: 'No hay usuarios.' });
         await generateUsuariosReportPdf(users, res); 
     } catch (error) {
-        console.error("Error usuarios PDF:", error);
+        console.error("Error Usuarios PDF:", error);
         res.status(500).json({ message: "Error PDF" });
     }
 };

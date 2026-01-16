@@ -20,35 +20,65 @@ const app = express();
 // ==== CONFIGURACIÓN DE SEGURIDAD (HARDENING) ====
 // =================================================================
 
-// 0. OCULTAR TECNOLOGÍA
+// 0. DETECCIÓN DE ENTORNO (Para ajustar seguridad)
+const isProduction = process.env.NODE_ENV === 'production';
+
+// 1. OCULTAR TECNOLOGÍA
 app.disable('x-powered-by');
 
-// 1. TRUST PROXY (ESENCIAL PARA RENDER)
+// 2. TRUST PROXY (CRÍTICO PARA RENDER)
+// Permite que Express confíe en el balanceador de carga de Render para leer la IP real del usuario
 app.set('trust proxy', 1); 
 
-// 2. CORS SEGURO (MODIFICADO PARA DOCKER)
+// 3. RATE LIMIT (PROTECCIÓN DDOS DIFERENCIADA)
+
+// A) Limitador General (Para navegación normal de la API)
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 1000, // 1000 peticiones
+    standardHeaders: true, 
+    legacyHeaders: false, 
+    message: { message: 'Demasiadas peticiones generales. Calma un poco.' }
+});
+
+// B) Limitador Estricto (Para Login/Registro - Anti Fuerza Bruta)
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    // LÓGICA DINÁMICA:
+    // En Producción (Render): 10 intentos (Seguridad Máxima)
+    // En Local (PC): 100 intentos (Comodidad para Desarrollo)
+    max: isProduction ? 10 : 100, 
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Demasiados intentos de acceso. Intenta más tarde.' }
+});
+
+// 4. CORS SEGURO
 const whiteList = [
-    'https://proyecto-repa.onrender.com', // Producción (Render) - SE QUEDA IGUAL
+    'https://proyecto-repa.onrender.com', // Producción (Render)
     'http://localhost:5500',              // Desarrollo Local (Live Server)
     'http://127.0.0.1:5500',              // Desarrollo Local IP
     'http://localhost:3000',              // Backend directo
-    // --- AGREGADOS PARA DOCKER ---
-    'http://localhost:8080',              // Tu Frontend en Docker
-    'http://127.0.0.1:8080'               // Tu Frontend en Docker (IP)
+    'http://localhost:8080',              // Frontend Docker
+    'http://127.0.0.1:8080'               // Frontend Docker IP
 ];
 
 const corsOptions = {
     origin: function (origin, callback) {
-        if (whiteList.includes(origin) || !origin) {
+        // Permitimos peticiones sin origen (como Postman) SOLO si no estamos en producción
+        // O si el origen está en la lista blanca
+        if (whiteList.includes(origin) || (!origin && !isProduction)) {
             callback(null, true);
         } else {
             callback(new Error('Acceso denegado por CORS'));
         }
-    }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 };
 app.use(cors(corsOptions));
 
-// 3. HELMET (HEADERS HTTP & CSP)
+// 5. HELMET (HEADERS HTTP & CSP)
 app.use(
     helmet.contentSecurityPolicy({
         directives: {
@@ -74,21 +104,13 @@ app.use(
     })
 );
 
-// 4. RATE LIMIT (PROTECCIÓN DDOS)
-const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 1000, 
-    standardHeaders: true, 
-    legacyHeaders: false, 
-    message: { message: 'Demasiadas peticiones desde esta IP, intenta más tarde.' }
-});
-
 // =================================================================
 // ==== MIDDLEWARES GLOBALES ====
 // =================================================================
 
-app.use(express.json()); 
-app.use(hpp()); 
+// Limitar tamaño del body JSON a 10kb para prevenir ataques DoS de memoria
+app.use(express.json({ limit: '10kb' })); 
+app.use(hpp()); // Protección contra contaminación de parámetros HTTP
 
 // Middleware Anti-Caché para páginas protegidas
 app.use((req, res, next) => {
@@ -98,7 +120,7 @@ app.use((req, res, next) => {
         '/admin-integrantes.html', '/admin-embarcaciones.html'
     ];
 
-    if (protectedPages.includes(req.path)) {
+    if (protectedPages.includes(req.path) || req.path.startsWith('/api/admin')) {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');
@@ -118,15 +140,19 @@ app.get('/', (req, res) => {
 // ==== RUTAS API ====
 // =================================================================
 
-app.use('/api', apiLimiter, authRoutes); 
-app.use('/api', apiLimiter, integranteRoutes);
-app.use('/api/embarcaciones', apiLimiter, embarcacionMenorRoutes);
-app.use('/api/admin', apiLimiter, adminRoutes);
-app.use('/api', apiLimiter, anexoRoutes); 
-app.use('/api/anexos', apiLimiter, anexoRoutes); 
+// Aplicamos el limitador ESTRICTO solo a autenticación
+app.use('/api', authLimiter, authRoutes); 
+
+// Aplicamos el limitador GENERAL al resto de rutas
+app.use('/api', globalLimiter, integranteRoutes);
+app.use('/api/embarcaciones', globalLimiter, embarcacionMenorRoutes);
+app.use('/api/admin', globalLimiter, adminRoutes);
+app.use('/api', globalLimiter, anexoRoutes); 
+app.use('/api/anexos', globalLimiter, anexoRoutes); 
 
 // Puerto
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`✅ Servidor seguro escuchando en el puerto ${PORT}`);
+    console.log(`🛡️  Modo Rate Limit: ${isProduction ? 'ESTRICTO (Prod)' : 'RELAJADO (Dev)'}`);
 });

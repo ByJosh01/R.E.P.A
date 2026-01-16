@@ -2,9 +2,14 @@
 const pool = require('../db');
 const bcrypt = require('bcryptjs');
 
-// --- NUEVA FUNCIÓN PARA FILTROS ---
+// --- FUNCIÓN OPTIMIZADA (SIN PASSWORD) ---
 const getAllUsuarios = async (search, startDate, endDate) => {
-    let query = 'SELECT * FROM usuarios WHERE 1=1';
+    // IMPORTANTE: Seleccionamos columna por columna para NO devolver el 'password'
+    let query = `
+        SELECT id, curp, email, rol, creado_en 
+        FROM usuarios 
+        WHERE 1=1
+    `;
     const params = [];
 
     // 1. Buscador (Email o CURP)
@@ -14,7 +19,7 @@ const getAllUsuarios = async (search, startDate, endDate) => {
         params.push(term, term);
     }
 
-    // 2. Filtro Fecha Inicio (creado_en)
+    // 2. Filtro Fecha Inicio
     if (startDate) {
         query += ' AND DATE(creado_en) >= ?';
         params.push(startDate);
@@ -31,7 +36,6 @@ const getAllUsuarios = async (search, startDate, endDate) => {
     const [rows] = await pool.query(query, params);
     return rows;
 };
-// ----------------------------------
 
 const findUserByEmail = async (email) => {
     const [rows] = await pool.query('SELECT * FROM usuarios WHERE email = ?', [email]);
@@ -50,16 +54,22 @@ const createUser = async (userData) => {
     
     try {
         await connection.beginTransaction();
+        
+        // 1. Insertar Usuario
         const [userResult] = await connection.query(
             'INSERT INTO usuarios (curp, email, password) VALUES (?, ?, ?)',
             [curp.toUpperCase(), email, hashedPassword]
         );
         const newUserId = userResult.insertId;
+
+        // 2. Insertar Perfil Solicitante (Vinculado)
         await connection.query(
             'INSERT INTO solicitantes (usuario_id, curp, correo_electronico) VALUES (?, ?, ?)',
             [newUserId, curp.toUpperCase(), email]
         );
+
         await connection.commit();
+        // Devolvemos solo lo necesario, nunca el password
         return { id: newUserId, curp, email };
     } catch (error) {
         await connection.rollback();
@@ -76,6 +86,7 @@ const updateUserPassword = async (email, newPassword) => {
 };
 
 const saveResetToken = async (email, token, expires) => {
+    // Invalidamos tokens anteriores por seguridad
     await pool.query('DELETE FROM password_reset_tokens WHERE email = ?', [email]);
     await pool.query(
         'INSERT INTO password_reset_tokens (email, token, expires) VALUES (?, ?, ?)',
@@ -93,7 +104,7 @@ const deleteResetToken = async (token) => {
 };
 
 module.exports = {
-    getAllUsuarios, // <--- No olvides exportar la nueva función
+    getAllUsuarios,
     findUserByEmail,
     findUserByCurp,
     createUser,

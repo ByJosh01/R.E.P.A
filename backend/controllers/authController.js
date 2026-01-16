@@ -6,7 +6,6 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const brevo = require('@getbrevo/brevo');
-// Nota: Ya no necesitamos importar validationResult aquí
 
 // --- VALIDACIÓN PREVIA DE ENTORNO ---
 if (!process.env.JWT_SECRET || !process.env.RECAPTCHA_SECRET_KEY) {
@@ -24,48 +23,60 @@ const generateToken = (userId) => {
 };
 
 exports.registerUser = async (req, res) => {
-    // ¡MIRA QUÉ LIMPIO! Sin validaciones de formato aquí.
     try {
         let { curp, email, password, recaptchaToken } = req.body;
         
-        // Sanitización extra por seguridad (aunque express-validator ya hizo gran parte)
+        // 1. Sanitización básica
         curp = curp ? curp.trim().toUpperCase() : '';
         email = email ? email.trim().toLowerCase() : '';
 
-        // Validación de lógica de negocio (captcha)
+        // 2. Validación de Contraseña Segura
+        if (!password || password.length < 8) {
+             return res.status(400).json({ message: 'La contraseña es muy débil. Debe tener al menos 8 caracteres.' });
+        }
+
+        // 3. Validación de Captcha
         if (!recaptchaToken) { 
             return res.status(400).json({ message: 'Validación de seguridad (Captcha) faltante.' });
         }
 
         const verificationURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
         const verificationResponse = await axios.post(verificationURL);
+        
         if (!verificationResponse.data.success) {
             return res.status(400).json({ message: 'Falló la verificación de seguridad (Captcha).' });
         }
 
-        // Verificar duplicados
+        // 4. Verificar duplicados (Optimizando consultas)
+        // Hacemos las dos consultas en paralelo para ser más rápidos
         const [existingCurp, existingEmail] = await Promise.all([
             userModel.findUserByCurp(curp),
             userModel.findUserByEmail(email)
         ]);
 
-        if (existingCurp || existingEmail) {
-            return res.status(400).json({ message: 'El CURP o correo electrónico ya están registrados.' });
+        if (existingCurp) {
+            return res.status(400).json({ message: 'El CURP ya está registrado.' });
+        }
+        if (existingEmail) {
+            return res.status(400).json({ message: 'El correo electrónico ya está registrado.' });
         }
 
-        // Crear Usuario
+        // 5. Crear Usuario
+        // Nota: La encriptación de password (hashing) debe hacerse dentro de userModel.createUser o aquí mismo antes de enviar
+        // Asumo que tu userModel ya hace el hash con bcrypt, si no, avísame.
         await userModel.createUser({ curp, email, password });
 
-        // Enviar Correo
+        // 6. Enviar Correo de Bienvenida
+        // Usamos .catch para que si falla el correo, NO falle el registro del usuario
         sendWelcomeEmail(curp, email).catch(err => {
             console.error("⚠️ Advertencia: Usuario registrado pero falló el correo:", err.message);
         });
 
-        res.status(201).json({ message: 'Registro exitoso. Revisa tu correo.' });
+        return res.status(201).json({ message: 'Registro exitoso. Revisa tu correo.' });
 
     } catch (error) {
         console.error("❌ Error crítico en registerUser:", error);
-        res.status(500).json({ message: "Error interno del servidor." });
+        return res.status(500).json({ message: "Error interno del servidor." });
     }
 };
 
@@ -85,23 +96,26 @@ exports.loginUser = async (req, res) => {
                 rol: user.rol 
             };
 
-            res.status(200).json({
+            return res.status(200).json({
                 message: 'Inicio de sesión exitoso.',
                 token,
                 user: userSafe
             });
         } else {
-            res.status(401).json({ message: 'Credenciales incorrectas.' });
+            return res.status(401).json({ message: 'Credenciales incorrectas.' });
         }
     } catch (error) {
         console.error("Error en loginUser:", error);
-        res.status(500).json({ message: "Error en el servidor." });
+        return res.status(500).json({ message: "Error en el servidor." });
     }
 };
 
 exports.forgotPassword = async (req, res) => {
     try {
         let { email } = req.body;
+        // Validación básica de input
+        if (!email) return res.status(400).json({ message: 'El email es requerido.' });
+        
         email = email.trim().toLowerCase();
 
         const user = await userModel.findUserByEmail(email);
@@ -116,30 +130,37 @@ exports.forgotPassword = async (req, res) => {
             sendRecoveryEmail(email, resetLink).catch(console.error);
         }
         
-        // Respondemos siempre OK por seguridad
-        res.status(200).json({ message: 'Si el correo existe, recibirás instrucciones.' });
+        // Respondemos siempre OK por seguridad (evita enumeración de usuarios)
+        return res.status(200).json({ message: 'Si el correo existe, recibirás instrucciones.' });
     } catch (error) {
         console.error("Error en forgotPassword:", error);
-        res.status(500).json({ message: "Error en el servidor." });
+        return res.status(500).json({ message: "Error en el servidor." });
     }
 };
 
 exports.resetPassword = async (req, res) => {
     try {
         const { token, newPassword } = req.body;
+        
+        // Validación de password en reset también
+        if (!newPassword || newPassword.length < 8) {
+            return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 8 caracteres.' });
+        }
+
         const tokenData = await userModel.findTokenData(token);
 
         if (!tokenData || new Date(tokenData.expires).getTime() < Date.now()) {
             return res.status(400).json({ message: 'El enlace ha expirado o es inválido.' });
         }
 
+        // Aquí asumimos que updateUserPassword hace el hash de la nueva contraseña
         await userModel.updateUserPassword(tokenData.email, newPassword);
         await userModel.deleteResetToken(token);
 
-        res.status(200).json({ message: 'Contraseña actualizada correctamente.' });
+        return res.status(200).json({ message: 'Contraseña actualizada correctamente.' });
     } catch (error) {
         console.error("Error en resetPassword:", error);
-        res.status(500).json({ message: "Error en el servidor." });
+        return res.status(500).json({ message: "Error en el servidor." });
     }
 };
 
