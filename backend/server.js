@@ -26,7 +26,7 @@ app.set('trust proxy', 1);
 
 // 2. LIMITADORES
 
-// A) Limitador Global con "Pase VIP" (Para navegación diaria)
+// A) Limitador Global con "Pase SEGURO" (Para navegación diaria)
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
     max: 5000, 
@@ -39,7 +39,7 @@ const globalLimiter = rateLimit({
             try {
                 const token = req.headers.authorization.split(' ')[1];
                 const decoded = jwt.verify(token, process.env.JWT_SECRET);
-                // Si es admin, pase VIP
+                // Si es admin, pase SEGURO
                 if (decoded.rol === 'admin' || decoded.rol === 'superadmin') return true; 
             } catch (e) { return false; }
         }
