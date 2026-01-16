@@ -116,7 +116,7 @@ app.use('/api/reset-password', authLimiter);
 // (Ya protegimos las sensibles arriba, el resto pasan normal)
 app.use('/api', authRoutes); 
 
-// 3. RUTAS PROTEGIDAS CON "PASE VIP"
+// 3. RUTAS PROTEGIDAS CON "PASE SEGURO"
 // (Aquí aplica el globalLimiter que sí respeta tu rol de Admin)
 app.use('/api', globalLimiter, integranteRoutes);
 app.use('/api/embarcaciones', globalLimiter, embarcacionMenorRoutes);
@@ -130,5 +130,5 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public', 'home.
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`✅ Servidor REPA escuchando en puerto ${PORT}`);
-    console.log(`🛡️  Rate Limits Configurados Correctamente (Pase VIP Activo)`);
+    console.log(`🛡️  Rate Limits Configurados Correctamente (Pase SEGURO Activo)`);
 });
